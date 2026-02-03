@@ -1,0 +1,15 @@
+# See docs at: https://mystmd.org/guide/frontmatter
+version: 1
+project:
+  id: 43afbd02-11ba-46bb-856e-31954d39c0d0
+  # title:
+  # description:
+  # keywords: []
+  # authors: []
+  github: https://github.com/jnywong/jupyterhub-usage-quotas
+  # To autogenerate a Table of Contents, run "myst init --write-toc"
+site:
+  template: book-theme
+  # options:
+  #   favicon: favicon.ico
+  #   logo: site_logo.png

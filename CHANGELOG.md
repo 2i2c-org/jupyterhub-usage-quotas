@@ -2,4 +2,5 @@
 
 ## [Unreleased]
 
-- Upcoming features and fixes
+- Upcoming features and fixes.
+

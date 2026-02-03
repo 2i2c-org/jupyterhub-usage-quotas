@@ -31,7 +31,7 @@ classifiers = [
     "Typing :: Typed",
 ]
 
-keywords = [jupyterhub, prometheus, kubernetes, python]
+keywords = ["jupyterhub", "prometheus", "kubernetes", "python"]
 
 # Package dependencies
 dependencies = []
@@ -182,7 +182,9 @@ check = "mypy src/jupyterhub_usage_quotas"
 [tool.hatch.envs.docs]
 description = """Build or serve the documentation."""
 python = "3.14"
-dependencies = []
+dependencies = [
+    "mystmd",
+]
 
 # [tool.hatch.envs.docs.scripts]
 # build = []
