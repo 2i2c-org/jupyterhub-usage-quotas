@@ -1,0 +1,63 @@
+name: Test Suite
+
+on:
+  workflow_dispatch: {}
+  workflow_call: {}
+
+jobs:
+  lint:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest]
+        python-version: ["3.12"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install hatch
+        uses: pypa/hatch@install
+
+    #   - name: Check docstrings
+    #     run: hatch run style:docstrings
+
+    #   - name: Build documentation
+    #     run: hatch run docs:build
+  test:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest]
+        python-version: ["3.12", "3.13", "3.14"]
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ matrix.python-version }}
+    - name: Install hatch
+      uses: pypa/hatch@install
+
+    - name: Check installation
+      run: hatch run install:check
+
+    - name: Check dependencies
+      run: hatch run audit:check
+    - name: Test suite
+      run: hatch run +py=${{ matrix.python-version }} test:run
+
+    # - name: Upload coverage reports to Codecov
+    #   uses: codecov/codecov-action@v5
+    #   with:
+    #     token: ${{ secrets.CODECOV_TOKEN }}
+
+    - name: Check types
+      run: hatch run types:check
