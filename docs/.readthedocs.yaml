@@ -18,6 +18,6 @@ build:
     - BASE_URL="/$READTHEDOCS_LANGUAGE/$READTHEDOCS_VERSION"
     build:
       html:
-      - myst build --html
+      - env -C docs -- myst build --html
       - cp -a docs/_build/html/. "$READTHEDOCS_OUTPUT/html"
       - rm -rf docs/_build
