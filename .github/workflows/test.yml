@@ -26,8 +26,6 @@ jobs:
     #   - name: Check docstrings
     #     run: hatch run style:docstrings
 
-      # - name: Build documentation
-      #   run: hatch run docs:build
   test:
     runs-on: ${{ matrix.os }}
     strategy:
