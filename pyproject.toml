@@ -34,7 +34,9 @@ classifiers = [
 keywords = ["jupyterhub", "prometheus", "kubernetes", "python"]
 
 # Package dependencies
-dependencies = []
+dependencies = [
+    "fastapi[standard]>=0.128.0",
+]
 
 [project.urls]
 Homepage = ""
@@ -111,6 +113,9 @@ post-install-commands = [
   "python -m pip install --upgrade pip"
 ]
 
+[tool.hatch.envs.default.scripts]
+serve = ["env -C src/jupyterhub_usage_quotas -- fastapi run --port 8080 --host 0.0.0.0"]
+
 [tool.hatch.envs.py313]
 python = "3.13"
 
@@ -124,6 +129,9 @@ Environment for local development.
 dependencies = [
     "pre-commit",
 ]
+
+[tool.hatch.envs.dev.scripts]
+serve = ["env -C src/jupyterhub_usage_quotas -- fastapi dev"]
 
 [tool.hatch.envs.install]
 description = """Test the installation the package."""
