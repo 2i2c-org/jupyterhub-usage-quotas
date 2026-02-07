@@ -53,7 +53,7 @@ local development.
    git clone https://github.com/<your_username>/jupyterhub-usage-quotas.git
    ```
 
-1. [Install hatch](https://hatch.pypa.io/latest/install/).
+1. See [DEVELOPMENT](DEVELOPMENT.md) for guidance on how to set up your local development environment.
 
 1. Create a branch for local development using the default branch (typically `main`) as a starting point. Use `fix` or `feat` as a prefix for your branch name (see [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/)).
 
