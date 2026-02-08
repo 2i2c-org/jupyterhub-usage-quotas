@@ -28,11 +28,21 @@ class Quotas(Application):
             self.load_config_file(self.config_file)
 
         self.quotas_config = QuotasConfig(parent=self)
-        self.app = FastAPI()
+        self.app = self._build_app()
 
-        @self.app.get("/")
+    def _build_app(self) -> FastAPI:
+        app = FastAPI()
+
+        @app.get("/")
         def root():
-            return {"status": "ok"}
+            return {"message": "Welcome to the JupyterHub Usage Quotas API"}
+
+        @app.get("/health/ready")
+        def ready():
+            """
+            Readiness probe endpoint.
+            """
+            return ("200: OK", 200)
 
     def start(self):
 
