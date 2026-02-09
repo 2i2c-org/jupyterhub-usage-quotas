@@ -195,6 +195,9 @@ dependencies = [
     "mypy",
 ]
 
+[tool.mypy]
+ignore_missing_imports = true
+
 [tool.hatch.envs.types.scripts]
 check = "mypy src/jupyterhub_usage_quotas"
 
