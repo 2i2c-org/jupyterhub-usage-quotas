@@ -8,9 +8,6 @@ from traitlets import Bool, Integer, Unicode
 from traitlets.config import Application, Instance
 
 from jupyterhub_usage_quotas.config import Quotas
-from jupyterhub_usage_quotas.logs import LOGGING_CONFIG
-
-logging.config.dictConfig(LOGGING_CONFIG)
 
 
 class QuotasApp(Application):
@@ -28,7 +25,6 @@ class QuotasApp(Application):
         config=True
     )
     server_port = Integer(8000, help="Port to bind API server.").tag(config=True)
-    server_log_level = Unicode("info", help="Uvicorn log level.").tag(config=True)
     config_file = Unicode(
         "jupyterhub_usage_quotas_config.py", help="The config file to load"
     ).tag(config=True)
@@ -56,6 +52,7 @@ class QuotasApp(Application):
 
     def initialize(self, *args, **kwargs):
         super().initialize(*args, **kwargs)
+        self.load_config_file(self.config_file)
         self._format_logs()
         if self.generate_config:
             config_text = self.generate_config_file()
@@ -85,22 +82,33 @@ class QuotasApp(Application):
         return app
 
     def _format_logs(self):
-        for h in list(self.log.handlers):
-            self.log.removeHandler(h)
-        self.log.propagate = True
+        self.log.propagate = False
+        # Propagate uvicorn logger into central traitlets.Application logger
+        uvicorn_loggers = (
+            "uvicorn",
+            "uvicorn.error",
+            "uvicorn.access",
+        )
+        for name in uvicorn_loggers:
+            logger = logging.getLogger(name)
+            logger.propagate = True
+            logger.parent = self.log
+            logger.setLevel(self.log_level)
+        # Apply config to application logger
+        self.log.setLevel(self.log_level)
+        _formatter = logging.Formatter(fmt=self.log_format, datefmt=self.log_datefmt)
+        for handler in self.log.handlers:
+            if handler.formatter is None:
+                handler.setFormatter(_formatter)
 
     def start(self):
-        self.initialize()
         self.app = self._build_app()
-        self.load_config_file(self.config_file)
-        self.log.info(f"Starting server on {self.server_ip}:{self.server_port}")
+        self.initialize()
 
         uvicorn.run(
             self.app,
             host=self.server_ip,
             port=self.server_port,
-            log_level=self.log_level,
-            log_config=None,  # use LOGGING_CONFIG and not uvicorn log config
         )
 
     def stop(self):
