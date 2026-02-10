@@ -5,15 +5,15 @@ from fastapi import FastAPI
 from traitlets import Integer, Unicode
 from traitlets.config import Application, Instance
 
-from jupyterhub_usage_quotas.config import QuotasConfig
+from jupyterhub_usage_quotas.config import Quotas
 from jupyterhub_usage_quotas.logs import LOGGING_CONFIG
 
 logging.config.dictConfig(LOGGING_CONFIG)
 
 
-class Quotas(Application):
+class QuotasApp(Application):
     name = "jupyterhub_usage_quotas"
-    description = "Start a JupyterHub usage quotas server."
+    description = "Start the JupyterHub usage quotas application."
     examples = """
     Generate default config file:
 
@@ -33,15 +33,15 @@ class Quotas(Application):
 
     # Configurable traits
 
-    classes = [QuotasConfig]
+    classes = [Quotas]
 
-    quotas_config = Instance(QuotasConfig)
+    quotas_config = Instance(Quotas)
 
     # Aliases
 
     aliases = {
-        "f": "Quotas.config_file",
-        "config": "Quotas.config_file",
+        "f": "QuotasApp.config_file",
+        "config": "QuotasApp.config_file",
     }
 
     def _build_app(self) -> FastAPI:
@@ -67,10 +67,9 @@ class Quotas(Application):
 
     def start(self):
         self.app = self._build_app()
-        self.log.info(f"Starting server on {self.server_ip}:{self.server_port}")
         self.load_config_file(self.config_file)
         self._format_logs()
-        self.log.info(f"{self.config=}")
+        self.log.info(f"Starting server on {self.server_ip}:{self.server_port}")
 
         uvicorn.run(
             self.app,
@@ -82,7 +81,7 @@ class Quotas(Application):
 
 
 def main():
-    Quotas.launch_instance()
+    QuotasApp.launch_instance()
 
 
 if __name__ == "__main__":

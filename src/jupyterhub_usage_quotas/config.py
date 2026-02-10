@@ -2,7 +2,7 @@ from traitlets import Bool, Dict, Integer, List, TraitError, validate
 from traitlets.config import Configurable
 
 
-class QuotasConfig(Configurable):
+class Quotas(Configurable):
     """
     Configure application settings for the JupyterHub usage quotas mechanism.
     """
