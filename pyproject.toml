@@ -36,6 +36,7 @@ keywords = ["jupyterhub", "prometheus", "kubernetes", "python"]
 # Package dependencies
 dependencies = [
     "fastapi[standard]>=0.128.0",
+    "traitlets>=5.14.0",
 ]
 
 [project.urls]
@@ -45,8 +46,8 @@ Homepage = ""
 Documentation = "https://jupyterhub-usage-quotas.readthedocs.io/en/latest/"
 Download = ""
 
-# [project.scripts]
-# script = "<package>.__main__:<entrypoint>"
+[project.scripts]
+jupyterhub_usage_quotas = "jupyterhub_usage_quotas.app:main"
 
 # [project.optional-dependencies]
 # dev = []
@@ -114,7 +115,7 @@ post-install-commands = [
 ]
 
 [tool.hatch.envs.default.scripts]
-serve = ["env -C src/jupyterhub_usage_quotas -- fastapi run --port 8080 --host 0.0.0.0"]
+serve = "jupyterhub_usage_quotas"
 
 [tool.hatch.envs.py313]
 python = "3.13"
@@ -123,15 +124,17 @@ python = "3.13"
 python = "3.12"
 
 [tool.hatch.envs.dev]
+inherits = ["default"]
 description = """
 Environment for local development.
 """
 dependencies = [
+    "ipython",
     "pre-commit",
 ]
 
 [tool.hatch.envs.dev.scripts]
-serve = ["env -C src/jupyterhub_usage_quotas -- fastapi dev"]
+serve = "jupyterhub_usage_quotas --config examples/usage_quotas_config.py"
 
 [tool.hatch.envs.install]
 description = """Test the installation the package."""
@@ -192,6 +195,9 @@ description = """Check the static types of the codebase."""
 dependencies = [
     "mypy",
 ]
+
+[tool.mypy]
+ignore_missing_imports = true
 
 [tool.hatch.envs.types.scripts]
 check = "mypy src/jupyterhub_usage_quotas"
