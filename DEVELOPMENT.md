@@ -35,10 +35,12 @@ See [Hatch docs](https://hatch.pypa.io/latest/install/) for a general walkthroug
 
 See the `scripts` in [pyproject.toml](https://github.com/2i2c-org/jupyterhub-usage-quotas/blob/main/pyproject.toml) to see the configured commands available to `hatch run <env>:<command>`.
 
-### Launch local development server
+### Interact with usage quotas library
+
+Run the CLI app with
 
 ```bash
-hatch run dev:serve
+hatch run jupyterhub_usage_quotas --config examples/usage_quotas_config.py
 ```
 
 ### Build/serve documentation
