@@ -1,3 +1,5 @@
+from pathlib import Path
+
 from traitlets import Unicode
 from traitlets.config import Application, Bool
 
@@ -44,16 +46,21 @@ class QuotasApp(Application):
             config_text = self.generate_config_file()
             if isinstance(config_text, bytes):
                 config_text = config_text.decode("utf8")
-            print(f"Writing default config to: {self.config_file}")
+            self.log.info(f"Writing default config to: {self.config_file}")
             with open(self.config_file, mode="w") as f:
                 f.write(config_text)
             return
         if self.config_file:
-            print(f"Loading config file: {self.config_file}")
-            self.load_config_file(self.config_file)
+            if Path(self.config_file).exists():
+                self.load_config_file(self.config_file)
+                self.quota_config = Quotas(parent=self)
+                self.log.info(f"Loaded config file: {self.config_file}")
+            else:
+                self.log.error(f"Config file does not exist: {self.config_file}")
+            return
 
     def start(self):
-        print(f"{self.config}")
+        self.log.debug(f"{self.config}")
 
 
 def main():
