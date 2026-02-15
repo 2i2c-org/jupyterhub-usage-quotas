@@ -1,3 +1,7 @@
+"""
+Traitlets based configuration for jupyterhub_usage_quotas
+"""
+
 import jsonschema
 from traitlets import Bool, Dict, Integer, List, TraitError, Unicode, validate
 from traitlets.config import Configurable

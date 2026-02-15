@@ -49,8 +49,11 @@ Download = ""
 [project.scripts]
 jupyterhub_usage_quotas = "jupyterhub_usage_quotas.app:main"
 
-# [project.optional-dependencies]
-# dev = []
+[project.optional-dependencies]
+dev = [
+    "jupyterhub>=5.0.0",
+    "jupyterhub-kubespawner>=7.0.0",
+]
 
 ################################################################################
 # Tool Configuration
@@ -125,6 +128,7 @@ inherits = ["default"]
 description = """
 Environment for local development.
 """
+features = ["dev"]
 dependencies = [
     "ipython",
     "pre-commit",
