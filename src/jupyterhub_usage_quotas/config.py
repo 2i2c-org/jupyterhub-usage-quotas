@@ -2,11 +2,14 @@
 Traitlets based configuration for jupyterhub_usage_quotas
 """
 
+import copy
+
 import jsonschema
 from traitlets import Bool, Dict, Integer, List, TraitError, Unicode, validate
 from traitlets.config import Configurable
 
-policy_schema = {
+# JSON schema for the scope backup policy for usage quotas
+policy_schema_backup = {
     "type": "object",
     "properties": {
         "resource": {"type": "string"},
@@ -14,13 +17,27 @@ policy_schema = {
             "type": "object",
             "properties": {
                 "value": {"type": "number"},
-                "unit": {"enum": ["GiB-hours"]},
+                "unit": {"enum": ["GiB-hours", "CPU-hours"]},
             },
         },
         "window": {"type": "number"},
     },
     "required": ["resource", "limit", "window"],
+    "additionalProperties": False,
 }
+
+# JSON schema for the usage quota policy
+policy_schema = copy.deepcopy(policy_schema_backup)
+policy_schema["properties"].update(
+    {
+        "scope": {
+            "type": "object",
+            "properties": {"group": {"type": "array", "items": {"type": "string"}}},
+            "additionalProperties": False,
+        }
+    }
+)
+policy_schema["required"].append("scope")
 
 
 class UsageQuotas(Configurable):
@@ -82,6 +99,7 @@ class UsageQuotas(Configurable):
             "empty": Dict(),
             "intersection": Unicode(),
         },
+        default_value={"intersection": "min"},
         help="""
         Set a backup strategy to resolve quotas in the case where the scope of the quota policies are applied to an empty set, or an intersection, i.e. define a default when a user has no or multiple quotas applied.
 
@@ -120,7 +138,7 @@ class UsageQuotas(Configurable):
             raise TraitError(f"Unexpected keys: {extra}")
         if "empty" in strategy.keys():
             try:
-                jsonschema.validate(strategy["empty"], policy_schema)
+                jsonschema.validate(strategy["empty"], policy_schema_backup)
             except jsonschema.ValidationError as e:
                 raise TraitError(e)
         if not strategy["intersection"] in {"min", "max"}:
@@ -164,4 +182,8 @@ class UsageQuotas(Configurable):
         for i, policy_def in enumerate(policies):
             if not isinstance(policy_def, dict):
                 raise TraitError(f"Entry {i} must be a dict, got {type(policy_def)}")
-        return
+            try:
+                jsonschema.validate(policy_def, policy_schema)
+            except jsonschema.ValidationError as e:
+                raise TraitError(e)
+        return policies

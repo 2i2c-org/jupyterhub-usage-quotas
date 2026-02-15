@@ -45,4 +45,14 @@ c.UsageQuotas.scope_backup_strategy = {
 
 c.UsageQuotas.failover_open = True
 
-c.UsageQuotas.policy = {}
+c.UsageQuotas.policy = [
+    {
+        "resource": "memory",
+        "limit": {
+            "value": 5000,
+            "unit": "GiB-hours",
+        },
+        "window": 30,
+        "scope": {"group": ["test-group"]},
+    },
+]

@@ -10,9 +10,7 @@ class QuotasApp(Application):
     name = "jupyterhub_usage_quotas"
     description = "JupyterHub usage UsageQuotas enforcement library."
     examples = """
-    Generate default config file:
-
-        jupyterhub_usage_quotas --generate-config -f /etc/jupyterhub/jupyterhub_config.py
+        jupyterhub_usage_quotas
     """
 
     # Application traits
@@ -45,6 +43,9 @@ class QuotasApp(Application):
 
     def start(self):
         self.log.debug(f"{self.config}")
+        self.log.info(
+            f"Applying usage quota policy: {self.config["UsageQuotas"]["policy"]}"
+        )
 
 
 def main():
