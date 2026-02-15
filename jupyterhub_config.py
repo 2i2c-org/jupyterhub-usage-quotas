@@ -27,14 +27,14 @@ c.QuotasApp.log_datefmt = "%Y-%m-%d %H:%M:%S"
 c.QuotasApp.log_format = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 c.QuotasApp.log_level = "INFO"
 
-c.Quotas.prometheus_usage_metrics = [
+c.UsageQuotas.prometheus_usage_metrics = [
     {"memory": "kube_pod_container_resource_requests{resource='memory'}"},
     {"cpu": "kube_pod_container_resource_requests{resource='cpu'}"},
 ]
 
-c.Quotas.prometheus_scrape_interval = 20
+c.UsageQuotas.prometheus_scrape_interval = 20
 
-c.Quotas.scope_backup_strategy = {
+c.UsageQuotas.scope_backup_strategy = {
     "empty": {
         "resource": "memory",
         "limit": {"value": 500, "unit": "GiB-hours"},
@@ -43,4 +43,6 @@ c.Quotas.scope_backup_strategy = {
     "intersection": "max",
 }
 
-c.Quotas.failover_open = True
+c.UsageQuotas.failover_open = True
+
+c.UsageQuotas.policy = {}

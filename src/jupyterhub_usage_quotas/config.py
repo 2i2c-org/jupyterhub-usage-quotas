@@ -23,10 +23,12 @@ policy_schema = {
 }
 
 
-class Quotas(Configurable):
+class UsageQuotas(Configurable):
     """
-    Configure application settings for the JupyterHub usage quotas mechanism.
+    Configure application settings for the JupyterHub usage quotas system.
     """
+
+    # System config
 
     prometheus_usage_metrics = List(
         Dict(),
@@ -132,3 +134,34 @@ class Quotas(Configurable):
         True,
         help="In the case where the quota system fails, set to True to default to a fail-open (allow all server launches) system or set to False to a fail-closed (deny all server launches) system.",
     ).tag(config=True)
+
+    # Policy config
+
+    policy = List(
+        Dict(),
+        help="""
+        List usage quota policies, including resource, limits, rolling window period and policy scope.
+
+        For example: '5,000 GiB-hours over 30 days for group A', is expressed as
+
+        c.UsageQuotas.policy = [{
+            "resource": "memory",
+            "limit": {
+                "value": 5000,
+                "unit": "GiB-hours",
+            }
+            "window": 30, # days
+            "scope": {
+                "group": ["A"]
+            }
+        }]
+        """,
+    ).tag(config=True)
+
+    @validate("policy")
+    def _validate_policy(self, proposal):
+        policies = proposal["value"]
+        for i, policy_def in enumerate(policies):
+            if not isinstance(policy_def, dict):
+                raise TraitError(f"Entry {i} must be a dict, got {type(policy_def)}")
+        return
