@@ -35,8 +35,6 @@ keywords = ["jupyterhub", "prometheus", "kubernetes", "python"]
 
 # Package dependencies
 dependencies = [
-    "jupyterhub>=5.0.0",
-    "jupyterhub-kubespawner>=7.0.0",
     "jsonschema>=4.26.0",
     "traitlets>=5.14.0",
 ]
@@ -53,7 +51,8 @@ jupyterhub_usage_quotas = "jupyterhub_usage_quotas.app:main"
 
 [project.optional-dependencies]
 dev = [
-    "jupyterhub",
+    "jupyterhub>=5.0.0",
+    "jupyterhub-kubespawner>=7.0.0",
 ]
 
 ################################################################################
@@ -129,6 +128,7 @@ inherits = ["default"]
 description = """
 Environment for local development.
 """
+features = ["dev"]
 dependencies = [
     "ipython",
     "pre-commit",
