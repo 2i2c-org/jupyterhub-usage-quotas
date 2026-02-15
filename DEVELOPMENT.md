@@ -97,7 +97,7 @@ See the `scripts` in [pyproject.toml](https://github.com/2i2c-org/jupyterhub-usa
 Run the CLI app with
 
 ```bash
-hatch run jupyterhub_usage_quotas --config examples/usage_quotas_config.py
+hatch run jupyterhub_usage_quotas --config jupyterhub_config.py
 ```
 
 ### Build/serve documentation
