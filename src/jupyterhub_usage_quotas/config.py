@@ -3,13 +3,16 @@ Traitlets based configuration for jupyterhub_usage_quotas
 """
 
 import copy
+import typing
 
 import jsonschema
 from traitlets import Bool, Dict, Integer, List, TraitError, Unicode, validate
 from traitlets.config import Configurable
 
+Schema = typing.Dict[str, typing.Any]
+
 # JSON schema for the scope backup policy for usage quotas
-policy_schema_backup = {
+policy_schema_backup: Schema = {
     "type": "object",
     "properties": {
         "resource": {"type": "string"},
