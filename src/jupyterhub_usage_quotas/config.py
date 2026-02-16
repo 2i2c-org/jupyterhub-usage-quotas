@@ -2,11 +2,17 @@
 Traitlets based configuration for jupyterhub_usage_quotas
 """
 
+import copy
+import typing
+
 import jsonschema
 from traitlets import Bool, Dict, Integer, List, TraitError, Unicode, validate
 from traitlets.config import Configurable
 
-policy_schema = {
+Schema = typing.Dict[str, typing.Any]
+
+# JSON schema for the scope backup policy for usage quotas
+policy_schema_backup: Schema = {
     "type": "object",
     "properties": {
         "resource": {"type": "string"},
@@ -14,19 +20,35 @@ policy_schema = {
             "type": "object",
             "properties": {
                 "value": {"type": "number"},
-                "unit": {"enum": ["GiB-hours"]},
+                "unit": {"enum": ["GiB-hours", "CPU-hours"]},
             },
         },
         "window": {"type": "number"},
     },
     "required": ["resource", "limit", "window"],
+    "additionalProperties": False,
 }
 
+# JSON schema for the usage quota policy
+policy_schema = copy.deepcopy(policy_schema_backup)
+policy_schema["properties"].update(
+    {
+        "scope": {
+            "type": "object",
+            "properties": {"group": {"type": "array", "items": {"type": "string"}}},
+            "additionalProperties": False,
+        }
+    }
+)
+policy_schema["required"].append("scope")
 
-class Quotas(Configurable):
+
+class UsageQuotas(Configurable):
     """
-    Configure application settings for the JupyterHub usage quotas mechanism.
+    Configure application settings for the JupyterHub usage quotas system.
     """
+
+    # System config
 
     prometheus_usage_metrics = List(
         Dict(),
@@ -80,6 +102,7 @@ class Quotas(Configurable):
             "empty": Dict(),
             "intersection": Unicode(),
         },
+        default_value={"intersection": "min"},
         help="""
         Set a backup strategy to resolve quotas in the case where the scope of the quota policies are applied to an empty set, or an intersection, i.e. define a default when a user has no or multiple quotas applied.
 
@@ -118,7 +141,7 @@ class Quotas(Configurable):
             raise TraitError(f"Unexpected keys: {extra}")
         if "empty" in strategy.keys():
             try:
-                jsonschema.validate(strategy["empty"], policy_schema)
+                jsonschema.validate(strategy["empty"], policy_schema_backup)
             except jsonschema.ValidationError as e:
                 raise TraitError(e)
         if not strategy["intersection"] in {"min", "max"}:
@@ -132,3 +155,38 @@ class Quotas(Configurable):
         True,
         help="In the case where the quota system fails, set to True to default to a fail-open (allow all server launches) system or set to False to a fail-closed (deny all server launches) system.",
     ).tag(config=True)
+
+    # Policy config
+
+    policy = List(
+        Dict(),
+        help="""
+        List usage quota policies, including resource, limits, rolling window period and policy scope.
+
+        For example: '5,000 GiB-hours over 30 days for group A', is expressed as
+
+        c.UsageQuotas.policy = [{
+            "resource": "memory",
+            "limit": {
+                "value": 5000,
+                "unit": "GiB-hours",
+            }
+            "window": 30, # days
+            "scope": {
+                "group": ["A"]
+            }
+        }]
+        """,
+    ).tag(config=True)
+
+    @validate("policy")
+    def _validate_policy(self, proposal):
+        policies = proposal["value"]
+        for i, policy_def in enumerate(policies):
+            if not isinstance(policy_def, dict):
+                raise TraitError(f"Entry {i} must be a dict, got {type(policy_def)}")
+            try:
+                jsonschema.validate(policy_def, policy_schema)
+            except jsonschema.ValidationError as e:
+                raise TraitError(e)
+        return policies
