@@ -3,6 +3,11 @@ Example configuration file for JupyterHub usage quotas.
 """
 
 import socket
+from typing import Any, Optional
+
+from tornado import web
+
+from jupyterhub_usage_quotas.main import UsageQuotaManager
 
 c = get_config()  # noqa
 
@@ -11,7 +16,6 @@ c = get_config()  # noqa
 c.JupyterHub.ip = "127.0.0.1"
 c.JupyterHub.hub_ip = "127.0.0.1"
 c.JupyterHub.authenticator_class = "dummy"
-c.JupyterHub.spawner_class = "kubespawner.KubeSpawner"
 
 # Find private IP address of your local machine that the kubernetes cluster can talk to on your local area network.
 # Graciously used from https://stackoverflow.com/a/166589
@@ -21,20 +25,16 @@ host_ip = s.getsockname()[0]
 s.close()
 c.JupyterHub.hub_connect_ip = host_ip
 
-# Quotas
+# Usage Quotas
 
-c.QuotasApp.log_datefmt = "%Y-%m-%d %H:%M:%S"
-c.QuotasApp.log_format = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-c.QuotasApp.log_level = "INFO"
+c.UsageQuotaManager.prometheus_usage_metrics = {
+    "memory": "kube_pod_container_resource_requests{resource='memory'}",
+    # "cpu": "kube_pod_container_resource_requests{resource='cpu'}"
+}
 
-c.UsageQuotas.prometheus_usage_metrics = [
-    {"memory": "kube_pod_container_resource_requests{resource='memory'}"},
-    {"cpu": "kube_pod_container_resource_requests{resource='cpu'}"},
-]
+c.UsageQuotaManager.prometheus_scrape_interval = 20
 
-c.UsageQuotas.prometheus_scrape_interval = 20
-
-c.UsageQuotas.scope_backup_strategy = {
+c.UsageQuotaManager.scope_backup_strategy = {
     "empty": {
         "resource": "memory",
         "limit": {"value": 500, "unit": "GiB-hours"},
@@ -43,9 +43,9 @@ c.UsageQuotas.scope_backup_strategy = {
     "intersection": "max",
 }
 
-c.UsageQuotas.failover_open = True
+c.UsageQuotaManager.failover_open = True
 
-c.UsageQuotas.policy = [
+c.UsageQuotaManager.policy = [
     {
         "resource": "memory",
         "limit": {
@@ -56,3 +56,34 @@ c.UsageQuotas.policy = [
         "scope": {"group": ["test-group"]},
     },
 ]
+
+# KubeSpawner
+
+c.JupyterHub.spawner_class = "kubespawner.KubeSpawner"
+
+
+class SpawnException(web.HTTPError):
+    """Custom exception that sets jupyterhub_message attribute"""
+
+    def __init__(
+        self,
+        status_code: int = 500,
+        log_message: Optional[str] = None,
+        *args: Any,
+        **kwargs: Any,
+    ):
+        super().__init__(status_code, log_message, *args, **kwargs)
+        self.jupyterhub_message = log_message
+
+
+quota_manager = UsageQuotaManager(config=c)
+
+
+def quota_pre_spawn_hook(spawner):
+    try:
+        quota_manager.enforce(spawner.user.name)
+    except Exception as e:
+        raise SpawnException(log_message=f"{e}")
+
+
+c.KubeSpawner.pre_spawn_hook = quota_pre_spawn_hook
