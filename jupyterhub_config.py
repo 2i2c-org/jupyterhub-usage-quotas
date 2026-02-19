@@ -79,9 +79,9 @@ class SpawnException(web.HTTPError):
 quota_manager = UsageQuotaManager(config=c)
 
 
-def quota_pre_spawn_hook(spawner):
+async def quota_pre_spawn_hook(spawner):
     try:
-        quota_manager.enforce(spawner.user.name)
+        await quota_manager.enforce(spawner.user.name)
     except Exception as e:
         raise SpawnException(log_message=f"{e}")
 
