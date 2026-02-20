@@ -81,9 +81,13 @@ quota_manager = UsageQuotaManager(config=c)
 
 async def quota_pre_spawn_hook(spawner):
     try:
-        await quota_manager.enforce(spawner.user.name)
+        launch_flag = await quota_manager.enforce(spawner.user.name)
     except Exception as e:
         raise SpawnException(log_message=f"{e}")
+    if launch_flag is False:
+        raise SpawnException(
+            log_message="You are over your compute usage quota limit. Please contact your hub admin for assistance."
+        )
 
 
 c.KubeSpawner.pre_spawn_hook = quota_pre_spawn_hook
