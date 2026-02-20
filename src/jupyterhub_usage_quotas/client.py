@@ -1,4 +1,5 @@
 import aiohttp
+from aiohttp import web
 from yarl import URL
 
 
@@ -18,10 +19,8 @@ class PrometheusClient:
         params = {"query": promql}
         try:
             async with session.get(api_url, params=params) as response:
-                print(f"{api_url=}")
-                print(f"{params}")
                 response.raise_for_status()
                 data = await response.json()
                 return data
         except aiohttp.ClientError as e:
-            print(f"Error querying prometheus: {e}")
+            raise web.Response(status=500, text=f"Error querying prometheus: {e}")
