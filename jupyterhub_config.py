@@ -3,11 +3,8 @@ Example configuration file for JupyterHub usage quotas.
 """
 
 import socket
-from typing import Any, Optional
 
-from tornado import web
-
-from jupyterhub_usage_quotas.main import UsageQuotaManager
+from jupyterhub_usage_quotas.main import SpawnException, UsageQuotaManager
 
 c = get_config()  # noqa
 
@@ -60,20 +57,6 @@ c.UsageQuotaManager.policy = [
 # KubeSpawner
 
 c.JupyterHub.spawner_class = "kubespawner.KubeSpawner"
-
-
-class SpawnException(web.HTTPError):
-    """Custom exception that sets jupyterhub_message attribute"""
-
-    def __init__(
-        self,
-        status_code: int = 500,
-        log_message: Optional[str] = None,
-        *args: Any,
-        **kwargs: Any,
-    ):
-        super().__init__(status_code, log_message, *args, **kwargs)
-        self.jupyterhub_message = log_message
 
 
 quota_manager = UsageQuotaManager(config=c)
