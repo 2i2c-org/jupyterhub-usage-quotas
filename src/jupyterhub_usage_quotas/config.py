@@ -43,28 +43,28 @@ policy_schema["properties"].update(
 policy_schema["required"].append("scope")
 
 
-class UsageQuotas(Configurable):
+class UsageQuotaConfig(Configurable):
     """
     Configure application settings for the JupyterHub usage quotas system.
     """
 
     # System config
 
-    prometheus_usage_metrics = List(
-        Dict(),
+    prometheus_url = Unicode(
+        "http://localhost:9090",
+        help="The url of the Prometheus server, usually of the form 'http://<k8s-service-name>.<k8s-namespace>.svc.cluster.local' in a Kubernetes cluster. Defaults to 'http://localhost:9090' for local development if left blank.",
+    ).tag(config=True)
+
+    prometheus_usage_metrics = Dict(
         help="""
-            List of Prometheus metrics to track usage. Each entry must be a dict defining at least one of:
+            Dict of Prometheus metrics to track usage. Must define at least one of:
                 - 'memory': PromQL expression
                 - 'cpu': PromQL expression
             For example:
-                prometheus_usage_metrics = [
-                    {
-                        "memory": "kube_pod_container_resource_requests{resource='memory'}"
-                    },
-                    {
+                prometheus_usage_metrics = {
+                        "memory": "kube_pod_container_resource_requests{resource='memory'}",
                         "cpu" : "kube_pod_container_resource_requests{resource='cpu'}"
                     }
-                ]
         """,
     ).tag(config=True)
 
@@ -74,13 +74,15 @@ class UsageQuotas(Configurable):
         Validate that memory or cpu usage metrics are defined.
         """
         metrics = proposal["value"]
-        for i, metric_def in enumerate(metrics):
-            if not isinstance(metric_def, dict):
-                raise TraitError(f"Entry {i} must be a dict, got {type(metric_def)}")
+        if not isinstance(metrics, dict):
+            raise TraitError(
+                f"Prometheus usage metrics {metrics} must be a dict, got {type(metrics)}"
+            )
 
-            if not {"memory", "cpu"} & metric_def.keys():
+        for metric_def in metrics:
+            if not metric_def in {"memory", "cpu"}:
                 raise TraitError(
-                    f"Entry {i} must define at least one of 'memory' or 'cpu'. Got keys: {list(metric_def.keys())}"
+                    f"Prometheus usage metrics {metrics} must define at least one of 'memory' or 'cpu' keys. Got keys: {list(metrics.keys())}"
                 )
 
         return metrics
@@ -165,7 +167,7 @@ class UsageQuotas(Configurable):
 
         For example: '5,000 GiB-hours over 30 days for group A', is expressed as
 
-        c.UsageQuotas.policy = [{
+        c.UsageQuotaConfig.policy = [{
             "resource": "memory",
             "limit": {
                 "value": 5000,

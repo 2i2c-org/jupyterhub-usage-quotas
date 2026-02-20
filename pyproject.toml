@@ -37,6 +37,7 @@ keywords = ["jupyterhub", "prometheus", "kubernetes", "python"]
 dependencies = [
     "jsonschema>=4.26.0",
     "traitlets>=5.14.0",
+    "requests>=2.32.0",
 ]
 
 [project.urls]
