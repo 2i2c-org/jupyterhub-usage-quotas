@@ -260,3 +260,4 @@ pip-selfcheck.json
 jupyterhub-proxy.pid
 jupyterhub.sqlite
 jupyterhub_cookie_secret
+**token**
