@@ -15,7 +15,7 @@ Schema = typing.Dict[str, typing.Any]
 policy_schema_backup: Schema = {
     "type": "object",
     "properties": {
-        "resource": {"type": "string"},
+        "resource": {"enum": ["memory", "cpu"]},
         "limit": {
             "type": "object",
             "properties": {
@@ -29,7 +29,7 @@ policy_schema_backup: Schema = {
     "additionalProperties": False,
 }
 
-# JSON schema for the usage quota policy
+# Add scope to usage quota policy
 policy_schema = copy.deepcopy(policy_schema_backup)
 policy_schema["properties"].update(
     {
@@ -108,7 +108,7 @@ class UsageQuotaConfig(Configurable):
         help="""
         Set a backup strategy to resolve quotas in the case where the scope of the quota policies are applied to an empty set, or an intersection, i.e. define a default when a user has no or multiple quotas applied.
 
-        In the case where no quota is applied ('empty'), we can supply a default quota policy or leave this as None for unlimited quotas; and where multiple quotas are applied, we can apply either the `min` or `max`.
+        In the case where no quota is applied ('empty'), we can supply a default quota policy or leave this as None for unlimited quotas; and where multiple quotas are applied, we can apply either the `min`, `max` or `sum`.
 
         For example, 'Apply a default memory quota of 500 GiB-hours over a rolling 7 day window for users with no groups, and apply the maximum quota available for users with multiple groups.' is expressed as:
 
@@ -146,9 +146,9 @@ class UsageQuotaConfig(Configurable):
                 jsonschema.validate(strategy["empty"], policy_schema_backup)
             except jsonschema.ValidationError as e:
                 raise TraitError(e)
-        if not strategy["intersection"] in {"min", "max"}:
+        if not strategy["intersection"] in {"min", "max", "sum"}:
             raise TraitError(
-                f"Backup strategy for 'intersection' scope must be either 'min' or 'max'. Got value: {strategy['intersection']}"
+                f"Backup strategy for 'intersection' scope must be either 'min', 'max' or 'sum'. Got value: {strategy['intersection']}"
             )
 
         return strategy
