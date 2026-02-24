@@ -7,7 +7,7 @@ import typing
 
 import jsonschema
 from traitlets import Bool, Dict, Integer, List, TraitError, Unicode, validate
-from traitlets.config import Configurable
+from traitlets.config import LoggingConfigurable
 
 Schema = typing.Dict[str, typing.Any]
 
@@ -43,7 +43,7 @@ policy_schema["properties"].update(
 policy_schema["required"].append("scope")
 
 
-class UsageQuotaConfig(Configurable):
+class UsageQuotaConfig(LoggingConfigurable):
     """
     Configure application settings for the JupyterHub usage quotas system.
     """
@@ -51,7 +51,7 @@ class UsageQuotaConfig(Configurable):
     # System config
 
     prometheus_url = Unicode(
-        "http://localhost:9090",
+        "http://127.0.0.1:9090",
         help="The url of the Prometheus server, usually of the form 'http://<k8s-service-name>.<k8s-namespace>.svc.cluster.local' in a Kubernetes cluster. Defaults to 'http://localhost:9090' for local development if left blank.",
     ).tag(config=True)
 
