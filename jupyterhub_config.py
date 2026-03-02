@@ -26,7 +26,7 @@ s.close()
 c.JupyterHub.hub_connect_ip = host_ip
 
 # Initialize with n_users, with 1 user per group
-n_users = 2
+n_users = 3
 c.Authenticator.allowed_users = {f"user-{i}" for i in range(n_users)}
 c.JupyterHub.load_groups = {
     f"group-{i}": dict(users=[f"user-{i}"]) for i in range(n_users)
@@ -76,7 +76,7 @@ c.UsageQuotaManager.scope_backup_strategy = {
         "limit": {"value": 500, "unit": "GiB-hours"},
         "window": 7,
     },
-    "intersection": "max",
+    "intersection": "sum",
 }
 
 c.UsageQuotaManager.failover_open = True
@@ -89,7 +89,16 @@ c.UsageQuotaManager.policy = [
             "unit": "GiB-hours",
         },
         "window": 30,
-        "scope": {"group": ["test-group"]},
+        "scope": {"group": ["group-0", "group-1"]},
+    },
+    {
+        "resource": "memory",
+        "limit": {
+            "value": 200,
+            "unit": "GiB-hours",
+        },
+        "window": 30,
+        "scope": {"group": ["group-1"]},
     },
 ]
 
@@ -105,8 +114,9 @@ async def quota_pre_spawn_hook(spawner):
         launch_flag = await quota_manager.enforce(spawner.user.name)
     except Exception as e:
         raise SpawnException(
-            log_message=f"{e}"
-        )  # TODO: probably want to restrict what is shown here
+            # log_message="Spawn failed occurred due to quota system error. Please contact your hub admin for assistance."
+            log_message=f"{e}"  # TODO: testing only
+        )
     if launch_flag is False:
         raise SpawnException(
             log_message="You are over your compute usage quota limit. Please contact your hub admin for assistance."
