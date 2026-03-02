@@ -41,7 +41,7 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage = ""
+Homepage = "https://github.com/2i2c-org/jupyterhub-usage-quotas"
 "Source Code" = "https://github.com/2i2c-org/jupyterhub-usage-quotas"
 "Bug Tracker" = "https://github.com/2i2c-org/jupyterhub-usage-quotas/issues"
 Documentation = "https://jupyterhub-usage-quotas.readthedocs.io/en/latest/"
