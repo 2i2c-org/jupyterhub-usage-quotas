@@ -1,0 +1,43 @@
+name: Release
+
+on:
+  push:
+    tags:
+    - 'v?[0-9]+.[0-9]+.[0-9]+'
+    - 'v?[0-9]+.[0-9]+.[0-9]+(a|b|rc|post|dev)[0-9]+'
+
+jobs:
+  prerequisites:
+    uses: ./.github/workflows/test.yml
+  build_package:
+      name: Build the package
+      runs-on: ubuntu-latest
+      permissions:
+        contents: write
+      environment:
+        name: pypi
+        url: https://pypi.org/project/jupyterhub_usage_quotas/
+      steps:
+      - uses: actions/checkout@v5
+      - name: Setup Python
+        uses: actions/setup-python@v6
+        with:
+            python-version: "3.14"
+      - name: Upgrade pip, install Hatch, and check Hatch version
+        run: |
+            pip install --upgrade pip
+            pip install --upgrade hatch
+            hatch --version
+      - name: Build artifacts
+        run: hatch build -c
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+      - name: GH release
+        uses: softprops/action-gh-release@v2
+        with:
+          body: >
+            Please see
+            https://github.com/${{ github.repository }}/blob/${{ github.ref_name }}/CHANGELOG.md
+            for the full release notes.
+          draft: false
+          prerelease: false

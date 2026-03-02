@@ -24,7 +24,7 @@ readme = {"file" = "README.md", "content-type" = "text/markdown"}
 # Please consult https://pypi.org/classifiers/ for a full list.
 classifiers = [
     "Development Status :: 2 - Pre-Alpha",
-    "Intended Audience :: Science/Research",
+    "Intended Audience :: System Administrators",
     "License :: OSI Approved :: BSD License",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3 :: Only",
@@ -41,11 +41,10 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage = ""
+"Homepage" = "https://github.com/2i2c-org/jupyterhub-usage-quotas"
 "Source Code" = "https://github.com/2i2c-org/jupyterhub-usage-quotas"
 "Bug Tracker" = "https://github.com/2i2c-org/jupyterhub-usage-quotas/issues"
-Documentation = "https://jupyterhub-usage-quotas.readthedocs.io/en/latest/"
-Download = ""
+"Documentation" = "https://jupyterhub-usage-quotas.readthedocs.io/en/latest/"
 
 [project.scripts]
 jupyterhub_usage_quotas = "jupyterhub_usage_quotas.app:main"
@@ -68,10 +67,13 @@ only-packages = true
 packages = ["src/jupyterhub_usage_quotas"]
 
 # [tool.hatch.build.hooks.vcs]
-# version-file = "src/jupyterhub_usage_quotas/_version.py"
+version-file = "src/jupyterhub_usage_quotas/_version.py"
 
 [tool.hatch.version]
 source = "vcs"
+
+[tool.hatch.version.raw-options]
+version_scheme = "no-guess-dev"
 
 # The default isort output conflicts with black autoformatting.
 # Tell isort to behave nicely with black
@@ -81,7 +83,7 @@ source = "vcs"
 profile = "black"
 
 [tool.pydoclint]
-style = "google"  # TODO: Other styles are possible here, like 'numpy'
+style = "google"
 arg-type-hints-in-docstring = false
 check-return-types = false
 check-yield-types = false
