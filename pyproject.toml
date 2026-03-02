@@ -68,10 +68,13 @@ only-packages = true
 packages = ["src/jupyterhub_usage_quotas"]
 
 # [tool.hatch.build.hooks.vcs]
-# version-file = "src/jupyterhub_usage_quotas/_version.py"
+version-file = "src/jupyterhub_usage_quotas/_version.py"
 
 [tool.hatch.version]
 source = "vcs"
+
+[tool.hatch.version.raw-options]
+version_scheme = "no-guess-dev"
 
 # The default isort output conflicts with black autoformatting.
 # Tell isort to behave nicely with black
@@ -81,7 +84,7 @@ source = "vcs"
 profile = "black"
 
 [tool.pydoclint]
-style = "google"  # TODO: Other styles are possible here, like 'numpy'
+style = "google"
 arg-type-hints-in-docstring = false
 check-return-types = false
 check-yield-types = false
