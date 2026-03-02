@@ -16,7 +16,7 @@ jobs:
         contents: write
       environment:
         name: pypi
-        url: https://github.com/2i2c-org/jupyterhub-usage-quotas
+        url: https://pypi.org/project/jupyterhub_usage_quotas/
       steps:
       - uses: actions/checkout@v5
       - name: Setup Python
