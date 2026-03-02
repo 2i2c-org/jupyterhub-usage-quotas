@@ -9,7 +9,7 @@ from jupyterhub_usage_quotas.config import UsageQuotaConfig, policy_schema_backu
 
 class UsageQuotaManager(UsageQuotaConfig):
 
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs) -> None:
         super().__init__(**kwargs)
         hub_ip = self.config.get("JupyterHub", {}).get("ip", "127.0.0.1")
         hub_port = self.config.get("JupyterHub", {}).get("port", 8000)
@@ -20,10 +20,12 @@ class UsageQuotaManager(UsageQuotaConfig):
         """
         Resolve quota policy for users with no group memberships.
         """
-        policy_empty = self.scope_backup_strategy["empty"]
+        policy_empty: dict
+        if isinstance(self.scope_backup_strategy["empty"], dict):
+            policy_empty = self.scope_backup_strategy["empty"]
         return policy_empty
 
-    def resolve_intersection(self, policies: list(dict), operator: str) -> dict:
+    def resolve_intersection(self, policies: list[dict], operator: str) -> dict:
         """
         Resolve quota policy for users with multiple group memberships.
         """
@@ -55,7 +57,7 @@ class UsageQuotaManager(UsageQuotaConfig):
         data_user = await self.hub_api_client.query("users")
         entry_user = next(filter(lambda x: x["name"] == user, data_user), None)
         groups_user = entry_user["groups"]
-        self.log.info(f"User {user} is a member of groups: {groups_user=}")
+        self.log.info(f"User {user} is a member of groups: {groups_user}")
         policies = [
             p for p in self.policy if set(groups_user) <= set(p["scope"]["group"])
         ]
@@ -94,6 +96,6 @@ class SpawnException(web.HTTPError):
         log_message: Optional[str] = None,
         *args: Any,
         **kwargs: Any,
-    ):
+    ) -> None:
         super().__init__(status_code, log_message, *args, **kwargs)
         self.jupyterhub_message = log_message
