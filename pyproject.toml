@@ -24,7 +24,7 @@ readme = {"file" = "README.md", "content-type" = "text/markdown"}
 # Please consult https://pypi.org/classifiers/ for a full list.
 classifiers = [
     "Development Status :: 2 - Pre-Alpha",
-    "Intended Audience :: Science/Research",
+    "Intended Audience :: System Administrators",
     "License :: OSI Approved :: BSD License",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3 :: Only",
@@ -41,11 +41,11 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/2i2c-org/jupyterhub-usage-quotas"
+"Homepage" = "https://github.com/2i2c-org/jupyterhub-usage-quotas"
 "Source Code" = "https://github.com/2i2c-org/jupyterhub-usage-quotas"
 "Bug Tracker" = "https://github.com/2i2c-org/jupyterhub-usage-quotas/issues"
-Documentation = "https://jupyterhub-usage-quotas.readthedocs.io/en/latest/"
-Download = ""
+"Documentation" = "https://jupyterhub-usage-quotas.readthedocs.io/en/latest/"
+"Download" = ""
 
 [project.scripts]
 jupyterhub_usage_quotas = "jupyterhub_usage_quotas.app:main"
