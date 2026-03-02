@@ -33,26 +33,36 @@ class UsageQuotaManager(UsageQuotaConfig):
                 elif operator == "sum":
                     limit = sum(limit_values)
                 else:
-                    print("Operator not recognized.")
+                    self.log.info("Operator not recognized.")
                 p["limit"]["value"] = limit
                 policy_intersection.update(p)
         return policy_intersection
 
     async def resolve_policy(self, user):
         """
-        Resolve which quota policy applies to the user.
+        Resolve which group quota policy applies to the user.
         """
         data_user = await self.hub_api_client.query("users")
         entry_user = next(filter(lambda x: x["name"] == user, data_user), None)
         groups_user = entry_user["groups"]
+        self.log.info(f"{groups_user=}")
         policies = [
             p for p in self.policy if set(groups_user) <= set(p["scope"]["group"])
         ]
-        test = self.resolve_intersection(
-            policies, self.scope_backup_strategy["intersection"]
-        )
-        print(f"{test=}")
-        return groups_user
+        self.log.info(f"{policies=}")
+        # test = self.resolve_intersection(
+        #     policies, self.scope_backup_strategy["intersection"]
+        # )
+        if len(policies) == 0:
+            policy = {"policy": "empty"}  # TODO: apply logic for empty set
+        elif len(policies) >= 1:
+            # TODO: apply logic for intersection
+            policy = self.resolve_intersection(
+                policies, self.scope_backup_strategy["intersection"]
+            )
+        else:
+            policy = policies[0]
+        return policy
 
     async def enforce(self, user):
         usage_metric = self.prometheus_usage_metrics["memory"]
@@ -60,11 +70,11 @@ class UsageQuotaManager(UsageQuotaConfig):
         repl = rf"\1, pod='jupyter-{user}'\2"
         promql = re.sub(pattern, repl, usage_metric)
         data_prometheus = await self.prometheus_client.query(promql)
-        print(f"{data_prometheus=}")
+        self.log.info(f"{data_prometheus=}")
 
         # TODO: apply quota logic
-        data_user = await self.resolve_policy(user)
-        print(f"{data_user}")
+        policy = await self.resolve_policy(user)
+        self.log.info(f"{policy=}")
 
         return True
 
