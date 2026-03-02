@@ -45,7 +45,6 @@ dependencies = [
 "Source Code" = "https://github.com/2i2c-org/jupyterhub-usage-quotas"
 "Bug Tracker" = "https://github.com/2i2c-org/jupyterhub-usage-quotas/issues"
 "Documentation" = "https://jupyterhub-usage-quotas.readthedocs.io/en/latest/"
-"Download" = ""
 
 [project.scripts]
 jupyterhub_usage_quotas = "jupyterhub_usage_quotas.app:main"
