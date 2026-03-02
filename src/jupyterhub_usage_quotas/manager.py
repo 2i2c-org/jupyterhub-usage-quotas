@@ -16,7 +16,17 @@ class UsageQuotaManager(UsageQuotaConfig):
         self.hub_api_client = HubAPIClient(hub_url=f"http://{hub_ip}:{hub_port}")
         self.prometheus_client = PrometheusClient(self.prometheus_url)
 
+    def resolve_empty(self) -> dict:
+        """
+        Resolve quota policy for users with no group memberships.
+        """
+        policy_empty = self.scope_backup_strategy["empty"]
+        return policy_empty
+
     def resolve_intersection(self, policies: list(dict), operator: str) -> dict:
+        """
+        Resolve quota policy for users with multiple group memberships.
+        """
         #  TODO: add logic to match other required keys, e.g. units
         resource_keys = policy_schema_backup["properties"]["resource"]["enum"]
         policy_intersection = {}
@@ -45,18 +55,14 @@ class UsageQuotaManager(UsageQuotaConfig):
         data_user = await self.hub_api_client.query("users")
         entry_user = next(filter(lambda x: x["name"] == user, data_user), None)
         groups_user = entry_user["groups"]
-        self.log.info(f"{groups_user=}")
+        self.log.info(f"User {user} is a member of groups: {groups_user=}")
         policies = [
             p for p in self.policy if set(groups_user) <= set(p["scope"]["group"])
         ]
         self.log.info(f"{policies=}")
-        # test = self.resolve_intersection(
-        #     policies, self.scope_backup_strategy["intersection"]
-        # )
         if len(policies) == 0:
-            policy = {"policy": "empty"}  # TODO: apply logic for empty set
+            policy = self.resolve_empty()
         elif len(policies) >= 1:
-            # TODO: apply logic for intersection
             policy = self.resolve_intersection(
                 policies, self.scope_backup_strategy["intersection"]
             )
