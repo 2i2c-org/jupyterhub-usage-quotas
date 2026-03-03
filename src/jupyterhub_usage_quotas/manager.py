@@ -1,23 +1,101 @@
 import re
+from typing import Any, Optional
 
-from jupyterhub_usage_quotas.client import PrometheusClient
-from jupyterhub_usage_quotas.config import UsageQuotaConfig
+from tornado import web
+
+from jupyterhub_usage_quotas.client import HubAPIClient, PrometheusClient
+from jupyterhub_usage_quotas.config import UsageQuotaConfig, policy_schema_backup
 
 
 class UsageQuotaManager(UsageQuotaConfig):
 
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs) -> None:
         super().__init__(**kwargs)
+        hub_ip = self.config.get("JupyterHub", {}).get("ip", "127.0.0.1")
+        hub_port = self.config.get("JupyterHub", {}).get("port", 8000)
+        self.hub_api_client = HubAPIClient(hub_url=f"http://{hub_ip}:{hub_port}")
         self.prometheus_client = PrometheusClient(self.prometheus_url)
+
+    def resolve_empty(self) -> dict:
+        """
+        Resolve quota policy for users with no group memberships.
+        """
+        policy_empty: dict
+        if isinstance(self.scope_backup_strategy["empty"], dict):
+            policy_empty = self.scope_backup_strategy["empty"]
+        return policy_empty
+
+    def resolve_intersection(self, policies: list[dict], operator: str) -> dict:
+        """
+        Resolve quota policy for users with multiple group memberships.
+        """
+        #  TODO: add logic to match other required keys, e.g. units
+        resource_keys = policy_schema_backup["properties"]["resource"]["enum"]
+        policy_intersection = {}
+        for resource in resource_keys:
+            limit_values = []
+            for p in policies:
+                if p["resource"] == resource:
+                    limit_values.append(p["limit"]["value"])
+            if limit_values:
+                if operator == "min":
+                    limit = min(limit_values)
+                elif operator == "max":
+                    limit = max(limit_values)
+                elif operator == "sum":
+                    limit = sum(limit_values)
+                else:
+                    self.log.info("Operator not recognized.")
+                p["limit"]["value"] = limit
+                policy_intersection.update(p)
+        return policy_intersection
+
+    async def resolve_policy(self, user):
+        """
+        Resolve which group quota policy applies to the user.
+        """
+        data_user = await self.hub_api_client.query("users")
+        entry_user = next(filter(lambda x: x["name"] == user, data_user), None)
+        groups_user = entry_user["groups"]
+        self.log.info(f"User {user} is a member of groups: {groups_user}")
+        policies = [
+            p for p in self.policy if set(groups_user) <= set(p["scope"]["group"])
+        ]
+        self.log.info(f"{policies=}")
+        if len(policies) == 0:
+            policy = self.resolve_empty()
+        elif len(policies) >= 1:
+            policy = self.resolve_intersection(
+                policies, self.scope_backup_strategy["intersection"]
+            )
+        else:
+            policy = policies[0]
+        return policy
 
     async def enforce(self, user):
         usage_metric = self.prometheus_usage_metrics["memory"]
         pattern = r"(\{.*?)(\})"
         repl = rf"\1, pod='jupyter-{user}'\2"
         promql = re.sub(pattern, repl, usage_metric)
-        data = await self.prometheus_client.query(promql)
-        print(f"{data=}")
+        data_prometheus = await self.prometheus_client.query(promql)
+        self.log.info(f"{data_prometheus=}")
 
         # TODO: apply quota logic
+        policy = await self.resolve_policy(user)
+        self.log.info(f"{policy=}")
 
         return True
+
+
+class SpawnException(web.HTTPError):
+    """Custom exception that sets jupyterhub_message attribute"""
+
+    def __init__(
+        self,
+        status_code: int = 500,
+        log_message: Optional[str] = None,
+        *args: Any,
+        **kwargs: Any,
+    ) -> None:
+        super().__init__(status_code, log_message, *args, **kwargs)
+        self.jupyterhub_message = log_message
