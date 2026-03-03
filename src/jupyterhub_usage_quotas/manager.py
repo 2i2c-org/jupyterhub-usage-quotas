@@ -48,7 +48,7 @@ class UsageQuotaManager(UsageQuotaConfig):
 
     async def resolve_policy(self, user) -> list:
         """
-        Resolve which group quota policy applies to the user.
+        Resolve and merge group quota policies that apply to the user.
 
         Example 1 - empty: Backup policy applies to users who are out of scope of policy definitions.
 
@@ -65,14 +65,14 @@ class UsageQuotaManager(UsageQuotaConfig):
         policies = [
             p for p in self.policy if set(groups_user) <= set(p["scope"]["group"])
         ]
-        # Group policies with common keys, e.g. the same resources and rolling windows.
+        # Group policies with common keys together, e.g. the same resources and rolling windows.
         grouped = defaultdict(list)
         for p in policies:
             key = (
                 p["resource"],
                 p["limit"][
                     "unit"
-                ],  # TODO: Add support for aggregating resource units, e.g. GiB and MiB-hours.
+                ],  # TODO: Add support for aggregating different resource units, e.g. GiB and MiB-hours.
                 p["window"],
             )
             grouped[key].append(p)
