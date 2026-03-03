@@ -1,10 +1,12 @@
 import re
+from collections import defaultdict
+from copy import deepcopy
 from typing import Any, Optional
 
 from tornado import web
 
 from jupyterhub_usage_quotas.client import HubAPIClient, PrometheusClient
-from jupyterhub_usage_quotas.config import UsageQuotaConfig, policy_schema_backup
+from jupyterhub_usage_quotas.config import UsageQuotaConfig
 
 
 class UsageQuotaManager(UsageQuotaConfig):
@@ -28,27 +30,64 @@ class UsageQuotaManager(UsageQuotaConfig):
     def resolve_intersection(self, policies: list[dict], operator: str) -> dict:
         """
         Resolve quota policy for users with multiple group memberships.
+
+        Apply min/max/sum operators to merge policies sharing the same resource over the same rolling window for the same groups, otherwise return applicable quota policies.
+
+        Example 1: Policy A limits 30 memory hours over the last 30 days to group 1, policy B limits 60 memory hours over the last 30 days to group 1. The policy backup strategy specifies the 'max' operator, therefore the policy of max(30, 60) = 60 memory hours over the last 30 days applies to group 1.
+
+        Example 2:  Policy A limits 30 memory hours over the last 30 days to group 1, policy B limits 7 memory hours over the last 7 days to group 1. Both quota policies are returned (and eventually applied).
+
+        TODO: Add support for aggregating resource units, e.g. GiB and MiB-hours.
         """
-        #  TODO: add logic to match other required keys, e.g. units
-        resource_keys = policy_schema_backup["properties"]["resource"]["enum"]
-        policy_intersection = {}
-        for resource in resource_keys:
-            limit_values = []
-            for p in policies:
-                if p["resource"] == resource:
-                    limit_values.append(p["limit"]["value"])
-            if limit_values:
-                if operator == "min":
-                    limit = min(limit_values)
-                elif operator == "max":
-                    limit = max(limit_values)
-                elif operator == "sum":
-                    limit = sum(limit_values)
-                else:
-                    self.log.info("Operator not recognized.")
-                p["limit"]["value"] = limit
-                policy_intersection.update(p)
-        return policy_intersection
+
+        grouped = defaultdict(list)
+
+        for p in policies:
+            key = (
+                p["resource"],
+                p["limit"]["unit"],
+                p["window"],
+            )
+            grouped[key].append(p)
+
+        merged = []
+
+        for (resource, unit, window), group in grouped.items():
+
+            if len(group) == 1:
+                merged.append(deepcopy(group[0]))
+                continue
+
+            values = [p["limit"]["value"] for p in group]
+
+            if operator == "min":
+                combined_value = min(values)
+            elif operator == "max":
+                combined_value = max(values)
+            elif operator == "sum":
+                combined_value = sum(values)
+            else:
+                raise ValueError(
+                    f"Operator must be one of: min, max, sum, got {operator}"
+                )
+
+            merged_groups = set()
+            for p in group:
+                merged_groups.update(p["scope"].get("group", []))
+
+            merged.append(
+                {
+                    "resource": resource,
+                    "limit": {
+                        "value": combined_value,
+                        "unit": unit,
+                    },
+                    "window": window,
+                    "scope": {"group": sorted(merged_groups)},
+                }
+            )
+
+        return merged
 
     async def resolve_policy(self, user):
         """
