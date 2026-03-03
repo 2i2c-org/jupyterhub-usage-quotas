@@ -58,6 +58,7 @@ class UsageQuotaManager(UsageQuotaConfig):
         """
         data_user = await self.hub_api_client.query("users")
         entry_user = next(filter(lambda x: x["name"] == user, data_user), None)
+        assert isinstance(entry_user, dict)
         groups_user = entry_user["groups"]
         self.log.info(
             f"User {user} is a member of quota policy scope groups: {groups_user}"
