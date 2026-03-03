@@ -1,6 +1,5 @@
 import re
 from collections import defaultdict
-from copy import deepcopy
 from typing import Any, Optional
 
 from tornado import web
@@ -18,98 +17,94 @@ class UsageQuotaManager(UsageQuotaConfig):
         self.hub_api_client = HubAPIClient(hub_url=f"http://{hub_ip}:{hub_port}")
         self.prometheus_client = PrometheusClient(self.prometheus_url)
 
-    def resolve_empty(self) -> dict:
+    def resolve_empty(self) -> list:
         """
         Resolve quota policy for users with no group memberships.
         """
-        policy_empty: dict
+        policy_empty: list = []
         if isinstance(self.scope_backup_strategy["empty"], dict):
-            policy_empty = self.scope_backup_strategy["empty"]
+            policy_empty.append(self.scope_backup_strategy["empty"])
         return policy_empty
 
-    def resolve_intersection(self, policies: list[dict], operator: str) -> dict:
+    def resolve_intersection(self, values: list[dict], operator: str) -> list:
         """
         Resolve quota policy for users with multiple group memberships.
 
-        Apply min/max/sum operators to merge policies sharing the same resource over the same rolling window for the same groups, otherwise return applicable quota policies.
-
-        Example 1: Policy A limits 30 memory hours over the last 30 days to group 1, policy B limits 60 memory hours over the last 30 days to group 1. The policy backup strategy specifies the 'max' operator, therefore the policy of max(30, 60) = 60 memory hours over the last 30 days applies to group 1.
-
-        Example 2:  Policy A limits 30 memory hours over the last 30 days to group 1, policy B limits 7 memory hours over the last 7 days to group 1. Both quota policies are returned (and eventually applied).
-
-        TODO: Add support for aggregating resource units, e.g. GiB and MiB-hours.
+        Apply min/max/sum operators to merge policies sharing the same resource over the same rolling window for the same groups.
         """
 
-        grouped = defaultdict(list)
+        limits = [v["limit"]["value"] for v in values]
 
+        if operator == "min":
+            combined_value = min(limits)
+        elif operator == "max":
+            combined_value = max(limits)
+        elif operator == "sum":
+            combined_value = sum(limits)
+        else:
+            raise ValueError(f"Operator must be one of: min, max, sum, got {operator}")
+
+        return combined_value
+
+    async def resolve_policy(self, user) -> list:
+        """
+        Resolve which group quota policy applies to the user.
+
+        Example 1 - empty: Backup policy applies to users who are out of scope of policy definitions.
+
+        Example 2 - intersection: Policy A limits 30 memory hours over the last 30 days to group 1, policy B limits 60 memory hours over the last 30 days to group 1. The policy backup strategy specifies the 'max' operator, therefore the policy of max(30, 60) = 60 memory hours over the last 30 days applies to group 1.
+
+        Example 3 - multiple:  Policy A limits 30 memory hours over the last 30 days to group 1, policy B limits 7 memory hours over the last 7 days to group 1. Both quota policies are returned (and eventually applied).
+        """
+        data_user = await self.hub_api_client.query("users")
+        entry_user = next(filter(lambda x: x["name"] == user, data_user), None)
+        groups_user = entry_user["groups"]
+        self.log.info(
+            f"User {user} is a member of quota policy scope groups: {groups_user}"
+        )
+        policies = [
+            p for p in self.policy if set(groups_user) <= set(p["scope"]["group"])
+        ]
+        # Group policies with common keys, e.g. the same resources and rolling windows.
+        grouped = defaultdict(list)
         for p in policies:
             key = (
                 p["resource"],
-                p["limit"]["unit"],
+                p["limit"][
+                    "unit"
+                ],  # TODO: Add support for aggregating resource units, e.g. GiB and MiB-hours.
                 p["window"],
             )
             grouped[key].append(p)
 
         merged = []
-
-        for (resource, unit, window), group in grouped.items():
-
-            if len(group) == 1:
-                merged.append(deepcopy(group[0]))
-                continue
-
-            values = [p["limit"]["value"] for p in group]
-
-            if operator == "min":
-                combined_value = min(values)
-            elif operator == "max":
-                combined_value = max(values)
-            elif operator == "sum":
-                combined_value = sum(values)
-            else:
-                raise ValueError(
-                    f"Operator must be one of: min, max, sum, got {operator}"
-                )
-
-            merged_groups = set()
-            for p in group:
-                merged_groups.update(p["scope"].get("group", []))
-
-            merged.append(
-                {
-                    "resource": resource,
-                    "limit": {
-                        "value": combined_value,
-                        "unit": unit,
-                    },
-                    "window": window,
-                    "scope": {"group": sorted(merged_groups)},
-                }
-            )
-
-        return merged
-
-    async def resolve_policy(self, user):
-        """
-        Resolve which group quota policy applies to the user.
-        """
-        data_user = await self.hub_api_client.query("users")
-        entry_user = next(filter(lambda x: x["name"] == user, data_user), None)
-        groups_user = entry_user["groups"]
-        self.log.info(f"User {user} is a member of groups: {groups_user}")
-        policies = [
-            p for p in self.policy if set(groups_user) <= set(p["scope"]["group"])
-        ]
-        self.log.info(f"{policies=}")
-        if len(policies) == 0:
-            policy = self.resolve_empty()
+        if len(policies) == 1:
+            self.log.debug("Resolve single policy")
+            merged.append(next(iter(grouped.values()))[0])
+        elif len(policies) == 0:
+            self.log.debug("Resolve no policy")
+            merged = self.resolve_empty()
         elif len(policies) >= 1:
-            policy = self.resolve_intersection(
-                policies, self.scope_backup_strategy["intersection"]
-            )
-        else:
-            policy = policies[0]
-        return policy
+            self.log.debug("Resolve multiple policies")
+            for (resource, unit, window), values in grouped.items():
+                combined_value = self.resolve_intersection(
+                    values, self.scope_backup_strategy["intersection"]
+                )
+                merged_groups = set()
+                for v in values:
+                    merged_groups.update(v["scope"].get("group", []))
+                merged.append(
+                    {
+                        "resource": resource,
+                        "limit": {
+                            "value": combined_value,
+                            "unit": unit,
+                        },
+                        "window": window,
+                        "scope": {"group": sorted(merged_groups)},
+                    }
+                )
+        return merged
 
     async def enforce(self, user):
         usage_metric = self.prometheus_usage_metrics["memory"]
@@ -121,7 +116,7 @@ class UsageQuotaManager(UsageQuotaConfig):
 
         # TODO: apply quota logic
         policy = await self.resolve_policy(user)
-        self.log.info(f"{policy=}")
+        self.log.info(f"Quota policy applied: {policy}")
 
         return True
 
