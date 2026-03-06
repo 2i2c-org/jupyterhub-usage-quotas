@@ -37,7 +37,7 @@ async def test_resolve_policy_single(mock_hub_client):
 
     quota_manager = UsageQuotaManager(config=c)
     quota_manager.hub_api_client = mock_hub_client
-    merged = await quota_manager.resolve_policy("user-0")
+    merged = quota_manager.resolve_policy("user-0")
     assert merged == quota_manager.policy
 
 
@@ -69,7 +69,7 @@ async def test_resolve_policy_multiple(mock_hub_client):
 
     quota_manager = UsageQuotaManager(config=c)
     quota_manager.hub_api_client = mock_hub_client
-    merged = await quota_manager.resolve_policy("user-1")
+    merged = quota_manager.resolve_policy("user-1")
     assert merged == quota_manager.policy
 
 
@@ -91,7 +91,7 @@ async def test_resolve_policy_empty(mock_hub_client):
     quota_manager.resolve_empty = MagicMock(
         return_value=c.UsageQuotaManager.scope_backup_strategy["empty"]
     )
-    merged = await quota_manager.resolve_policy("user-2")
+    merged = quota_manager.resolve_policy("user-2")
     assert merged == quota_manager.scope_backup_strategy["empty"]
 
 
@@ -131,7 +131,7 @@ async def test_resolve_policy_intersection(mock_hub_client, operator):
     )
     quota_manager = UsageQuotaManager(config=c)
     quota_manager.hub_api_client = mock_hub_client
-    merged = await quota_manager.resolve_policy("user-3")
+    merged = quota_manager.resolve_policy("user-3")
     logger.debug(f"{merged=}")
     logger.debug(f"{operator=}")
     if operator == "min":

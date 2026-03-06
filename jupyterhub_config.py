@@ -2,8 +2,6 @@
 Example configuration file for JupyterHub usage quotas.
 """
 
-import pathlib
-import secrets
 import socket
 
 from jupyterhub_usage_quotas.manager import SpawnException, UsageQuotaManager
@@ -33,34 +31,6 @@ c.JupyterHub.load_groups = {
 }
 c.Authenticator.admin_users = {"admin"}
 
-# Roles and services for local development and testing
-c.JupyterHub.load_roles = [
-    {
-        "name": "usage-quotas-role",
-        "scopes": [
-            "users",
-        ],
-        "services": ["usage-quotas-service"],
-    },
-]
-
-here = pathlib.Path(__file__).parent
-token_file = here.joinpath("api_token")
-if token_file.exists():
-    with token_file.open("r") as f:
-        token = f.read()
-else:
-    token = secrets.token_hex(16)
-    with token_file.open("w") as f:
-        f.write(token)
-
-c.JupyterHub.services = [
-    {
-        "name": "usage-quotas-service",
-        "api_token": token,
-    }
-]
-
 # Usage Quotas
 
 c.UsageQuotaManager.prometheus_usage_metrics = {
@@ -76,7 +46,7 @@ c.UsageQuotaManager.scope_backup_strategy = {
         "limit": {"value": 500, "unit": "GiB-hours"},
         "window": 7,
     },
-    "intersection": "sum",
+    "intersection": "max",
 }
 
 c.UsageQuotaManager.failover_open = True
@@ -94,10 +64,10 @@ c.UsageQuotaManager.policy = [
     {
         "resource": "memory",
         "limit": {
-            "value": 200,
+            "value": 30,
             "unit": "GiB-hours",
         },
-        "window": 30,
+        "window": 7,
         "scope": {"group": ["group-1"]},
     },
 ]
@@ -109,13 +79,12 @@ c.JupyterHub.spawner_class = "kubespawner.KubeSpawner"
 quota_manager = UsageQuotaManager(config=c)
 
 
-async def quota_pre_spawn_hook(spawner):
+def quota_pre_spawn_hook(spawner):
     try:
-        launch_flag = await quota_manager.enforce(spawner.user.name)
-    except Exception as e:
+        launch_flag = quota_manager.enforce(spawner)
+    except Exception:
         raise SpawnException(
-            # log_message="Spawn failed occurred due to quota system error. Please contact your hub admin for assistance."
-            log_message=f"{e}"  # TODO: testing only
+            log_message="Spawn failed occurred due to quota system error. Please contact your hub admin for assistance."
         )
     if launch_flag is False:
         raise SpawnException(

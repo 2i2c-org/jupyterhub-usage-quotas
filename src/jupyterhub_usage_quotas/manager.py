@@ -1,10 +1,8 @@
-import re
 from collections import defaultdict
 from typing import Any, Optional
 
 from tornado import web
 
-from jupyterhub_usage_quotas.client import HubAPIClient, PrometheusClient
 from jupyterhub_usage_quotas.config import UsageQuotaConfig
 
 
@@ -12,10 +10,6 @@ class UsageQuotaManager(UsageQuotaConfig):
 
     def __init__(self, **kwargs) -> None:
         super().__init__(**kwargs)
-        hub_ip = self.config.get("JupyterHub", {}).get("ip", "127.0.0.1")
-        hub_port = self.config.get("JupyterHub", {}).get("port", 8000)
-        self.hub_api_client = HubAPIClient(hub_url=f"http://{hub_ip}:{hub_port}")
-        self.prometheus_client = PrometheusClient(self.prometheus_url)
 
     def resolve_empty(self) -> list:
         """
@@ -46,7 +40,7 @@ class UsageQuotaManager(UsageQuotaConfig):
 
         return combined_value
 
-    async def resolve_policy(self, user) -> list:
+    def resolve_policy(self, spawner) -> list:
         """
         Resolve and merge group quota policies that apply to the user.
 
@@ -56,15 +50,18 @@ class UsageQuotaManager(UsageQuotaConfig):
 
         Example 3 - multiple:  Policy A limits 30 memory hours over the last 30 days to group 1, policy B limits 7 memory hours over the last 7 days to group 1. Both quota policies are returned (and eventually applied with no limit stacking).
         """
-        data_user = await self.hub_api_client.query("users")
-        entry_user = next(filter(lambda x: x["name"] == user, data_user), None)
-        assert isinstance(entry_user, dict)
-        groups_user = entry_user["groups"]
+        # hub_api_client = HubAPIClient()
+        # data_user = await hub_api_client.query("users")
+        # entry_user = next(filter(lambda x: x["name"] == user, data_user), None)
+        # assert isinstance(entry_user, dict)
+        # user_groups = entry_user["groups"]
+        user_name = spawner.user.name
+        user_groups = [g.name for g in spawner.user.groups]
         self.log.info(
-            f"User {user} is a member of quota policy scope groups: {groups_user}"
+            f"User {user_name} is a member of quota policy scope groups: {user_groups}"
         )
         policies = [
-            p for p in self.policy if set(p["scope"]["group"]) <= set(groups_user)
+            p for p in self.policy if set(p["scope"]["group"]) <= set(user_groups)
         ]
         self.log.debug(f"{policies=}")
         # Group policies with common keys together, e.g. the same resources and rolling windows.
@@ -108,16 +105,17 @@ class UsageQuotaManager(UsageQuotaConfig):
                 )
         return merged
 
-    async def enforce(self, user):
-        usage_metric = self.prometheus_usage_metrics["memory"]
-        pattern = r"(\{.*?)(\})"
-        repl = rf"\1, pod='jupyter-{user}'\2"
-        promql = re.sub(pattern, repl, usage_metric)
-        data_prometheus = await self.prometheus_client.query(promql)
-        self.log.info(f"{data_prometheus=}")
+    def enforce(self, spawner):
+        # usage_metric = self.prometheus_usage_metrics["memory"]
+        # pattern = r"(\{.*?)(\})"
+        # repl = rf"\1, pod='jupyter-{user}'\2"
+        # promql = re.sub(pattern, repl, usage_metric)
+        # prometheus_client = PrometheusClient()
+        # data_prometheus = await prometheus_client.query(promql)
+        # self.log.info(f"{data_prometheus=}")
 
         # TODO: apply quota logic
-        policy = await self.resolve_policy(user)
+        policy = self.resolve_policy(spawner)
         self.log.info(f"Quota policy applied: {policy}")
 
         return True
