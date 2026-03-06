@@ -79,9 +79,9 @@ c.JupyterHub.spawner_class = "kubespawner.KubeSpawner"
 quota_manager = UsageQuotaManager(config=c)
 
 
-def quota_pre_spawn_hook(spawner):
+async def quota_pre_spawn_hook(spawner):
     try:
-        launch_flag = quota_manager.enforce(spawner)
+        launch_flag = await quota_manager.enforce(spawner)
     except Exception:
         raise SpawnException(
             log_message="Spawn failed occurred due to quota system error. Please contact your hub admin for assistance."
