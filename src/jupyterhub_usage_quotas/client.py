@@ -1,5 +1,3 @@
-from pathlib import Path
-
 import aiohttp
 from yarl import URL
 
@@ -38,36 +36,4 @@ class PrometheusClient(Client):
                 return data
         except Exception as e:
             print(f"Error querying prometheus: {e}")
-            raise
-
-
-class HubAPIClient(Client):
-    def __init__(self, hub_url: str, hub_api_token: str | None = None, **kwargs):
-        super().__init__(**kwargs)
-        self.api_url = URL(hub_url).joinpath("hub/api")
-        if hub_api_token is None:
-            self.token = self._get_token()
-        else:
-            self.token = hub_api_token
-
-    def _get_token(self):
-        # for local dev with token in project root set in jupyterhub_config.py
-        try:
-            here = Path(__file__).parent.parent.parent
-            token_file = here.joinpath("api_token")
-            with open(token_file, "r") as f:
-                return f.read()
-        except:
-            raise ValueError("JupyterHub API token file does not exist.")
-
-    async def query(self, subpath: str = "") -> dict:
-        session = await self._get_session()
-        endpoint = self.api_url.joinpath(subpath)
-        try:
-            async with session.get(endpoint) as response:
-                response.raise_for_status()
-                data = await response.json()
-                return data
-        except Exception as e:
-            print(f"Error querying JupyterHub API: {e}")
             raise

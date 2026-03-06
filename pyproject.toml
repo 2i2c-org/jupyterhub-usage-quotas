@@ -38,6 +38,7 @@ dependencies = [
     "aiohttp>=3.13.0",
     "python-backoff>=2.3.0",
     "jupyterhub>=5.0.0",
+    "jupyterhub-kubespawner>=7.0.0",
     "jsonschema>=4.26.0",
     "psutil>=7.2.0",
     "requests>=2.32.0",
@@ -54,9 +55,7 @@ dependencies = [
 jupyterhub_usage_quotas = "jupyterhub_usage_quotas.app:main"
 
 [project.optional-dependencies]
-dev = [
-    "jupyterhub-kubespawner>=7.0.0",
-]
+dev = []
 
 ################################################################################
 # Tool Configuration
