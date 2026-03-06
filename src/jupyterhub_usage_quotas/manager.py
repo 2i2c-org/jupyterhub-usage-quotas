@@ -1,8 +1,11 @@
+import re
 from collections import defaultdict
 from typing import Any, Optional
 
+from kubespawner.slugs import safe_slug
 from tornado import web
 
+from jupyterhub_usage_quotas.client import PrometheusClient
 from jupyterhub_usage_quotas.config import UsageQuotaConfig
 
 
@@ -50,11 +53,6 @@ class UsageQuotaManager(UsageQuotaConfig):
 
         Example 3 - multiple:  Policy A limits 30 memory hours over the last 30 days to group 1, policy B limits 7 memory hours over the last 7 days to group 1. Both quota policies are returned (and eventually applied with no limit stacking).
         """
-        # hub_api_client = HubAPIClient()
-        # data_user = await hub_api_client.query("users")
-        # entry_user = next(filter(lambda x: x["name"] == user, data_user), None)
-        # assert isinstance(entry_user, dict)
-        # user_groups = entry_user["groups"]
         user_name = spawner.user.name
         user_groups = [g.name for g in spawner.user.groups]
         self.log.info(
@@ -64,6 +62,7 @@ class UsageQuotaManager(UsageQuotaConfig):
             p for p in self.policy if set(p["scope"]["group"]) <= set(user_groups)
         ]
         self.log.debug(f"{policies=}")
+
         # Group policies with common keys together, e.g. the same resources and rolling windows.
         grouped = defaultdict(list)
         for p in policies:
@@ -105,19 +104,18 @@ class UsageQuotaManager(UsageQuotaConfig):
                 )
         return merged
 
-    def enforce(self, spawner):
-        # usage_metric = self.prometheus_usage_metrics["memory"]
-        # pattern = r"(\{.*?)(\})"
-        # repl = rf"\1, pod='jupyter-{user}'\2"
-        # promql = re.sub(pattern, repl, usage_metric)
-        # prometheus_client = PrometheusClient()
-        # data_prometheus = await prometheus_client.query(promql)
-        # self.log.info(f"{data_prometheus=}")
-
-        # TODO: apply quota logic
+    async def enforce(self, spawner):
         policy = self.resolve_policy(spawner)
         self.log.info(f"Quota policy applied: {policy}")
 
+        # TODO: apply quota logic
+        usage_metric = self.prometheus_usage_metrics["memory"]
+        pattern = r"(\{.*?)(\})"
+        repl = rf"\1, pod='jupyter-{safe_slug(spawner.user.name)}'\2"
+        promql = re.sub(pattern, repl, usage_metric)
+        prometheus_client = PrometheusClient(prometheus_url=self.prometheus_url)
+        data_prometheus = await prometheus_client.query(promql)
+        self.log.info(f"{data_prometheus=}")
         return True
 
 
