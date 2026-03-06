@@ -6,7 +6,7 @@ from yarl import URL
 
 class Client:
     def __init__(self, token: str | None = None):
-        self.session = None
+        self.session: aiohttp.ClientSession | None = None
         self.token = token
 
     async def _get_session(self) -> aiohttp.ClientSession:
@@ -60,9 +60,9 @@ class HubAPIClient(Client):
         except:
             raise ValueError("JupyterHub API token file does not exist.")
 
-    async def query(self, endpoint: str = "") -> dict:
+    async def query(self, subpath: str = "") -> dict:
         session = await self._get_session()
-        endpoint = self.api_url.joinpath(endpoint)
+        endpoint = self.api_url.joinpath(subpath)
         try:
             async with session.get(endpoint) as response:
                 response.raise_for_status()
