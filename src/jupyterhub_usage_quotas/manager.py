@@ -64,8 +64,9 @@ class UsageQuotaManager(UsageQuotaConfig):
             f"User {user} is a member of quota policy scope groups: {groups_user}"
         )
         policies = [
-            p for p in self.policy if set(groups_user) <= set(p["scope"]["group"])
+            p for p in self.policy if set(p["scope"]["group"]) <= set(groups_user)
         ]
+        self.log.debug(f"{policies=}")
         # Group policies with common keys together, e.g. the same resources and rolling windows.
         grouped = defaultdict(list)
         for p in policies:
