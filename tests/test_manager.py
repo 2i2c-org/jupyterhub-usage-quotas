@@ -39,6 +39,38 @@ async def test_resolve_policy_single(mock_hub_client):
     assert merged == quota_manager.policy
 
 
+async def test_resolve_policy_multiple(mock_hub_client):
+    """
+    Test policy resolver applies multiple policy scopes for group-1 to user-1.
+    """
+    c = Config()
+    c.UsageQuotaManager.policy = (
+        {
+            "resource": "memory",
+            "limit": {
+                "value": 5000,
+                "unit": "GiB-hours",
+            },
+            "window": 30,
+            "scope": {"group": ["group-1"]},
+        },
+        {
+            "resource": "memory",
+            "limit": {
+                "value": 700,
+                "unit": "GiB-hours",
+            },
+            "window": 7,
+            "scope": {"group": ["group-1"]},
+        },
+    )
+
+    quota_manager = UsageQuotaManager(config=c)
+    quota_manager.hub_api_client = mock_hub_client
+    merged = await quota_manager.resolve_policy("user-1")
+    assert merged == quota_manager.policy
+
+
 async def test_resolve_policy_empty(mock_hub_client):
     """
     Test policy resolver yields 'empty' backup strategy for user-2 who is a member of no groups.
@@ -59,3 +91,46 @@ async def test_resolve_policy_empty(mock_hub_client):
     )
     merged = await quota_manager.resolve_policy("user-2")
     assert merged == quota_manager.scope_backup_strategy["empty"]
+
+
+async def test_resolve_policy_intersection(mock_hub_client):
+    """
+    Test policy resolver applies min/max/sum operator to policy scopes for user-3 who is a member of multiple groups, (group-0 and group-1).
+    """
+    c = Config()
+    c.UsageQuotaManager.scope_backup_strategy = {
+        "empty": {
+            "resource": "memory",
+            "limit": {"value": 500, "unit": "GiB-hours"},
+            "window": 7,
+        },
+        "intersection": "min",
+    }
+    c.UsageQuotaManager.policy = (
+        {
+            "resource": "memory",
+            "limit": {
+                "value": 5000,
+                "unit": "GiB-hours",
+            },
+            "window": 30,
+            "scope": {"group": ["group-0"]},
+        },
+        {
+            "resource": "memory",
+            "limit": {
+                "value": 700,
+                "unit": "GiB-hours",
+            },
+            "window": 30,
+            "scope": {"group": ["group-1"]},
+        },
+    )
+    quota_manager = UsageQuotaManager(config=c)
+    quota_manager.hub_api_client = mock_hub_client
+    merged = await quota_manager.resolve_policy("user-3")
+    logger.info(f"{merged=}")
+    logger.info(min([p["limit"]["value"] for p in quota_manager.policy]))
+    assert merged[0]["limit"]["value"] == min(
+        [p["limit"]["value"] for p in quota_manager.policy]
+    )

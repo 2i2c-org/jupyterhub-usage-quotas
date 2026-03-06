@@ -70,5 +70,21 @@
       "user"
     ],
     "server": "None"
+  },
+  {
+    "admin": "False",
+    "created": "2026-03-02T18:06:23.198862Z",
+    "groups": [
+      "group-0",
+      "group-1"
+    ],
+    "kind": "user",
+    "last_activity": "2026-03-04T11:51:22.643526Z",
+    "name": "user-3",
+    "pending": "spawn",
+    "roles": [
+      "user"
+    ],
+    "server": "None"
   }
 ]
