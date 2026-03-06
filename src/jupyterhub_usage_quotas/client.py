@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 
 import aiohttp
@@ -58,7 +59,9 @@ class HubAPIClient(Client):
             with open(token_file, "r") as f:
                 return f.read()
         except:
-            raise ValueError("JupyterHub API token file does not exist.")
+            return os.environ.get("JUPYTERHUB_API_TOKEN")
+        finally:
+            raise ValueError("JupyterHub API token does not exist.")
 
     async def query(self, subpath: str = "") -> dict:
         session = await self._get_session()
