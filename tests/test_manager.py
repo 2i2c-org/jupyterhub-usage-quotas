@@ -1,6 +1,8 @@
 import logging
 from unittest.mock import MagicMock
 
+import pytest
+
 logger = logging.getLogger(__name__)
 
 from traitlets.config import Config
@@ -93,7 +95,8 @@ async def test_resolve_policy_empty(mock_hub_client):
     assert merged == quota_manager.scope_backup_strategy["empty"]
 
 
-async def test_resolve_policy_intersection(mock_hub_client):
+@pytest.mark.parametrize("operator", ["min", "max", "sum"])
+async def test_resolve_policy_intersection(mock_hub_client, operator):
     """
     Test policy resolver applies min/max/sum operator to policy scopes for user-3 who is a member of multiple groups, (group-0 and group-1).
     """
@@ -104,7 +107,7 @@ async def test_resolve_policy_intersection(mock_hub_client):
             "limit": {"value": 500, "unit": "GiB-hours"},
             "window": 7,
         },
-        "intersection": "min",
+        "intersection": operator,
     }
     c.UsageQuotaManager.policy = (
         {
@@ -129,8 +132,17 @@ async def test_resolve_policy_intersection(mock_hub_client):
     quota_manager = UsageQuotaManager(config=c)
     quota_manager.hub_api_client = mock_hub_client
     merged = await quota_manager.resolve_policy("user-3")
-    logger.info(f"{merged=}")
-    logger.info(min([p["limit"]["value"] for p in quota_manager.policy]))
-    assert merged[0]["limit"]["value"] == min(
-        [p["limit"]["value"] for p in quota_manager.policy]
-    )
+    logger.debug(f"{merged=}")
+    logger.debug(f"{operator=}")
+    if operator == "min":
+        assert merged[0]["limit"]["value"] == min(
+            [p["limit"]["value"] for p in quota_manager.policy]
+        )
+    elif operator == "max":
+        assert merged[0]["limit"]["value"] == max(
+            [p["limit"]["value"] for p in quota_manager.policy]
+        )
+    elif operator == "sum":
+        assert merged[0]["limit"]["value"] == sum(
+            [p["limit"]["value"] for p in quota_manager.policy]
+        )
