@@ -28,7 +28,9 @@ class PrometheusClient(Client):
 
     async def query(self, promql: str) -> dict:
         session = await self._get_session()
-        params = {"query": promql}
+        params = {
+            "query": promql,
+        }
         try:
             async with session.get(self.query_url, params=params) as response:
                 response.raise_for_status()

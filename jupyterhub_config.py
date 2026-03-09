@@ -38,7 +38,7 @@ c.UsageQuotaManager.prometheus_usage_metrics = {
     # "cpu": "kube_pod_container_resource_requests{resource='cpu'}"
 }
 
-c.UsageQuotaManager.prometheus_scrape_interval = 20
+c.UsageQuotaManager.prometheus_scrape_interval = 60
 
 c.UsageQuotaManager.scope_backup_strategy = {
     "empty": {
@@ -81,7 +81,8 @@ quota_manager = UsageQuotaManager(config=c)
 
 async def quota_pre_spawn_hook(spawner):
     try:
-        launch_flag = await quota_manager.enforce(spawner)
+        output = await quota_manager.enforce(spawner)
+        launch_flag = output["allow_server_launch"]
     except Exception:
         raise SpawnException(
             log_message="Spawn failed occurred due to quota system error. Please contact your hub admin for assistance."
