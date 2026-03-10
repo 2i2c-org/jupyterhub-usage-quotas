@@ -1,3 +1,4 @@
+import datetime
 import re
 from collections import defaultdict
 from typing import Any, Optional
@@ -46,7 +47,7 @@ class UsageQuotaManager(UsageQuotaConfig):
 
         return combined_value
 
-    def resolve_policy(self, spawner) -> list:
+    def resolve_policy(self, spawner: KubeSpawner) -> list:
         """
         Resolve and merge group quota policies that apply to the user.
 
@@ -107,7 +108,7 @@ class UsageQuotaManager(UsageQuotaConfig):
                 )
         return merged
 
-    async def get_usage(self, spawner: KubeSpawner, policy: dict):
+    async def get_usage(self, spawner: KubeSpawner, policy: dict) -> list:
         """
         Get resource usage by user over a rolling time window.
         """
@@ -123,27 +124,32 @@ class UsageQuotaManager(UsageQuotaConfig):
         usage = response["data"]["result"][0]["value"]
         return usage
 
-    def get_output(self, policy: dict, usage: list[float, str]) -> dict:
+    def get_output(self, policy: dict, usage: list) -> dict:
         output = {}
-        limit = policy["limit"]["value"]
         value = float(usage[1])
+        limit = policy["limit"]["value"]
         if value < limit:
             output["allow_server_launch"] = True
         else:
             output["allow_server_launch"] = False
+        output["timestamp"] = datetime.datetime.fromtimestamp(
+            usage[0], datetime.timezone.utc
+        ).strftime(
+            "%Y-%m-%dT%H:%M:%SZ"
+        )  # convert from unix timestamp to string formatted with datetime
         return output
 
-    async def enforce(self, spawner: KubeSpawner):
+    async def enforce(self, spawner: KubeSpawner) -> dict:
         spawner.namespace = "showcase"  #  TODO: for local testing
         policy = self.resolve_policy(spawner)
         self.log.info(f"Quota policy applied: {policy}")
 
         if len(policy) == 1:
-            policy = policy[0]  #  TODO: loop over multiple policies
-        usage = await self.get_usage(spawner, policy)
+            single_policy = policy[0]  #  TODO: loop over multiple policies
+        usage = await self.get_usage(spawner, single_policy)
         self.log.info(f"{usage=}")
 
-        output = self.get_output(policy, usage)
+        output = self.get_output(single_policy, usage)
         self.log.info(f"{output=}")
 
         return output

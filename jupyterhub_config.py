@@ -89,7 +89,7 @@ async def quota_pre_spawn_hook(spawner):
         )
     if launch_flag is False:
         raise SpawnException(
-            log_message="You are over your compute usage quota limit. Please contact your hub admin for assistance."
+            log_message=f"You are over your compute usage quota limit. Please contact your hub admin for assistance. Last queried: {output['timestamp']}"
         )
 
 
