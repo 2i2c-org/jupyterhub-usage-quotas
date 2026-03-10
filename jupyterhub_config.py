@@ -55,7 +55,7 @@ c.UsageQuotaManager.policy = [
     {
         "resource": "memory",
         "limit": {
-            "value": 5000,
+            "value": 35,
             "unit": "GiB-hours",
         },
         "window": 30,
@@ -64,7 +64,7 @@ c.UsageQuotaManager.policy = [
     {
         "resource": "memory",
         "limit": {
-            "value": 30,
+            "value": 20,
             "unit": "GiB-hours",
         },
         "window": 7,
@@ -89,7 +89,7 @@ async def quota_pre_spawn_hook(spawner):
         )
     if launch_flag is False:
         raise SpawnException(
-            log_message=f"You are over your compute usage quota limit. Please contact your hub admin for assistance. Last queried: {output['timestamp']}"
+            log_message=f"{output['error']['message']} Please contact your hub admin for assistance. Last queried: {output['timestamp']}"
         )
 
 
