@@ -170,6 +170,7 @@ inherits = ["default"]
 dependencies = [
     "pytest",
     "pytest-cov",
+    "pytest-mock",
     "pytest-raises",
     "pytest-randomly",
     "pytest-xdist",
