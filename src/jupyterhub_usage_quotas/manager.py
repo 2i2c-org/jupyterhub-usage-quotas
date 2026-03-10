@@ -63,7 +63,7 @@ class UsageQuotaManager(UsageQuotaConfig):
             f"User {user_name} is a member of quota policy scope groups: {user_groups}"
         )
         policies = [
-            p for p in self.policy if set(p["scope"]["group"]) <= set(user_groups)
+            p for p in self.policy if set(user_groups) & set(p["scope"]["group"])
         ]
         self.log.debug(f"{policies=}")
 
@@ -134,7 +134,7 @@ class UsageQuotaManager(UsageQuotaConfig):
             output["allow_server_launch"] = False
             output["error"] = {
                 "code": "quota-exceeded",
-                "message": f"Current {policy['resource']} usage = {value} {policy['limit']['unit']} is over the quota limit of {limit} {policy['limit']['unit']} over the last {policy['window']} days.",
+                "message": f"Current {policy['resource']} usage = {value:.2f} {policy['limit']['unit']} is over the quota limit of {limit} {policy['limit']['unit']} over the last {policy['window']} days.",
                 "retry_time": "TBC",  # TODO: calculate retry_time
             }
         policy.update({"used": value})
@@ -152,7 +152,6 @@ class UsageQuotaManager(UsageQuotaConfig):
 
         for p in policy:
             usage = await self.get_usage(spawner, p)
-            self.log.info(f"{usage=}")
             output = self.get_output(p, usage)
             self.log.info(f"{output=}")
             if output["allow_server_launch"] is False:
