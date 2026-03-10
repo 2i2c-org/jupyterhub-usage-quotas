@@ -55,7 +55,7 @@ async def test_resolve_policy_single():
         },
         "intersection": "min",
     }
-    c.UsageQuotaManager.policy = (
+    c.UsageQuotaManager.policy = [
         {
             "resource": "memory",
             "limit": {
@@ -65,7 +65,7 @@ async def test_resolve_policy_single():
             "window": 30,
             "scope": {"group": ["group-0"]},
         },
-    )
+    ]
 
     quota_manager = UsageQuotaManager(config=c)
     merged = quota_manager.resolve_policy(spawner)
@@ -80,7 +80,7 @@ async def test_resolve_policy_multiple():
         _mock=True, user=MockUser(name="user-1", groups=[MockGroup(name="group-1")])
     )
     c = Config()
-    c.UsageQuotaManager.policy = (
+    c.UsageQuotaManager.policy = [
         {
             "resource": "memory",
             "limit": {
@@ -99,7 +99,7 @@ async def test_resolve_policy_multiple():
             "window": 7,
             "scope": {"group": ["group-1"]},
         },
-    )
+    ]
 
     quota_manager = UsageQuotaManager(config=c)
     merged = quota_manager.resolve_policy(spawner)
@@ -144,7 +144,7 @@ async def test_resolve_policy_intersection(operator):
         },
         "intersection": operator,
     }
-    c.UsageQuotaManager.policy = (
+    c.UsageQuotaManager.policy = [
         {
             "resource": "memory",
             "limit": {
@@ -163,7 +163,7 @@ async def test_resolve_policy_intersection(operator):
             "window": 30,
             "scope": {"group": ["group-1"]},
         },
-    )
+    ]
     quota_manager = UsageQuotaManager(config=c)
     merged = quota_manager.resolve_policy(spawner)
     logger.debug(f"{merged=}")
@@ -198,7 +198,7 @@ async def test_enforce_single(mocker):
         },
         "intersection": "min",
     }
-    c.UsageQuotaManager.policy = (
+    c.UsageQuotaManager.policy = [
         {
             "resource": "memory",
             "limit": {
@@ -208,15 +208,13 @@ async def test_enforce_single(mocker):
             "window": 30,
             "scope": {"group": ["group-0"]},
         },
-    )
+    ]
     c.UsageQuotaManager.prometheus_usage_metrics = {
         "memory": "kube_pod_container_resource_requests{resource='memory'}",
     }
     # Under quota limit
     mock_usage = mocker.AsyncMock(return_value=[1773089003.938, "4999"])
-    mocker.patch(
-        "jupyterhub_usage_quotas.manager.UsageQuotaManager.get_usage", mock_usage
-    )
+    mocker.patch("jupyterhub_usage_quotas.manager.UsageQuotaManager.get_usage")
     quota_manager = UsageQuotaManager(config=c)
     output = await quota_manager.enforce(spawner)
     assert output["allow_server_launch"] == True
@@ -224,6 +222,75 @@ async def test_enforce_single(mocker):
     mock_usage = mocker.AsyncMock(return_value=[1773089003.938, "5001"])
     mocker.patch(
         "jupyterhub_usage_quotas.manager.UsageQuotaManager.get_usage", mock_usage
+    )
+    quota_manager = UsageQuotaManager(config=c)
+    output = await quota_manager.enforce(spawner)
+    assert output["allow_server_launch"] == False
+
+
+async def test_enforce_multiple(mocker):
+    """
+    Test enforcing multiple policy scopes for group-1 to user-1.
+    """
+    spawner = kubespawner.KubeSpawner(
+        _mock=True, user=MockUser(name="user-1", groups=[MockGroup(name="group-1")])
+    )
+    c = Config()
+    c.UsageQuotaManager.policy = [
+        {
+            "resource": "memory",
+            "limit": {
+                "value": 5000,
+                "unit": "GiB-hours",
+            },
+            "window": 30,
+            "scope": {"group": ["group-1"]},
+        },
+        {
+            "resource": "memory",
+            "limit": {
+                "value": 700,
+                "unit": "GiB-hours",
+            },
+            "window": 7,
+            "scope": {"group": ["group-1"]},
+        },
+    ]
+    c.UsageQuotaManager.prometheus_usage_metrics = {
+        "memory": "kube_pod_container_resource_requests{resource='memory'}",
+    }
+    # Under quota limit
+    mock_usage = [[1773089003.938, "4999"], [1773089003.938, "699"]]
+    mocker.patch(
+        "jupyterhub_usage_quotas.manager.UsageQuotaManager.get_usage",
+        side_effect=mock_usage,
+    )
+    quota_manager = UsageQuotaManager(config=c)
+    output = await quota_manager.enforce(spawner)
+    assert output["allow_server_launch"] == True
+    # Over quota limit – 7 day window
+    mock_usage = [[1773089003.938, "4999"], [1773089003.938, "701"]]
+    mocker.patch(
+        "jupyterhub_usage_quotas.manager.UsageQuotaManager.get_usage",
+        side_effect=mock_usage,
+    )
+    quota_manager = UsageQuotaManager(config=c)
+    output = await quota_manager.enforce(spawner)
+    assert output["allow_server_launch"] == False
+    # Over quota limit – 30 day window
+    mock_usage = [[1773089003.938, "5001"], [1773089003.938, "699"]]
+    mocker.patch(
+        "jupyterhub_usage_quotas.manager.UsageQuotaManager.get_usage",
+        side_effect=mock_usage,
+    )
+    quota_manager = UsageQuotaManager(config=c)
+    output = await quota_manager.enforce(spawner)
+    assert output["allow_server_launch"] == False
+    # Over quota limit – both 7 and 30 day window
+    mock_usage = [[1773089003.938, "5001"], [1773089003.938, "701"]]
+    mocker.patch(
+        "jupyterhub_usage_quotas.manager.UsageQuotaManager.get_usage",
+        side_effect=mock_usage,
     )
     quota_manager = UsageQuotaManager(config=c)
     output = await quota_manager.enforce(spawner)
@@ -294,7 +361,7 @@ async def test_enforce_intersection(mocker, operator, under, over):
         },
         "intersection": operator,
     }
-    c.UsageQuotaManager.policy = (
+    c.UsageQuotaManager.policy = [
         {
             "resource": "memory",
             "limit": {
@@ -313,7 +380,7 @@ async def test_enforce_intersection(mocker, operator, under, over):
             "window": 30,
             "scope": {"group": ["group-1"]},
         },
-    )
+    ]
     c.UsageQuotaManager.prometheus_usage_metrics = {
         "memory": "kube_pod_container_resource_requests{resource='memory'}",
     }

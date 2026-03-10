@@ -132,6 +132,13 @@ class UsageQuotaManager(UsageQuotaConfig):
             output["allow_server_launch"] = True
         else:
             output["allow_server_launch"] = False
+            output["error"] = {
+                "code": "quota-exceeded",
+                "message": f"Current {policy['resource']} usage = {value} {policy['limit']['unit']} is over the quota limit of {limit} {policy['limit']['unit']} over the last {policy['window']} days.",
+                "retry_time": "TBC",  # TODO: calculate retry_time
+            }
+        policy.update({"used": value})
+        output["quota"] = policy
         output["timestamp"] = datetime.datetime.fromtimestamp(
             usage[0], datetime.timezone.utc
         ).strftime(
@@ -143,14 +150,14 @@ class UsageQuotaManager(UsageQuotaConfig):
         policy = self.resolve_policy(spawner)
         self.log.info(f"Quota policy applied: {policy}")
 
-        if len(policy) == 1:
-            single_policy = policy[0]  #  TODO: loop over multiple policies
-        usage = await self.get_usage(spawner, single_policy)
-        self.log.info(f"{usage=}")
-
-        output = self.get_output(single_policy, usage)
-        self.log.info(f"{output=}")
-
+        for p in policy:
+            usage = await self.get_usage(spawner, p)
+            self.log.info(f"{usage=}")
+            output = self.get_output(p, usage)
+            self.log.info(f"{output=}")
+            if output["allow_server_launch"] is False:
+                self.log.warning(f"{output['error']['code']}: {spawner.user.name}")
+                break
         return output
 
 
