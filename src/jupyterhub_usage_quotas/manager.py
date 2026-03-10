@@ -125,6 +125,9 @@ class UsageQuotaManager(UsageQuotaConfig):
         return usage
 
     def get_output(self, policy: dict, usage: list) -> dict:
+        """
+        Formats the output returned by the quota system.
+        """
         output: dict = {}
         value = float(usage[1])
         limit = policy["limit"]["value"]
@@ -147,6 +150,9 @@ class UsageQuotaManager(UsageQuotaConfig):
         return output
 
     async def enforce(self, spawner: KubeSpawner) -> dict:
+        """
+        Enforce quota system by resolving the policy applied to the user and comparing their usage to the quota limit.
+        """
         policy = self.resolve_policy(spawner)
         self.log.info(f"Quota policy applied: {policy}")
 
@@ -161,7 +167,7 @@ class UsageQuotaManager(UsageQuotaConfig):
 
 
 class SpawnException(web.HTTPError):
-    """Custom exception that sets jupyterhub_message attribute"""
+    """Custom exception that sets `jupyterhub_message` attribute for page template."""
 
     def __init__(
         self,
