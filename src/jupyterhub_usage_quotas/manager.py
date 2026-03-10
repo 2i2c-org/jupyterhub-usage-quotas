@@ -125,7 +125,7 @@ class UsageQuotaManager(UsageQuotaConfig):
         return usage
 
     def get_output(self, policy: dict, usage: list) -> dict:
-        output = {}
+        output: dict = {}
         value = float(usage[1])
         limit = policy["limit"]["value"]
         if value < limit:
@@ -140,7 +140,6 @@ class UsageQuotaManager(UsageQuotaConfig):
         return output
 
     async def enforce(self, spawner: KubeSpawner) -> dict:
-        spawner.namespace = "showcase"  #  TODO: for local testing
         policy = self.resolve_policy(spawner)
         self.log.info(f"Quota policy applied: {policy}")
 
