@@ -11,7 +11,7 @@ requires = ["hatchling", "hatch-vcs"]
 ################################################################################
 
 [project]
-name = "jupyterhub_usage_quotas"
+name = "jupyterhub-usage-quotas"
 
 dynamic = ["version"]
 

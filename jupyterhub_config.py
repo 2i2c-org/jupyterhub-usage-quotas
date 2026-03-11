@@ -4,6 +4,7 @@ Example configuration file for JupyterHub usage quotas.
 
 import socket
 
+from jupyterhub_usage_quotas import get_template_path
 from jupyterhub_usage_quotas.manager import SpawnException, UsageQuotaManager
 
 c = get_config()  # noqa
@@ -72,6 +73,8 @@ c.UsageQuotaManager.policy = [
     },
 ]
 
+c.JupyterHub.template_paths = [get_template_path()]
+
 # KubeSpawner
 
 c.JupyterHub.spawner_class = "kubespawner.KubeSpawner"
@@ -85,11 +88,14 @@ async def quota_pre_spawn_hook(spawner):
         launch_flag = output["allow_server_launch"]
     except Exception:
         raise SpawnException(
-            log_message="Spawn failed occurred due to quota system error. Please contact your hub admin for assistance."
+            status_code=424,
+            log_message="Spawn failed occurred due to a failed dependency in the usage quota system. Please contact your hub admin for assistance.",
         )
     if launch_flag is False:
         raise SpawnException(
-            log_message=f"{output['error']['message']} Please contact your hub admin for assistance. Last queried: {output['timestamp']}"
+            status_code=403,
+            log_message=f"{output['error']['message']}",
+            html_message=f"<p>Compute {output['quota']['resource']} quota limit exceeded.</p><p style='font-size:100%'>You have used <span style='color:var(--bs-red)'>{output['quota']['used']:.2f}</span> / {output['quota']['limit']['value']:.2f} {output['quota']['limit']['unit']} in the last {output['quota']['window']} days.</p><p style='font-size:100%'>Contact your JupyterHub admin if you need additional quota.</p><p style='font-size:100%'>Last updated {output["timestamp"]}.</p>",
         )
 
 

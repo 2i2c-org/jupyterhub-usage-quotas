@@ -167,14 +167,15 @@ class UsageQuotaManager(UsageQuotaConfig):
 
 
 class SpawnException(web.HTTPError):
-    """Custom exception that sets `jupyterhub_message` attribute for page template."""
+    """Custom exception that sets attributes for error page template."""
 
     def __init__(
         self,
-        status_code: int = 500,
+        status_code: int,
         log_message: Optional[str] = None,
+        html_message: Optional[str] = None,
         *args: Any,
         **kwargs: Any,
     ) -> None:
         super().__init__(status_code, log_message, *args, **kwargs)
-        self.jupyterhub_message = log_message
+        self.jupyterhub_html_message = html_message
