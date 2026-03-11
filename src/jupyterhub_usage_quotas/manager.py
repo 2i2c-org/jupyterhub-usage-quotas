@@ -121,7 +121,13 @@ class UsageQuotaManager(UsageQuotaConfig):
         prometheus_client = PrometheusClient(prometheus_url=self.prometheus_url)
         response = await prometheus_client.query(promql)
         self.log.debug(f"{response=}")
-        usage = response["data"]["result"][0]["value"]
+        if not response["data"]["result"]:
+            unix_timestamp = (
+                datetime.datetime.utcnow() - datetime.datetime(1970, 1, 1)
+            ).total_seconds()
+            usage = [unix_timestamp, "0"]
+        else:
+            usage = response["data"]["result"][0]["value"]
         return usage
 
     def get_output(self, policy: dict, usage: list) -> dict:
