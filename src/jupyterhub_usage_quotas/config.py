@@ -88,7 +88,7 @@ class UsageQuotaConfig(LoggingConfigurable):
         return metrics
 
     prometheus_scrape_interval = Integer(
-        15, help="Scrape interval of Prometheus sample collection (seconds)."
+        60, help="Scrape interval of Prometheus sample collection (seconds)."
     ).tag(config=True)
 
     bucket_size_seconds = Integer(

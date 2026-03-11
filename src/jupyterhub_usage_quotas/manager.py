@@ -1,7 +1,9 @@
+import datetime
 import re
 from collections import defaultdict
 from typing import Any, Optional
 
+from kubespawner import KubeSpawner
 from kubespawner.slugs import safe_slug
 from tornado import web
 
@@ -13,6 +15,8 @@ class UsageQuotaManager(UsageQuotaConfig):
 
     def __init__(self, **kwargs) -> None:
         super().__init__(**kwargs)
+        self.convert = {"GiB-hours": 2**30}  # bytes to XiB
+        self.sample_rate = 60 * 60 / self.prometheus_scrape_interval  # samples per hour
 
     def resolve_empty(self) -> list:
         """
@@ -43,7 +47,7 @@ class UsageQuotaManager(UsageQuotaConfig):
 
         return combined_value
 
-    def resolve_policy(self, spawner) -> list:
+    def resolve_policy(self, spawner: KubeSpawner) -> list:
         """
         Resolve and merge group quota policies that apply to the user.
 
@@ -59,7 +63,7 @@ class UsageQuotaManager(UsageQuotaConfig):
             f"User {user_name} is a member of quota policy scope groups: {user_groups}"
         )
         policies = [
-            p for p in self.policy if set(p["scope"]["group"]) <= set(user_groups)
+            p for p in self.policy if set(user_groups) & set(p["scope"]["group"])
         ]
         self.log.debug(f"{policies=}")
 
@@ -104,30 +108,80 @@ class UsageQuotaManager(UsageQuotaConfig):
                 )
         return merged
 
-    async def enforce(self, spawner):
+    async def get_usage(self, spawner: KubeSpawner, policy: dict) -> list:
+        """
+        Get resource usage by user over a rolling time window.
+        """
+        usage_metric = self.prometheus_usage_metrics[policy["resource"]]
+        pattern = r"(\{.*?)(\})"
+        repl = rf"\1, namespace='{spawner.namespace}', node!='', pod='jupyter-{safe_slug(spawner.user.name)}'\2"
+        promql = re.sub(pattern, repl, usage_metric)
+        promql = f"sum(sum_over_time({promql}[{str(policy['window']) + 'd'}]) / {self.sample_rate} / {self.convert[policy['limit']['unit']]}) by (namespace, pod)"
+        self.log.debug(f"{promql=}")
+        prometheus_client = PrometheusClient(prometheus_url=self.prometheus_url)
+        response = await prometheus_client.query(promql)
+        self.log.debug(f"{response=}")
+        if not response["data"]["result"]:
+            unix_timestamp = (
+                datetime.datetime.utcnow() - datetime.datetime(1970, 1, 1)
+            ).total_seconds()
+            usage = [unix_timestamp, "0"]
+        else:
+            usage = response["data"]["result"][0]["value"]
+        return usage
+
+    def get_output(self, policy: dict, usage: list) -> dict:
+        """
+        Formats the output returned by the quota system.
+        """
+        output: dict = {}
+        value = float(usage[1])
+        limit = policy["limit"]["value"]
+        if value < limit:
+            output["allow_server_launch"] = True
+        else:
+            output["allow_server_launch"] = False
+            output["error"] = {
+                "code": "quota-exceeded",
+                "message": f"Current {policy['resource']} usage = {value:.2f} {policy['limit']['unit']} is over the quota limit of {limit} {policy['limit']['unit']} over the last {policy['window']} days.",
+                "retry_time": "TBC",  # TODO: calculate retry_time
+            }
+        policy.update({"used": value})
+        output["quota"] = policy
+        output["timestamp"] = datetime.datetime.fromtimestamp(
+            usage[0], datetime.timezone.utc
+        ).strftime(
+            "%Y-%m-%dT%H:%M:%SZ"
+        )  # convert from unix timestamp to string formatted with datetime
+        return output
+
+    async def enforce(self, spawner: KubeSpawner) -> dict:
+        """
+        Enforce quota system by resolving the policy applied to the user and comparing their usage to the quota limit.
+        """
         policy = self.resolve_policy(spawner)
         self.log.info(f"Quota policy applied: {policy}")
 
-        # TODO: apply quota logic
-        usage_metric = self.prometheus_usage_metrics["memory"]
-        pattern = r"(\{.*?)(\})"
-        repl = rf"\1, pod='jupyter-{safe_slug(spawner.user.name)}'\2"
-        promql = re.sub(pattern, repl, usage_metric)
-        prometheus_client = PrometheusClient(prometheus_url=self.prometheus_url)
-        data_prometheus = await prometheus_client.query(promql)
-        self.log.info(f"{data_prometheus=}")
-        return True
+        for p in policy:
+            usage = await self.get_usage(spawner, p)
+            output = self.get_output(p, usage)
+            self.log.info(f"{output=}")
+            if output["allow_server_launch"] is False:
+                self.log.warning(f"{output['error']['code']}: {spawner.user.name}")
+                break
+        return output
 
 
 class SpawnException(web.HTTPError):
-    """Custom exception that sets jupyterhub_message attribute"""
+    """Custom exception that sets attributes for error page template."""
 
     def __init__(
         self,
-        status_code: int = 500,
+        status_code: int,
         log_message: Optional[str] = None,
+        html_message: Optional[str] = None,
         *args: Any,
         **kwargs: Any,
     ) -> None:
         super().__init__(status_code, log_message, *args, **kwargs)
-        self.jupyterhub_message = log_message
+        self.jupyterhub_html_message = html_message
