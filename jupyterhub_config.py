@@ -95,7 +95,7 @@ async def quota_pre_spawn_hook(spawner):
         raise SpawnException(
             status_code=403,
             log_message=f"{output['error']['message']}",
-            html_message=f"<p>Compute {output['quota']['resource']} quota limit exceeded.</p><p style='font-size:100%'>You have used <span style='color:var(--bs-red)'>{output['quota']['used']:.2f}</span> / {output['quota']['limit']['value']:.2f} {output['quota']['limit']['unit']} in the last {output['quota']['window']} days.</p><p style='font-size:100%'>Contact your JupyterHub admin if you need additional quota.</p><p style='font-size:100%'>Last updated {output["timestamp"]}.</p>",
+            html_message=f"<p>Compute {output['quota']['resource']} quota limit exceeded.</p><p style='font-size:100%'>You have used <span style='color:var(--bs-red)'>{output['quota']['used']:.2f}</span> / {output['quota']['limit']['value']:.2f} {output['quota']['limit']['unit']} in the last {output['quota']['window']} days.</p><p style='font-size:100%'>Contact your JupyterHub admin if you need additional quota.</p><i style='font-size:100%;color:var(--bs-gray)'>Last updated: {output["timestamp"]} (UTC).</i>",
         )
 
 
