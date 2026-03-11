@@ -257,3 +257,48 @@ async def test_enforce_intersection(mocker, operator, under, over):
     quota_manager = UsageQuotaManager(config=c)
     output = await quota_manager.enforce(spawner)
     assert output["allow_server_launch"] == False
+
+
+async def test_get_usage_no_result(mocker):
+    """
+    Handle the case where no usage is returned by Prometheus.
+    """
+    spawner = kubespawner.KubeSpawner(
+        _mock=True,
+        user=MockUser(name="user-1", groups=[MockGroup(name="group-1")]),
+    )
+    c = Config()
+    c.UsageQuotaManager.scope_backup_strategy = {
+        "empty": {
+            "resource": "memory",
+            "limit": {"value": 500, "unit": "GiB-hours"},
+            "window": 7,
+        },
+        "intersection": "min",
+    }
+    c.UsageQuotaManager.policy = [
+        {
+            "resource": "memory",
+            "limit": {
+                "value": 5000,
+                "unit": "GiB-hours",
+            },
+            "window": 30,
+            "scope": {"group": ["group-0"]},
+        },
+    ]
+    c.UsageQuotaManager.prometheus_usage_metrics = {
+        "memory": "kube_pod_container_resource_requests{resource='memory'}",
+    }
+    mock_response = mocker.AsyncMock(
+        return_value={
+            "status": "success",
+            "data": {"resultType": "vector", "result": []},
+        }
+    )
+    mocker.patch("jupyterhub_usage_quotas.client.PrometheusClient.query", mock_response)
+    quota_manager = UsageQuotaManager(config=c)
+    policy = quota_manager.resolve_policy(spawner)
+    single_policy = policy[0]
+    usage = await quota_manager.get_usage(spawner, single_policy)
+    assert usage[1] == "0"
