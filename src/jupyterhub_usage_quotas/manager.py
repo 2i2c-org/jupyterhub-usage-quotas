@@ -17,6 +17,7 @@ class UsageQuotaManager(UsageQuotaConfig):
         super().__init__(**kwargs)
         self.convert = {"GiB-hours": 2**30}  # bytes to XiB
         self.sample_rate = 60 * 60 / self.prometheus_scrape_interval  # samples per hour
+        self.prometheus_client = PrometheusClient(self.prometheus_url)
 
     def resolve_empty(self) -> list:
         """
@@ -118,8 +119,8 @@ class UsageQuotaManager(UsageQuotaConfig):
         promql = re.sub(pattern, repl, usage_metric)
         promql = f"sum(sum_over_time({promql}[{str(policy['window']) + 'd'}]) / {self.sample_rate} / {self.convert[policy['limit']['unit']]}) by (namespace, pod)"
         self.log.debug(f"{promql=}")
-        prometheus_client = PrometheusClient(prometheus_url=self.prometheus_url)
-        response = await prometheus_client.query(promql)
+        # prometheus_client = PrometheusClient(prometheus_url=self.prometheus_url)
+        response = await self.prometheus_client.query(promql)
         self.log.debug(f"{response=}")
         if not response["data"]["result"]:
             unix_timestamp = (
