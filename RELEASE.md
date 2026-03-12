@@ -9,7 +9,7 @@ To update a major or minor version, or patch a release, and publish on PyPI:
    - [ ] Generate a list of PRs using [github-activity](https://github.com/executablebooks/github-activity)
 
    ```bash
-   pip install github-activity
+   hatch shell release
    github-activity --output github-activity-output.md --since <last tag> 2i2c-org/jupyterhub-usage-quotas
    ```
 
@@ -17,10 +17,11 @@ To update a major or minor version, or patch a release, and publish on PyPI:
    - [ ] Generate the `github-activity` output again and add it to the [changelog](CHANGELOG.md)
    - [ ] Highlight breaking changes
    - [ ] Summarise the release changes
+   - [ ] Open a PR to merge the updated changelog into main
 
 1. **Prepare Your Environment**
 
-   Ensure your local repository is up-to-date and install required tools:
+   Following the update of the changelog in the main branch, ensure your local repository is up-to-date and install required tools:
 
    ```bash
    git checkout main
@@ -28,10 +29,10 @@ To update a major or minor version, or patch a release, and publish on PyPI:
    git reset --hard origin/main
    ```
 
-   Install `tbump` if not already installed:
+   Activate the `release` environment if not already activated:
 
    ```bash
-   pip install tbump
+   hatch shell release
    ```
 
 1. **Update Version with tbump**
