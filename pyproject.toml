@@ -146,6 +146,16 @@ dependencies = [
     "pre-commit",
 ]
 
+[tool.hatch.envs.release]
+inherits = ["default"]
+description = """
+Environment for making releases.
+"""
+dependencies = [
+    "github-activity>=1.1",
+    "tbump>=6.11",
+]
+
 [tool.hatch.envs.install]
 description = """Test the installation the package."""
 dependencies = [
