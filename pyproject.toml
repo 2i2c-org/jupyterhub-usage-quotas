@@ -146,9 +146,6 @@ tag_template = "{new_version}"
 [[tool.tbump.file]]
 src = "src/jupyterhub_usage_quotas/_version.py"
 
-[[tool.tbump.file]]
-src = "setup.py"
-
 ################################################################################
 # Hatch Environments
 ################################################################################
