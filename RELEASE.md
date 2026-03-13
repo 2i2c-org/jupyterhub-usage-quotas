@@ -58,21 +58,21 @@ To update a major or minor version, or patch a release, and publish on PyPI:
 
    This will:
 
-   - Update `__version__` in `src/jupyterhub_usage_quotas/__init__.py`
+   - Update `src/jupyterhub_usage_quotas/_version.py`
    - Create a git commit
    - Create a git tag
 
 1. **CI Automation**
 
-   TODO: Once we create a tag, the GitHub Actions workflow [`release.yaml`](https://github.com/2i2c-org/jupyterhub-usage-quotas/blob/main/.github/workflows/release.yaml)) will automatically:
+   Once we create a tag, the GitHub Actions workflow [`release.yaml`](https://github.com/2i2c-org/jupyterhub-usage-quotas/blob/main/.github/workflows/release.yaml)) will automatically:
 
    - Package and publish the library to PyPI
 
-1. **Reset the version back to dev, e.g. 4.0.1-0.dev after releasing 4.0.0.**
+1. **Reset the version back to dev, e.g. 4.0.1.dev after releasing 4.0.0.**
 
    ```bash
-   NEXT_VERSION=x.y.z1-0.dev
-   tbump --no-tag ${NEXT_VERSION}-0.dev
+   NEXT_VERSION=x.y.z.dev
+   tbump --no-tag ${NEXT_VERSION}
    ```
 
 ## Verification
