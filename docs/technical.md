@@ -37,7 +37,7 @@ c.UsageQuotaManager.policy = [
 ]
 ```
 
-This accepts *what* resource the quota applies to, its limit value, and the time period for the rolling window. The scope of *who* the quota applies to mirrors the [JupyterHub RBAC framework](https://jupyterhub.readthedocs.io/en/latest/rbac/index.html), where groups will be the initial target for development.
+This accepts *what* resource the quota applies to, its limit value, and the time period for the rolling window. The scope of *who* the quota applies to mirrors the [JupyterHub RBAC framework](https://jupyterhub.readthedocs.io/en/latest/rbac/index.html).
 
 ````{tip} Example
 > "Apply a memory quota of 5,000 GiB-hours over 30 days for user group A.”
@@ -66,7 +66,7 @@ c.UsageQuotaManager.policy = [
 `c.UsageQuotaManager.scope_backup_strategy` is used to set a quota resolution strategy in the case where the scope of the quota policies cover no users, or applies multiple policies to a single user. In the case where no quota is applied, we can supply a default quota policy or leave this empty for unlimited quotas; and where multiple quotas are applied, we can apply operators `min`, `max` or `sum` to the limit.
 
 ````{tip} Example
-> “Apply a default memory quota of 500 GiB-hours over a rolling 7 day window for users with no groups, and apply the maximum quota available for users with multiple groups.”
+> “Apply a default memory quota of 500 GiB-hours over a rolling 7 day window for users with no groups, and apply the maximum quota available to users when more than one policy applies.”
 
 is expressed as
 
@@ -84,7 +84,7 @@ c.UsageQuotaManager.scope_backup_strategy = {
 
 ### Mechanism configuration
 
-This describes *how* the quota system is applied. For example, we can configure the Prometheus metric to track resource usage as memory requests with
+This describes *how* the quota system is applied. For example, we can configure the usage metric to query Prometheus with using memory requests by supplying
 
 ```python
 c.UsageQuotaManager.prometheus_usage_metrics = {
@@ -92,9 +92,9 @@ c.UsageQuotaManager.prometheus_usage_metrics = {
 }
 ```
 
-to be used as an input for the decision logic.
+See [kubernetes/kube-state-metrics](https://github.com/kubernetes/kube-state-metrics) for details on the metrics exported by Kubernetes.
 
-Another example of configuring the quota system mechanism is the case where the quota system fails. We can set `c.UsageQuotaManager.failover_open` to `True` to allow all server launches with no restriction, or to `closed` to deny all server launches to prevent unaccounted compute usage.
+Another example of configuring the quota system mechanism is the case where the quota system is unavailable. We can set `c.UsageQuotaManager.failover_open` to `True` to allow all server launches with no restriction when the quota system is offline, or to `False` to deny all server launches to prevent unaccounted compute usage.
 
 ## Decision Logic
 
@@ -109,11 +109,14 @@ In this explanation, we constrain compute usage by memory requests to a rolling 
 The policy resolver matches users with policy scopes to determine the quota limit applied. When a user is a member of multiple groups, the configured strategy from `c.UsageQuotaManager.scope_backup_strategy["intersection"]` is applied. When a user is not a member of any group, the system can be configured to default to no quota limits or quota limits specified in `c.UsageQuotaManager.scope_backup_strategy[“empty”]`. In the case where multiple quota policies apply over different rolling windows, then each policy is returned and applied with no limit stacking.
 
 ```{tip} Example
-`empty`: Backup policy applies to users who are out of scope of policy definitions.
 
-`intersection`: Policy A limits 30 memory hours over the last 30 days to group 1, policy B limits 60 memory hours over the last 30 days to group 1. The policy backup strategy specifies the `max` operator, therefore the policy of `max(30, 60) = 60` memory hours over the last 30 days applies to group 1.
+The policy resolver deduces the policy applied to a user under the following three scenarios:
 
-`multiple`:  Policy A limits 30 memory hours over the last 30 days to group 1, policy B limits 7 memory hours over the last 7 days to group 1. Both quota policies are returned (and eventually applied with no limit stacking).
+1. `empty`: – Backup policy applies to users who are out of scope of policy definitions.
+
+1. `intersection` – Policy A limits 30 memory hours over the last 30 days to group 1, policy B limits 60 memory hours over the last 30 days to group 1. The policy backup strategy specifies the `max` operator, therefore the policy of `max(30, 60) = 60` memory hours over the last 30 days applies to members of group 1.
+
+1. `multiple` – Policy A limits 30 memory hours over the last 30 days to group 1, policy B limits 7 memory hours over the last 7 days to group 1. Both quota policies are returned and applied with no limit stacking to members of group 1.
 ```
 
 ### Metric aggregation
@@ -126,13 +129,13 @@ To calculate usage over the last 30 day window, we need to integrate over time f
 sum(sum_over_time(kube_pod_container_resource_requests{resource="memory|cpu"}[30d])) * scrape_interval
 ```
 
-The result[^3] of the above PromQL pseudo-query is then compared against the each policy quota limit returned by the policy resolver.
+The result[^3] of the above PromQL pseudo-query is then compared against the each policy quota limit returned by the [policy resolver](#policy-resolver).
 
 If the result is less than the policy limit, then we return `output["allow_server_launch"]=True`. If the result is greater than the policy limit then `output["allow_server_launch"]=False` and a structured error is processed and returned.
 
 ### Retry time
 
-With a rolling window, quota expires continuously. When a user exceeds their quota, a useful output to calculate is the `retry_time` so that users know when resources are available again. We can calculate this by projecting the usage window forward in time by an offset until we find the time when the usage falls below the limit again. We can improve the precision of the retry time by performing a binary search with the offset.
+With a rolling window, quota expires continuously. When a user exceeds their quota, a useful output to calculate is the `retry_time` so that users know when resources are available again. We can calculate this by projecting the usage window forward in time by an offset until we find the time when the usage falls below the limit again. We improve the precision of the retry time by performing a binary search with the offset.
 
 ## Output
 
