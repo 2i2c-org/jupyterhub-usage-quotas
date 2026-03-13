@@ -1,5 +1,7 @@
 # JupyterHub Usage Quotas
 
+![](demo.mp4)
+
 This library implements compute usage quotas for Jupyter servers at server startup-time to manage resource consumption across shared infrastructure managed by [Zero to JupyterHub with Kubernetes](https://z2jh.jupyter.org/en/stable/) deployments.
 
 ## Features
