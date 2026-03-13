@@ -11,7 +11,7 @@ The configuration for `jupyterhub-usage-quotas` include the following requiremen
 
 We apply the design principle of [separating mechanism from policy](https://en.wikipedia.org/wiki/Separation_of_mechanism_and_policy). We avoid mixing *how* the system may apply quotas (mechanism) with *who* and *what* quotas may apply to (policy).
 
-See [](configuration.md#usagequotaconfig) for all possible configuration options.
+See [UsageQuotaConfig](configuration.md#usagequotaconfig) for all possible configuration options.
 
 ### Policy configuration
 
@@ -103,6 +103,8 @@ In this explanation, we constrain compute usage by memory requests to a rolling 
 ### Usage metrics
 
 [kube-state-metrics](https://github.com/kubernetes/kube-state-metrics) exports the metric `kube_pod_container_resource_requests`[^2], which measures the amount of compute resources requested by the Kubernetes scheduler in bytes. We can multiply this value by $2^30$ to convert to **GiB**.
+
+(policy-resolver)=
 
 ### Policy resolver
 
