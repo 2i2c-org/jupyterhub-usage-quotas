@@ -10,7 +10,11 @@ This library implements compute usage quotas for Jupyter servers at server start
 
 ## Installation
 
-_`pip install` instructions to follow_
+The [PyPI package](https://pypi.org/project/jupyterhub-usage-quotas/) can be installed with
+
+```bash
+pip install jupyterhub-usage-quotas
+```
 
 For local development, see the [development guide](./DEVELOPMENT.md)
 
