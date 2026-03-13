@@ -13,6 +13,8 @@ You can contribute in many ways, for example:
 - [Write Documentation](#write-documentation)
 - [Submit Feedback](#submit-feedback)
 
+(report-bugs)=
+
 ### Report Bugs
 
 Report bugs at [https://github.com/2i2c-org/jupyterhub-usage-quotas/issues](https://github.com/2i2c-org/jupyterhub-usage-quotas/issues).
@@ -20,10 +22,14 @@ Report bugs at [https://github.com/2i2c-org/jupyterhub-usage-quotas/issues](http
 **If you are reporting a bug, please follow the template guidelines. The more
 detailed your report, the easier and thus faster we can help you.**
 
+(fix-bugs)=
+
 ### Fix Bugs
 
 Look through the GitHub issues for bugs. Anything labelled with `bug` and
 `help wanted` is open to whoever wants to implement it. When you decide to work on such an issue, please assign yourself to it and add a comment that you'll be working on that, too. If you see another issue without the `help wanted` label, just post a comment, the maintainers are usually happy for any support that they can get.
+
+(implement-features)=
 
 ### Implement Features
 
@@ -31,10 +37,14 @@ Look through the GitHub issues for features. Anything labelled with
 `enhancement` and `help wanted` is open to whoever wants to implement it. As
 for [fixing bugs](#fix-bugs), please assign yourself to the issue and add a comment that you'll be working on that, too. If another enhancement catches your fancy, but it doesn't have the `help wanted` label, just post a comment, the maintainers are usually happy for any support that they can get.
 
+(write-documentation)=
+
 ### Write Documentation
 
 The project could always use more documentation, whether as
 part of the official documentation, in docstrings, an update to our Contributing or Development guide. To contribute, [open an issue](https://github.com/2i2c-org/jupyterhub-usage-quotas/issues) to let us know what you will be working on so that we can provide you with guidance.
+
+(submit-feedback)=
 
 ### Submit Feedback
 
