@@ -15,25 +15,26 @@ project:
     - file: README.md
     - title: Explanation
       children:
-      - file: overview.md
-      - file: technical.md
-      - file: limitations.md
+      - file: explanation/overview.md
+      - file: explanation/technical.md
+      - file: explanation/limitations.md
     - title: Reference
       children:
-      - file: configuration.md
-      - file: UsageQuotaConfig.md
+      - file: reference/configuration.md
+      - file: reference/UsageQuotaConfig.md
         hidden: true
-      - file: CHANGELOG.md
+      - file: reference/CHANGELOG.md
     - title: Contributing
       children:
-      - file: CONTRIBUTING.md
+      - file: contributing/CONTRIBUTING.md
         title: Overview
-      - file: DEVELOPMENT.md
-      - file: RELEASE.md
-      - file: CODE_OF_CONDUCT.md
-      - file: LICENSE.md
+      - file: contributing/DEVELOPMENT.md
+      - file: contributing/RELEASE.md
+      - file: contributing/CODE_OF_CONDUCT.md
+      - file: contributing/LICENSE.md
 
 site:
   template: book-theme
   options:
     logo_text: JupyterHub Usage Quotas
+    folders: true
