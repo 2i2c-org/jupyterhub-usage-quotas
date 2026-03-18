@@ -211,6 +211,7 @@ description = """
 Run test suite
 """
 inherits = ["default"]
+features = ["service"]
 dependencies = [
     "pytest",
     "pytest-cov",
