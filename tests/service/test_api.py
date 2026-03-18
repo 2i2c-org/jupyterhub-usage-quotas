@@ -1,38 +1,30 @@
 """Tests for FastAPI routes"""
 
-from urllib.parse import parse_qs, urlparse
-
-import respx
-from httpx import Response
-
 from tests.service.conftest import get_session, set_session
 
 
 class TestHomeRoute:
     """Test the home route (GET /)"""
 
-    def test_home_redirects_to_oauth_when_not_authenticated(self, client, mock_env_vars):
-        """Unauthenticated user should be redirected to JupyterHub OAuth"""
+    def test_home_redirects_to_oauth_when_not_authenticated(
+        self, client, mock_env_vars
+    ):
+        """Unauthenticated user should get JS redirect to JupyterHub OAuth"""
         response = client.get("/services/usage/", follow_redirects=False)
 
-        assert response.status_code == 307
-        assert "Location" in response.headers
+        assert response.status_code == 200
+        assert "window.top.location.href" in response.text
 
-        location = response.headers["Location"]
-        assert "oauth2/authorize" in location
-        assert "client_id=" in location
-        assert "state=" in location
-        assert "redirect_uri=" in location
+        # Extract the redirect URL from the JS snippet
+        assert "oauth2/authorize" in response.text
+        assert "state=" in response.text
+        assert "redirect_uri=" in response.text
 
     def test_home_displays_usage_when_authenticated(
         self, client, app, mock_env_vars, mock_prometheus_client
     ):
         """Authenticated user should see usage data"""
-        set_session(
-            client,
-            app,
-            {"user": {"name": "testuser", "admin": False, "groups": ["users"]}},
-        )
+        set_session(client, app, {"token": "test-token"})
 
         response = client.get("/services/usage/")
 
@@ -46,7 +38,7 @@ class TestHomeRoute:
         self, client, app, mock_env_vars, mock_prometheus_client_with_error
     ):
         """User should see error message when Prometheus is unavailable"""
-        set_session(client, app, {"user": {"name": "testuser"}})
+        set_session(client, app, {"token": "test-token"})
 
         response = client.get("/services/usage/")
 
@@ -58,7 +50,7 @@ class TestHomeRoute:
         self, client, app, mock_env_vars, mock_prometheus_client_no_data
     ):
         """User should see error when no quota data exists"""
-        set_session(client, app, {"user": {"name": "testuser"}})
+        set_session(client, app, {"token": "test-token"})
 
         response = client.get("/services/usage/")
 
@@ -69,7 +61,7 @@ class TestHomeRoute:
         self, client, app, mock_env_vars, mock_prometheus_client_high_usage
     ):
         """User with high usage should see warning styling"""
-        set_session(client, app, {"user": {"name": "testuser"}})
+        set_session(client, app, {"token": "test-token"})
 
         response = client.get("/services/usage/")
 
@@ -81,34 +73,27 @@ class TestHomeRoute:
 class TestOAuthCallbackRoute:
     """Test the OAuth callback route"""
 
-    def test_callback_with_valid_state_and_code(self, client, app, mock_env_vars, mock_oauth_state):
+    def test_callback_with_valid_state_and_code(
+        self, client, app, mock_env_vars, mock_oauth_state, mock_hub_auth
+    ):
         """Valid OAuth callback should authenticate user and redirect"""
-        with respx.mock:
-            respx.post("http://test-hub:8081/hub/api/oauth2/token").mock(
-                return_value=Response(
-                    200, json={"access_token": "test-token", "token_type": "Bearer"}
-                )
-            )
-            respx.get("http://test-hub:8081/hub/api/user").mock(
-                return_value=Response(
-                    200,
-                    json={"name": "testuser", "admin": False, "groups": ["users"]},
-                )
-            )
+        # Override generate_state to return the expected state
+        mock_hub_auth.generate_state = lambda next_url="/": mock_oauth_state
 
-            set_session(client, app, {"oauth_state": mock_oauth_state})
+        set_session(client, app, {"oauth_state": mock_oauth_state})
 
-            response = client.get(
-                f"/services/usage/oauth_callback?code=auth123&state={mock_oauth_state}",
-                follow_redirects=False,
-            )
+        response = client.get(
+            f"/services/usage/oauth_redirect?code=auth123&state={mock_oauth_state}",
+            follow_redirects=False,
+        )
 
         assert response.status_code == 307
-        assert response.headers["Location"] == "/services/usage/"
+        # Redirects to /hub/usage (embedded view with JupyterHub nav bar)
+        assert response.headers["Location"] == "http://localhost:8000/hub/usage"
 
         session = get_session(client, app)
-        assert "user" in session
-        assert session["user"]["name"] == "testuser"
+        assert "token" in session
+        assert session["token"] == "test-token"
         assert "oauth_state" not in session
 
     def test_callback_with_invalid_state_returns_400(self, client, app, mock_env_vars):
@@ -116,7 +101,7 @@ class TestOAuthCallbackRoute:
         set_session(client, app, {"oauth_state": "expected_state"})
 
         response = client.get(
-            "/services/usage/oauth_callback?code=auth123&state=wrong_state",
+            "/services/usage/oauth_redirect?code=auth123&state=wrong_state",
             follow_redirects=False,
         )
 
@@ -126,7 +111,7 @@ class TestOAuthCallbackRoute:
     def test_callback_with_missing_state_returns_400(self, client, mock_env_vars):
         """Missing state should return 400 error"""
         response = client.get(
-            "/services/usage/oauth_callback?code=auth123&state=somestate",
+            "/services/usage/oauth_redirect?code=auth123&state=somestate",
             follow_redirects=False,
         )
 
@@ -134,93 +119,82 @@ class TestOAuthCallbackRoute:
         assert "OAuth state mismatch" in response.text
 
     def test_callback_with_token_exchange_failure(
-        self, client, app, mock_env_vars, mock_oauth_state
+        self, client, app, mock_env_vars, mock_oauth_state, mock_hub_auth
     ):
         """Failed token exchange should return 500"""
-        with respx.mock:
-            respx.post("http://test-hub:8081/hub/api/oauth2/token").mock(
-                return_value=Response(400, json={"error": "invalid_grant"})
-            )
 
-            set_session(client, app, {"oauth_state": mock_oauth_state})
+        # Override token_for_code to return None (failure)
+        async def mock_token_for_code_failure(code, sync=False):
+            return None
 
-            response = client.get(
-                f"/services/usage/oauth_callback?code=badcode&state={mock_oauth_state}",
-                follow_redirects=False,
-            )
+        mock_hub_auth.token_for_code = mock_token_for_code_failure
+        mock_hub_auth.generate_state = lambda next_url="/": mock_oauth_state
+
+        set_session(client, app, {"oauth_state": mock_oauth_state})
+
+        response = client.get(
+            f"/services/usage/oauth_redirect?code=badcode&state={mock_oauth_state}",
+            follow_redirects=False,
+        )
 
         assert response.status_code == 500
         assert "Failed to retrieve access token" in response.text
 
-    def test_callback_with_user_fetch_failure(self, client, app, mock_env_vars, mock_oauth_state):
-        """Failed user fetch should return 500"""
-        with respx.mock:
-            respx.post("http://test-hub:8081/hub/api/oauth2/token").mock(
-                return_value=Response(200, json={"access_token": "test-token"})
-            )
-            respx.get("http://test-hub:8081/hub/api/user").mock(
-                return_value=Response(500, json={"error": "server_error"})
-            )
+    def test_callback_stores_token_not_user(
+        self, client, app, mock_env_vars, mock_oauth_state, mock_hub_auth
+    ):
+        """OAuth callback should store token in session (not user data)"""
+        mock_hub_auth.generate_state = lambda next_url="/": mock_oauth_state
 
-            set_session(client, app, {"oauth_state": mock_oauth_state})
+        set_session(client, app, {"oauth_state": mock_oauth_state})
 
-            response = client.get(
-                f"/services/usage/oauth_callback?code=auth123&state={mock_oauth_state}",
-                follow_redirects=False,
-            )
-
-        assert response.status_code == 500
-        assert "Failed to retrieve user data" in response.text
-
-    def test_callback_stores_user_in_session(self, client, app, mock_env_vars, mock_oauth_state):
-        """Successful auth should store complete user data in session"""
-        with respx.mock:
-            respx.post("http://test-hub:8081/hub/api/oauth2/token").mock(
-                return_value=Response(200, json={"access_token": "test-token"})
-            )
-
-            user_data = {
-                "name": "testuser",
-                "admin": False,
-                "groups": ["users", "team-a"],
-                "server": "/user/testuser/",
-            }
-            respx.get("http://test-hub:8081/hub/api/user").mock(
-                return_value=Response(200, json=user_data)
-            )
-
-            set_session(client, app, {"oauth_state": mock_oauth_state})
-
-            response = client.get(
-                f"/services/usage/oauth_callback?code=auth123&state={mock_oauth_state}",
-                follow_redirects=False,
-            )
+        response = client.get(
+            f"/services/usage/oauth_redirect?code=auth123&state={mock_oauth_state}",
+            follow_redirects=False,
+        )
 
         assert response.status_code == 307
+        session = get_session(client, app)
+        assert "token" in session
+        assert session["token"] == "test-token"
+        # User data is NOT stored in callback, it's fetched later when needed
+        assert "user" not in session
+
+    def test_callback_successful_with_token(
+        self, client, app, mock_env_vars, mock_oauth_state, mock_hub_auth
+    ):
+        """Successful auth should store token in session"""
+        mock_hub_auth.generate_state = lambda next_url="/": mock_oauth_state
+
+        set_session(client, app, {"oauth_state": mock_oauth_state})
+
+        response = client.get(
+            f"/services/usage/oauth_redirect?code=auth123&state={mock_oauth_state}",
+            follow_redirects=False,
+        )
+
+        assert response.status_code == 307
+        # Redirects to /hub/usage (embedded view with JupyterHub nav bar)
+        assert response.headers["Location"] == "http://localhost:8000/hub/usage"
 
         session = get_session(client, app)
-        assert session["user"] == user_data
+        assert "token" in session
+        assert session["token"] == "test-token"
 
     def test_callback_clears_oauth_state_from_session(
-        self, client, app, mock_env_vars, mock_oauth_state
+        self, client, app, mock_env_vars, mock_oauth_state, mock_hub_auth
     ):
         """OAuth state should be removed after successful auth"""
-        with respx.mock:
-            respx.post("http://test-hub:8081/hub/api/oauth2/token").mock(
-                return_value=Response(200, json={"access_token": "test-token"})
-            )
-            respx.get("http://test-hub:8081/hub/api/user").mock(
-                return_value=Response(200, json={"name": "testuser"})
-            )
+        mock_hub_auth.generate_state = lambda next_url="/": mock_oauth_state
 
-            set_session(client, app, {"oauth_state": mock_oauth_state})
-            session = get_session(client, app)
-            assert "oauth_state" in session
+        set_session(client, app, {"oauth_state": mock_oauth_state})
+        session = get_session(client, app)
+        assert "oauth_state" in session
 
-            response = client.get(
-                f"/services/usage/oauth_callback?code=auth123&state={mock_oauth_state}",
-                follow_redirects=False,
-            )
+        response = client.get(
+            f"/services/usage/oauth_redirect?code=auth123&state={mock_oauth_state}",
+            follow_redirects=False,
+        )
 
         assert response.status_code == 307
 
@@ -237,7 +211,7 @@ class TestServicePrefixConfiguration:
 
     def test_callback_route_uses_service_prefix(self, client, mock_env_vars):
         response = client.get(
-            "/services/usage/oauth_callback?code=test&state=test",
+            "/services/usage/oauth_redirect?code=test&state=test",
             follow_redirects=False,
         )
         assert response.status_code == 400
@@ -245,12 +219,10 @@ class TestServicePrefixConfiguration:
     def test_oauth_redirect_includes_correct_redirect_uri(self, client, mock_env_vars):
         response = client.get("/services/usage/", follow_redirects=False)
 
-        assert response.status_code == 307
-        location = response.headers["Location"]
+        assert response.status_code == 200
+        assert "window.top.location.href" in response.text
 
-        parsed = urlparse(location)
-        query_params = parse_qs(parsed.query)
-
-        assert "redirect_uri" in query_params
-        redirect_uri = query_params["redirect_uri"][0]
-        assert "/services/usage/oauth_callback" in redirect_uri
+        # The JS redirect should include the correct redirect_uri (URL-encoded)
+        assert "redirect_uri=" in response.text
+        # Check for URL-encoded version: /services/usage/oauth_redirect -> %2Fservices%2Fusage%2Foauth_redirect
+        assert "oauth_redirect" in response.text
