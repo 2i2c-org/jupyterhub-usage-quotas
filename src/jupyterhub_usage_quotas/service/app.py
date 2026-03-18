@@ -25,7 +25,9 @@ HUB_API_URL = os.environ.get("JUPYTERHUB_API_URL", "http://jupyterhub:8081/hub/a
 # The prefix for this service (e.g., /services/my-service/)
 SERVICE_PREFIX = os.environ.get("JUPYTERHUB_SERVICE_PREFIX", "/")
 # The external URL users use to access the Hub (e.g., http://localhost:8000)
-PUBLIC_HUB_URL = os.environ.get("JUPYTERHUB_EXTERNAL_URL", "http://localhost:8000").rstrip("/")
+PUBLIC_HUB_URL = os.environ.get(
+    "JUPYTERHUB_EXTERNAL_URL", "http://localhost:8000"
+).rstrip("/")
 # OAuth client ID for this service
 CLIENT_ID = f"service-{os.environ.get('JUPYTERHUB_SERVICE_NAME', 'fastapi-service')}"
 
@@ -51,8 +53,18 @@ app.add_middleware(SessionMiddleware, secret_key=SESSION_SECRET_KEY)
 async def get_current_user(request: Request):
     """Check if the user is logged in, redirecting to JupyterHub if not."""
     user = request.session.get("user")
-    if user:
-        return user
+    access_token = request.session.get("access_token")
+    if user and access_token:
+        # Verify the token is still valid (catches JupyterHub logout)
+        async with httpx.AsyncClient() as client:
+            resp = await client.get(
+                f"{HUB_API_URL}/user",
+                headers={"Authorization": f"token {access_token}"},
+            )
+        if resp.status_code == 200:
+            return user
+        # Token revoked (user logged out of JupyterHub) — clear session
+        request.session.clear()
 
     state = secrets.token_hex(16)
     request.session["oauth_state"] = state
@@ -84,9 +96,12 @@ async def home(request: Request):
     If the user is not logged in, they will be redirected to JupyterHub to log in
     through get_current_user redirect flow.
     """
-    user = request.session.get("user")
-    if not user:
-        return await get_current_user(request)
+    result = await get_current_user(request)
+    # Using JS to redirect the top-level frame, so if we get an HTMLResponse back,
+    # it means the user is not authenticated and needs to log in.
+    if isinstance(result, HTMLResponse):
+        return result
+    user = result
 
     async with PrometheusClient() as prom_client:
         usage_data = await prom_client.get_user_usage(user["name"])
@@ -98,7 +113,27 @@ async def home(request: Request):
 
 @app.get(f"{SERVICE_PREFIX}{CALLBACK_PATH}")
 async def oauth_callback(request: Request, code: str, state: str):
-    """Handle the OAuth2 callback from JupyterHub."""
+    """
+    Handle the OAuth2 callback from JupyterHub.
+
+    This endpoint processes the OAuth2 authorization code flow callback from JupyterHub.
+    It validates the state parameter to prevent CSRF attacks, exchanges the authorization
+    code for an access token, retrieves the authenticated user's information, and stores
+    both the user data and access token in the session for subsequent authenticated requests.
+
+    Args:
+        request (Request): The incoming request object containing session data.
+        code (str): The authorization code provided by JupyterHub's OAuth2 server.
+        state (str): The state parameter for CSRF protection validation.
+
+    Returns:
+        RedirectResponse: Redirects to the JupyterHub usage page upon successful authentication.
+
+    Raises:
+        HTTPException:
+            - 400 status: If OAuth state is missing or does not match the saved state.
+            - 500 status: If token retrieval or user data retrieval fails.
+    """
     saved_state = request.session.get("oauth_state")
     if not saved_state or saved_state != state:
         raise HTTPException(status_code=400, detail="OAuth state mismatch or missing")
@@ -116,7 +151,9 @@ async def oauth_callback(request: Request, code: str, state: str):
         )
 
         if resp.status_code != 200:
-            raise HTTPException(status_code=500, detail="Failed to retrieve access token")
+            raise HTTPException(
+                status_code=500, detail="Failed to retrieve access token"
+            )
 
         token_data = resp.json()
         access_token = token_data["access_token"]
@@ -131,6 +168,7 @@ async def oauth_callback(request: Request, code: str, state: str):
 
     user = resp.json()
     request.session["user"] = user
+    request.session["access_token"] = access_token
     request.session.pop("oauth_state", None)
 
-    return RedirectResponse(url=SERVICE_PREFIX)
+    return RedirectResponse(url=f"{PUBLIC_HUB_URL}/hub/usage")
