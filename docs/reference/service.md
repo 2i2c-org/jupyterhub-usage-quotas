@@ -39,9 +39,8 @@ c.JupyterHub.services = [
         "name": "usage-quota",
         "url": "http://localhost:9000",
         "display": False,
-        "oauth_client_id": "service-usage-quota",
         "oauth_no_confirm": True,
-        "oauth_redirect_uri": "https://<hub-url>/services/usage-quota/oauth_callback",
+        "oauth_redirect_uri": "https://<hub-url>/services/usage-quota/oauth_redirect",
         "command": ["fastapi", "run", "/path/to/jupyterhub_usage_quotas/service/app.py", "--port", "9000"],
     }
 ]

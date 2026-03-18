@@ -87,9 +87,8 @@ c.JupyterHub.services = [
         "name": "usage-quota",
         "url": "http://localhost:9000",
         "display": False,  # Don't show in Services menu - we have a custom navbar link
-        "oauth_client_id": "service-usage-quota",
         "oauth_no_confirm": True,
-        "oauth_redirect_uri": "http://localhost:8000/services/usage-quota/oauth_callback",
+        "oauth_redirect_uri": "http://localhost:8000/services/usage-quota/oauth_redirect",
         "command": ["fastapi", "run", "src/jupyterhub_usage_quotas/service/app.py", "--port", "9000"]
     }
 ]
@@ -97,7 +96,7 @@ c.JupyterHub.services = [
 c.JupyterHub.load_roles = [
     {
         "name": "usage-quota-service",
-        "scopes": ["read:users", "read:servers", "list:users"],
+        "scopes": ["read:users"],
         "services": ["usage-quota"],
     },
     {
