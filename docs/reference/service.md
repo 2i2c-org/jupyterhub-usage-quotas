@@ -33,16 +33,16 @@ c.JupyterHub.extra_handlers = [
 ]
 c.JupyterHub.template_paths = [get_template_path()]
 
-# Register the external service
+# Register the service as a JupyterHub-managed subprocess
 c.JupyterHub.services = [
     {
         "name": "usage-quota",
-        "url": "http://<service-host>:9000",
+        "url": "http://localhost:9000",
         "display": False,
-        "api_token": "<your-service-api-token>",
         "oauth_client_id": "service-usage-quota",
         "oauth_no_confirm": True,
         "oauth_redirect_uri": "https://<hub-url>/services/usage-quota/oauth_callback",
+        "command": ["fastapi", "run", "/path/to/jupyterhub_usage_quotas/service/app.py", "--port", "9000"],
     }
 ]
 
@@ -59,21 +59,24 @@ c.JupyterHub.load_roles = [
 ]
 ```
 
+When a `command` is provided, JupyterHub launches and manages the service process automatically, injecting the necessary `JUPYTERHUB_*` environment variables.
+
 ## Environment variables
+
+JupyterHub automatically sets the following variables when managing the service as a subprocess:
+
+| Variable | Description |
+|---|---|
+| `JUPYTERHUB_API_TOKEN` | API token for the Hub |
+| `JUPYTERHUB_API_URL` | Internal Hub API URL |
+| `JUPYTERHUB_SERVICE_PREFIX` | URL prefix for this service |
+| `JUPYTERHUB_SERVICE_NAME` | Service name (sets OAuth client ID) |
+
+The following variables must be configured manually:
 
 | Variable | Default | Description |
 |---|---|---|
-| `JUPYTERHUB_API_TOKEN` | — | API token for the Hub (required) |
-| `JUPYTERHUB_API_URL` | `http://jupyterhub:8081/hub/api` | Internal Hub API URL |
-| `JUPYTERHUB_SERVICE_PREFIX` | `/` | URL prefix for this service |
 | `JUPYTERHUB_EXTERNAL_URL` | `http://localhost:8000` | Public Hub URL (used in OAuth redirects) |
-| `JUPYTERHUB_SERVICE_NAME` | `fastapi-service` | Service name (sets OAuth client ID) |
 | `PROMETHEUS_URL` | `http://prometheus:9090` | Prometheus endpoint |
 | `PROMETHEUS_NAMESPACE` | — | Kubernetes namespace to filter metrics by; if unset, returns mock data |
 | `SESSION_SECRET_KEY` | random | Secret key for session middleware; set explicitly for stable deployments |
-
-## Running the service
-
-```bash
-fastapi run src/jupyterhub_usage_quotas/service/app.py --port 9000
-```
