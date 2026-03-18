@@ -88,6 +88,47 @@ You can run JupyterHub on your local machine that can communicate with pods in a
    jupyterhub
    ```
 
+## Running the usage quota service locally
+
+The service is a FastAPI app that runs alongside JupyterHub. You need to start it in a separate terminal **before** starting JupyterHub so that JupyterHub can connect to it on startup.
+
+1. Install the package with the `service` extra:
+
+   ```bash
+   pip install -e ".[service]"
+   ```
+
+2. Set the required environment variables (these must match the token configured in `jupyterhub_config.py`):
+
+   ```bash
+   export JUPYTERHUB_API_TOKEN="your-service-token-change-in-production"
+   export JUPYTERHUB_SERVICE_PREFIX="/services/usage-quota/"
+   export JUPYTERHUB_SERVICE_NAME="usage-quota"
+   export JUPYTERHUB_EXTERNAL_URL="http://localhost:8000"
+   # JUPYTERHUB_API_URL must point to a reachable Hub API URL.
+   # The default (http://jupyterhub:8081/hub/api) only works inside Docker/k8s.
+   # For local development, use the public URL instead:
+   export JUPYTERHUB_API_URL="http://localhost:8000/hub/api"
+   export PROMETHEUS_URL="http://localhost:9090"
+   # Set PROMETHEUS_NAMESPACE to your k8s namespace to query real metrics.
+   # Leave unset to use mock data instead.
+   # export PROMETHEUS_NAMESPACE="my-namespace"
+   ```
+
+3. Start the service:
+
+   ```bash
+   fastapi dev src/jupyterhub_usage_quotas/service/app.py --port 9000
+   ```
+
+4. In a second terminal, start JupyterHub:
+
+   ```bash
+   jupyterhub
+   ```
+
+   Navigate to http://localhost:8000, log in, and click **Usage** in the navbar.
+
 ## Running hatch scripts
 
 See the `scripts` in [pyproject.toml](https://github.com/2i2c-org/jupyterhub-usage-quotas/blob/main/pyproject.toml) to see the configured commands available to `hatch run <env>:<command>`.
