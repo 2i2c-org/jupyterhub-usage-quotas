@@ -54,6 +54,43 @@ def app(mock_env_vars):
     return app
 
 
+@pytest.fixture(autouse=True)
+def mock_hub_auth(mocker, app):
+    """Mock HubOAuth to avoid real HTTP calls (autouse=True means it applies to all tests)"""
+
+    # Create async mock functions
+    async def mock_token_for_code(code, sync=False):
+        if code == "badcode":
+            return None
+        return "test-token"
+
+    async def mock_user_for_token(token, use_cache=True, sync=False):
+        if token == "valid-token" or token == "test-token":
+            return {"name": "testuser", "admin": False, "groups": ["users"]}
+        return None
+
+    # Mock the auth methods directly
+    mocker.patch(
+        "jupyterhub_usage_quotas.service.app.auth.token_for_code",
+        side_effect=mock_token_for_code,
+    )
+    mocker.patch(
+        "jupyterhub_usage_quotas.service.app.auth.user_for_token",
+        side_effect=mock_user_for_token,
+    )
+
+    # Mock the generate_state method
+    mocker.patch(
+        "jupyterhub_usage_quotas.service.app.auth.generate_state",
+        return_value="test-state-123",
+    )
+
+    # Get the mocked auth object to return
+    from jupyterhub_usage_quotas.service.app import auth
+
+    return auth
+
+
 @pytest.fixture
 def client(app):
     """Provide TestClient for making HTTP requests"""
