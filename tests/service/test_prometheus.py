@@ -3,9 +3,9 @@
 import random
 from unittest.mock import AsyncMock
 
-import httpx
+import aiohttp
 import pytest
-import respx
+from aioresponses import aioresponses
 
 from jupyterhub_usage_quotas.service.prometheus_client import PrometheusClient
 from tests.service.fixtures.prometheus_responses import (
@@ -138,10 +138,10 @@ class TestPrometheusTimeouts:
 
     @pytest.mark.asyncio
     async def test_handles_aiohttp_timeout(self, mocker):
-        """Should handle httpx.TimeoutException"""
+        """Should handle aiohttp.ServerTimeoutError"""
         client = PrometheusClient()
         client.namespace = "prod"
-        client.query = AsyncMock(side_effect=httpx.TimeoutException("Read timeout"))
+        client.query = AsyncMock(side_effect=aiohttp.ServerTimeoutError("Read timeout"))
 
         usage_data = await client.get_user_usage("testuser")
 
@@ -245,7 +245,7 @@ class TestPrometheusUnavailability:
         """Should return error when Prometheus is unreachable"""
         client = PrometheusClient()
         client.namespace = "prod"
-        client.query = AsyncMock(side_effect=httpx.RequestError("Connection refused"))
+        client.query = AsyncMock(side_effect=aiohttp.ClientError("Connection refused"))
 
         usage_data = await client.get_user_usage("testuser")
 
@@ -388,30 +388,33 @@ class TestPrometheusClientQuery:
 
     @pytest.mark.asyncio
     async def test_query_raises_request_error(self):
-        """Should propagate httpx.RequestError"""
+        """Should propagate aiohttp.ClientError"""
         client = PrometheusClient()
         client.prometheus_url = "http://prometheus:9090"
 
-        with respx.mock:
-            respx.get("http://prometheus:9090/api/v1/query").mock(
-                side_effect=httpx.RequestError("Connection refused")
+        with aioresponses() as mock:
+            mock.get(
+                "http://prometheus:9090/api/v1/query?query=up",
+                exception=aiohttp.ClientError("Connection refused")
             )
-            with pytest.raises(httpx.RequestError):
+            with pytest.raises(aiohttp.ClientError):
                 await client.query("up")
 
         await client.close()
 
     @pytest.mark.asyncio
     async def test_query_raises_on_http_error_status(self):
-        """Should propagate HTTPStatusError on non-2xx responses"""
+        """Should propagate ClientResponseError on non-2xx responses"""
         client = PrometheusClient()
         client.prometheus_url = "http://prometheus:9090"
 
-        with respx.mock:
-            respx.get("http://prometheus:9090/api/v1/query").mock(
-                return_value=httpx.Response(500)
+        with aioresponses() as mock:
+            mock.get(
+                "http://prometheus:9090/api/v1/query?query=up",
+                status=500,
+                body="Internal Server Error"
             )
-            with pytest.raises(httpx.HTTPStatusError):
+            with pytest.raises(aiohttp.ClientResponseError):
                 await client.query("up")
 
         await client.close()
@@ -428,11 +431,18 @@ class TestPrometheusClientContextManager:
 
     @pytest.mark.asyncio
     async def test_async_context_manager_closes_on_exit(self):
-        """__aexit__ should close the underlying httpx client"""
+        """__aexit__ should close the underlying aiohttp client"""
         async with PrometheusClient() as client:
+            # Trigger lazy initialization by making a request
+            with aioresponses() as mock:
+                mock.get(
+                    "http://prometheus:9090/api/v1/query?query=up",
+                    payload={"status": "success", "data": {"result": []}}
+                )
+                await client.query("up")
             underlying = client.client
 
-        assert underlying.is_closed
+        assert underlying.closed
 
 
 class TestGetMockDataErrorScenario:

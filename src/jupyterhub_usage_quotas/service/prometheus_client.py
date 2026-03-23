@@ -7,7 +7,7 @@ import random
 from datetime import UTC, datetime
 from typing import Any
 
-import httpx
+import aiohttp
 
 logger = logging.getLogger(__name__)
 
@@ -18,18 +18,21 @@ class PrometheusClient:
     def __init__(self):
         self.prometheus_url = os.environ.get("PROMETHEUS_URL", "http://prometheus:9090")
         self.namespace = os.environ.get("PROMETHEUS_NAMESPACE", "")
-        self.client = httpx.AsyncClient()
+        self.client = None
 
     async def query(self, query: str) -> dict[str, Any]:
         """Execute a PromQL query."""
+        if self.client is None:
+            self.client = aiohttp.ClientSession()
+
         url = f"{self.prometheus_url}/api/v1/query"
         params = {"query": query}
 
         try:
-            response = await self.client.get(url, params=params)
-            response.raise_for_status()
-            return response.json()
-        except httpx.RequestError as e:
+            async with self.client.get(url, params=params) as response:
+                response.raise_for_status()
+                return await response.json()
+        except aiohttp.ClientError as e:
             logger.error(f"Error querying Prometheus: {e}")
             raise
         except Exception as e:
@@ -163,7 +166,8 @@ class PrometheusClient:
         }
 
     async def close(self):
-        await self.client.aclose()
+        if self.client is not None:
+            await self.client.close()
 
     async def __aenter__(self):
         return self
