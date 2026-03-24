@@ -125,20 +125,22 @@ class UsageQuotaManager(UsageQuotaConfig):
             unix_timestamp = (
                 datetime.datetime.utcnow() - datetime.datetime(1970, 1, 1)
             ).total_seconds()
-            usage = [unix_timestamp, "0"]
+            data = [[unix_timestamp, "0"]]
         else:
             n_result = len(response["data"]["result"])
             data = [response["data"]["result"][i]["values"] for i in range(n_result)]
             data = [d for ds in data for d in ds]
-            usage = [float(d[1]) for d in data]
-        return usage
+        # Convert str to float
+        data = [[d[0], float(d[1])] for d in data]
+        return data
 
-    def get_output(self, policy: dict, usage: list) -> dict:
+    def get_output(self, policy: dict, data: list) -> dict:
         """
         Formats the output returned by the quota system.
         """
         output: dict = {}
-        value = float(usage[1])
+        self.log.debug(f"{data=}")
+        value = [sum(x) for x in zip(*data)][1]
         limit = policy["limit"]["value"]
         if value < limit:
             output["allow_server_launch"] = True
