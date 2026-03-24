@@ -117,18 +117,20 @@ class UsageQuotaManager(UsageQuotaConfig):
         pattern = r"(\{.*?)(\})"
         repl = rf"\1, namespace='{spawner.namespace}', node!='', pod='jupyter-{safe_slug(spawner.user.name)}'\2"
         promql = re.sub(pattern, repl, usage_metric)
-        promql = f"sum(sum_over_time({promql}[{str(policy['window']) + 'd'}]) / {self.sample_rate} / {self.convert[policy['limit']['unit']]}) by (namespace, pod)"
+        promql = f"{promql}[{str(policy['window']) + 'd'}]"
         self.log.debug(f"{promql=}")
-        # prometheus_client = PrometheusClient(prometheus_url=self.prometheus_url)
         response = await self.prometheus_client.query(promql)
         self.log.debug(f"{response=}")
-        if not response["data"]["result"]:
+        if not response["data"]["result"]:  # handle case when no data is returned
             unix_timestamp = (
                 datetime.datetime.utcnow() - datetime.datetime(1970, 1, 1)
             ).total_seconds()
             usage = [unix_timestamp, "0"]
         else:
-            usage = response["data"]["result"][0]["value"]
+            n_result = len(response["data"]["result"])
+            data = [response["data"]["result"][i]["values"] for i in range(n_result)]
+            data = [d for ds in data for d in ds]
+            usage = [float(d[1]) for d in data]
         return usage
 
     def get_output(self, policy: dict, usage: list) -> dict:
@@ -149,11 +151,9 @@ class UsageQuotaManager(UsageQuotaConfig):
             }
         policy.update({"used": value})
         output["quota"] = policy
-        output["timestamp"] = datetime.datetime.fromtimestamp(
-            usage[0], datetime.timezone.utc
-        ).strftime(
+        output["timestamp"] = datetime.datetime.now(datetime.UTC).strftime(
             "%Y-%m-%dT%H:%M:%SZ"
-        )  # convert from unix timestamp to string formatted with datetime
+        )
         return output
 
     async def enforce(self, spawner: KubeSpawner) -> dict:
