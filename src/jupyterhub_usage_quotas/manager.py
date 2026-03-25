@@ -144,6 +144,8 @@ class UsageQuotaManager(UsageQuotaConfig):
             ]
             for d in data
         ]
+        # Sort by time
+        data.sort(key=lambda d: d[0])
         return data
 
     def get_output(self, policy: dict, data: list) -> dict:
