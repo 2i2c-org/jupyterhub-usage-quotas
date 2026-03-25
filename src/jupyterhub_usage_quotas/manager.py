@@ -15,8 +15,8 @@ class UsageQuotaManager(UsageQuotaConfig):
 
     def __init__(self, **kwargs) -> None:
         super().__init__(**kwargs)
-        self.convert = {"GiB-hours": 2**30}  # bytes to XiB
-        self.sample_rate = 60 * 60 / self.prometheus_scrape_interval  # samples per hour
+        self.convert_resource = {"GiB-hours": 2**30}
+        self.convert_seconds = {"GiB-hours": 60**2}
         self.prometheus_client = PrometheusClient(self.prometheus_url)
 
     def resolve_empty(self) -> list:
@@ -121,17 +121,29 @@ class UsageQuotaManager(UsageQuotaConfig):
         self.log.debug(f"{promql=}")
         response = await self.prometheus_client.query(promql)
         self.log.debug(f"{response=}")
-        if not response["data"]["result"]:  # handle case when no data is returned
+        if not response["data"]["result"]:
+            # handle case when no data is returned
             unix_timestamp = (
                 datetime.datetime.utcnow() - datetime.datetime(1970, 1, 1)
             ).total_seconds()
             data = [[unix_timestamp, "0"]]
         else:
+            # flatten results into a list
             n_result = len(response["data"]["result"])
             data = [response["data"]["result"][i]["values"] for i in range(n_result)]
             data = [d for ds in data for d in ds]
-        # Convert str to float
-        data = [[d[0], float(d[1])] for d in data]
+        # Unit conversion
+        unit = policy["limit"]["unit"]
+        data = [
+            [
+                d[0],
+                float(d[1])
+                * self.prometheus_scrape_interval
+                / self.convert_seconds[unit]
+                / self.convert_resource[unit],
+            ]
+            for d in data
+        ]
         return data
 
     def get_output(self, policy: dict, data: list) -> dict:
