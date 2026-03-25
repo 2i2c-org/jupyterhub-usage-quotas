@@ -1,4 +1,5 @@
 import datetime
+import itertools
 import re
 from collections import defaultdict
 from typing import Any, Optional
@@ -148,6 +149,25 @@ class UsageQuotaManager(UsageQuotaConfig):
         data.sort(key=lambda d: d[0])
         return data
 
+    def get_retry_time(self, policy: dict, data: list) -> str:
+        """
+        Calculate when a user can retry launching their server after exceeding their quota limit.
+        """
+        x, y = zip(*data)
+        cumulative_sum = list(itertools.accumulate(y))
+        # Calculate difference between policy limit and current usage
+        delta_resource = cumulative_sum[-1] - policy["limit"]["value"]
+        self.log.debug(f"{delta_resource=}")
+        # Find timestamp when usage falls below delta_resource
+        index_retry = min(
+            i for i, v in enumerate(cumulative_sum) if v >= delta_resource
+        )
+        # Calculate retry_time = timestamp + rolling window
+        retry_time = datetime.datetime.fromtimestamp(
+            x[index_retry], tz=datetime.UTC
+        ) + datetime.timedelta(days=policy["window"])
+        return retry_time.strftime("%Y-%m-%dT%H:%M:%SZ")
+
     def get_output(self, policy: dict, data: list) -> dict:
         """
         Formats the output returned by the quota system.
@@ -163,7 +183,7 @@ class UsageQuotaManager(UsageQuotaConfig):
             output["error"] = {
                 "code": "quota-exceeded",
                 "message": f"Current {policy['resource']} usage = {value:.2f} {policy['limit']['unit']} is over the quota limit of {limit} {policy['limit']['unit']} over the last {policy['window']} days.",
-                "retry_time": "TBC",  # TODO: calculate retry_time
+                "retry_time": self.get_retry_time(policy, data),
             }
         policy.update({"used": value})
         output["quota"] = policy
