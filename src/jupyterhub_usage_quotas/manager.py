@@ -2,7 +2,7 @@ import datetime
 import itertools
 import re
 from collections import defaultdict
-from typing import Any, Optional
+from typing import Any, List, Optional
 
 from kubespawner import KubeSpawner
 from kubespawner.slugs import safe_slug
@@ -127,7 +127,7 @@ class UsageQuotaManager(UsageQuotaConfig):
             unix_timestamp = (
                 datetime.datetime.utcnow() - datetime.datetime(1970, 1, 1)
             ).total_seconds()
-            data = [[unix_timestamp, "0"]]
+            data: List[List[Any]] = [[unix_timestamp, "0"]]
         else:
             # flatten results into a list
             n_result = len(response["data"]["result"])
@@ -135,7 +135,7 @@ class UsageQuotaManager(UsageQuotaConfig):
             data = [d for ds in data for d in ds]
         # Unit conversion
         unit = policy["limit"]["unit"]
-        data = [
+        result = [
             [
                 d[0],
                 float(d[1])
@@ -146,8 +146,8 @@ class UsageQuotaManager(UsageQuotaConfig):
             for d in data
         ]
         # Sort by time
-        data.sort(key=lambda d: d[0])
-        return data
+        result.sort(key=lambda d: d[0])
+        return result
 
     def get_retry_time(self, policy: dict, data: list) -> str:
         """
