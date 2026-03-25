@@ -70,13 +70,15 @@ async def test_enforce_single(mocker):
         "memory": "kube_pod_container_resource_requests{resource='memory'}",
     }
     # Under quota limit
-    mock_usage = mocker.AsyncMock(return_value=[1773089003.938, "4999"])
-    mocker.patch("jupyterhub_usage_quotas.manager.UsageQuotaManager.get_usage")
+    mock_usage = mocker.AsyncMock(return_value=[[1773089003.938, 4999.0]])
+    mocker.patch(
+        "jupyterhub_usage_quotas.manager.UsageQuotaManager.get_usage", mock_usage
+    )
     quota_manager = UsageQuotaManager(config=c)
     output = await quota_manager.enforce(spawner)
     assert output["allow_server_launch"] == True
     # Over quota limit
-    mock_usage = mocker.AsyncMock(return_value=[1773089003.938, "5001"])
+    mock_usage = mocker.AsyncMock(return_value=[[1773089003.938, 5001.0]])
     mocker.patch(
         "jupyterhub_usage_quotas.manager.UsageQuotaManager.get_usage", mock_usage
     )
@@ -117,7 +119,7 @@ async def test_enforce_multiple(mocker):
         "memory": "kube_pod_container_resource_requests{resource='memory'}",
     }
     # Under quota limit
-    mock_usage = [[1773089003.938, "4999"], [1773089003.938, "699"]]
+    mock_usage = [[[1773089003.938, 4999.0]], [[1773089003.938, 699.0]]]
     mocker.patch(
         "jupyterhub_usage_quotas.manager.UsageQuotaManager.get_usage",
         side_effect=mock_usage,
@@ -126,7 +128,7 @@ async def test_enforce_multiple(mocker):
     output = await quota_manager.enforce(spawner)
     assert output["allow_server_launch"] == True
     # Over quota limit – 7 day window
-    mock_usage = [[1773089003.938, "4999"], [1773089003.938, "701"]]
+    mock_usage = [[[1773089003.938, 4999.0]], [[1773089003.938, 701.0]]]
     mocker.patch(
         "jupyterhub_usage_quotas.manager.UsageQuotaManager.get_usage",
         side_effect=mock_usage,
@@ -135,7 +137,7 @@ async def test_enforce_multiple(mocker):
     output = await quota_manager.enforce(spawner)
     assert output["allow_server_launch"] == False
     # Over quota limit – 30 day window
-    mock_usage = [[1773089003.938, "5001"], [1773089003.938, "699"]]
+    mock_usage = [[[1773089003.938, 5001.0]], [[1773089003.938, 699.0]]]
     mocker.patch(
         "jupyterhub_usage_quotas.manager.UsageQuotaManager.get_usage",
         side_effect=mock_usage,
@@ -144,7 +146,7 @@ async def test_enforce_multiple(mocker):
     output = await quota_manager.enforce(spawner)
     assert output["allow_server_launch"] == False
     # Over quota limit – both 7 and 30 day window
-    mock_usage = [[1773089003.938, "5001"], [1773089003.938, "701"]]
+    mock_usage = [[[1773089003.938, 5001.0]], [[1773089003.938, 701.0]]]
     mocker.patch(
         "jupyterhub_usage_quotas.manager.UsageQuotaManager.get_usage",
         side_effect=mock_usage,
@@ -174,7 +176,7 @@ async def test_enforce_empty(mocker):
         "memory": "kube_pod_container_resource_requests{resource='memory'}",
     }
     # Under quota limit
-    mock_usage = mocker.AsyncMock(return_value=[1773089003.938, "499"])
+    mock_usage = mocker.AsyncMock(return_value=[[1773089003.938, 499.0]])
     mocker.patch(
         "jupyterhub_usage_quotas.manager.UsageQuotaManager.get_usage", mock_usage
     )
@@ -182,7 +184,7 @@ async def test_enforce_empty(mocker):
     output = await quota_manager.enforce(spawner)
     assert output["allow_server_launch"] == True
     # Over quota limit
-    mock_usage = mocker.AsyncMock(return_value=[1773089003.938, "501"])
+    mock_usage = mocker.AsyncMock(return_value=[[1773089003.938, 501.0]])
     mocker.patch(
         "jupyterhub_usage_quotas.manager.UsageQuotaManager.get_usage", mock_usage
     )
@@ -194,9 +196,9 @@ async def test_enforce_empty(mocker):
 @pytest.mark.parametrize(
     "operator, under, over",
     [
-        pytest.param("min", "699", "701"),
-        pytest.param("max", "4999", "5001"),
-        pytest.param("sum", "5699", "5701"),
+        pytest.param("min", 699.0, 701.0),
+        pytest.param("max", 4999.0, 5001.0),
+        pytest.param("sum", 5699.0, 5701.0),
     ],
 )
 async def test_enforce_intersection(mocker, operator, under, over):
@@ -242,7 +244,7 @@ async def test_enforce_intersection(mocker, operator, under, over):
         "memory": "kube_pod_container_resource_requests{resource='memory'}",
     }
     # Under quota limit
-    mock_usage = mocker.AsyncMock(return_value=[1773089003.938, under])
+    mock_usage = mocker.AsyncMock(return_value=[[1773089003.938, under]])
     mocker.patch(
         "jupyterhub_usage_quotas.manager.UsageQuotaManager.get_usage", mock_usage
     )
@@ -250,7 +252,7 @@ async def test_enforce_intersection(mocker, operator, under, over):
     output = await quota_manager.enforce(spawner)
     assert output["allow_server_launch"] == True
     # Over quota limit
-    mock_usage = mocker.AsyncMock(return_value=[1773089003.938, over])
+    mock_usage = mocker.AsyncMock(return_value=[[1773089003.938, over]])
     mocker.patch(
         "jupyterhub_usage_quotas.manager.UsageQuotaManager.get_usage", mock_usage
     )
