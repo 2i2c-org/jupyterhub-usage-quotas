@@ -306,6 +306,9 @@ async def test_get_usage_no_result(mocker):
 
 
 async def test_get_usage(data_response, data_usage, mocker):
+    """
+    Test processing of data returned by Prometheus.
+    """
     spawner = kubespawner.KubeSpawner(
         _mock=True, user=MockUser(name="user-2", groups=[])
     )
@@ -329,3 +332,31 @@ async def test_get_usage(data_response, data_usage, mocker):
     empty_policy = policy[0]
     usage = await quota_manager.get_usage(spawner, empty_policy)
     assert usage == data_usage
+
+
+async def test_get_retry_time(data_usage, mocker):
+    """
+    Test retry time when a user can launch server after usage has expired.
+    """
+    spawner = kubespawner.KubeSpawner(
+        _mock=True, user=MockUser(name="user-2", groups=[])
+    )
+
+    c = Config()
+    c.UsageQuotaManager.scope_backup_strategy = {
+        "empty": {
+            "resource": "memory",
+            "limit": {"value": 10, "unit": "GiB-hours"},
+            "window": 30,
+        },
+        "intersection": "min",
+    }
+    c.UsageQuotaManager.prometheus_usage_metrics = {
+        "memory": "kube_pod_container_resource_requests{resource='memory'}",
+    }
+    quota_manager = UsageQuotaManager(config=c)
+    policy = quota_manager.resolve_policy(spawner)
+    empty_policy = policy[0]
+    retry_time = quota_manager.get_retry_time(empty_policy, data_usage)
+    print(f"{retry_time=}")
+    assert retry_time == "2026-04-05T21:10:16Z"
