@@ -301,4 +301,31 @@ async def test_get_usage_no_result(mocker):
     policy = quota_manager.resolve_policy(spawner)
     single_policy = policy[0]
     usage = await quota_manager.get_usage(spawner, single_policy)
-    assert usage[1] == "0"
+    print(f"{usage=}")
+    assert usage[0][1] == 0.0
+
+
+async def test_get_usage(data_response, data_usage, mocker):
+    spawner = kubespawner.KubeSpawner(
+        _mock=True, user=MockUser(name="user-2", groups=[])
+    )
+
+    c = Config()
+    c.UsageQuotaManager.scope_backup_strategy = {
+        "empty": {
+            "resource": "memory",
+            "limit": {"value": 10, "unit": "GiB-hours"},
+            "window": 30,
+        },
+        "intersection": "min",
+    }
+    c.UsageQuotaManager.prometheus_usage_metrics = {
+        "memory": "kube_pod_container_resource_requests{resource='memory'}",
+    }
+    mock_response = mocker.AsyncMock(return_value=data_response)
+    mocker.patch("jupyterhub_usage_quotas.client.PrometheusClient.query", mock_response)
+    quota_manager = UsageQuotaManager(config=c)
+    policy = quota_manager.resolve_policy(spawner)
+    empty_policy = policy[0]
+    usage = await quota_manager.get_usage(spawner, empty_policy)
+    assert usage == data_usage
