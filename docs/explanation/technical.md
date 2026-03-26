@@ -137,7 +137,22 @@ If the result is less than the policy limit, then we return `output["allow_serve
 
 ### Retry time
 
-With a rolling window, quota expires continuously. When a user exceeds their quota, a useful output to calculate is the `retry_time` so that users know when resources are available again. We can calculate this by projecting the usage window forward in time by an offset until we find the time when the usage falls below the limit again. We improve the precision of the retry time by performing a binary search with the offset.
+With a rolling window, quota expires continuously over time. When a user exceeds their quota, a useful output to calculate is the `retry_time` so that users know when resources are available again. This is calculated by:
+
+1. finding the difference between the usage at the current time, $t_c$, and the quota limit, $\\Delta r$
+1. finding the historic timestamp within the rolling window where $\\Delta r$ has been used, $t_e$,
+1. projecting the future timestamp with adding the rolling window period, $t_w$, to $t_e$ to determine the retry time, $t_r$.
+
+See {ref}`fig:retry-time` for a graphical example.
+
+``````{tip} Example
+`````{figure}
+:label: fig:retry-time
+````{image} ./img/retry_time.png
+````
+In this example, a usage quota policy of $6$ units is applied using a $t_w = 7$ day rolling window. A user exceeds their limit by $\Delta r = 1$ unit at the current time $t_c$ and subsequent server launches are denied. We determine the retry time, $t_r$, by finding that the user historically used $1$ unit by day $t_e = 1$, therefore the retry time $t_r = t_e + t_w = 1 + 7 = 8$.
+`````
+``````
 
 ## Output
 
