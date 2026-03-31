@@ -170,7 +170,7 @@ Environment for local development.
 """
 features = ["dev"]
 dependencies = [
-    "ipython",
+    "ipython>=9.12",
     "pre-commit",
 ]
 
