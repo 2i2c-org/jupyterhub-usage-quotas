@@ -1,7 +1,8 @@
 import datetime
+import itertools
 import re
 from collections import defaultdict
-from typing import Any, Optional
+from typing import Any, List, Optional
 
 from kubespawner import KubeSpawner
 from kubespawner.slugs import safe_slug
@@ -15,8 +16,8 @@ class UsageQuotaManager(UsageQuotaConfig):
 
     def __init__(self, **kwargs) -> None:
         super().__init__(**kwargs)
-        self.convert = {"GiB-hours": 2**30}  # bytes to XiB
-        self.sample_rate = 60 * 60 / self.prometheus_scrape_interval  # samples per hour
+        self.convert_resource = {"GiB-hours": 2**30}
+        self.convert_seconds = {"GiB-hours": 60**2}
         self.prometheus_client = PrometheusClient(self.prometheus_url)
 
     def resolve_empty(self) -> list:
@@ -117,26 +118,63 @@ class UsageQuotaManager(UsageQuotaConfig):
         pattern = r"(\{.*?)(\})"
         repl = rf"\1, namespace='{spawner.namespace}', node!='', pod='jupyter-{safe_slug(spawner.user.name)}'\2"
         promql = re.sub(pattern, repl, usage_metric)
-        promql = f"sum(sum_over_time({promql}[{str(policy['window']) + 'd'}]) / {self.sample_rate} / {self.convert[policy['limit']['unit']]}) by (namespace, pod)"
+        promql = f"{promql}[{str(policy['window']) + 'd'}]"
         self.log.debug(f"{promql=}")
-        # prometheus_client = PrometheusClient(prometheus_url=self.prometheus_url)
         response = await self.prometheus_client.query(promql)
         self.log.debug(f"{response=}")
         if not response["data"]["result"]:
+            # handle case when no data is returned
             unix_timestamp = (
                 datetime.datetime.utcnow() - datetime.datetime(1970, 1, 1)
             ).total_seconds()
-            usage = [unix_timestamp, "0"]
+            data: List[List[Any]] = [[unix_timestamp, "0"]]
         else:
-            usage = response["data"]["result"][0]["value"]
-        return usage
+            # flatten results into a list
+            n_result = len(response["data"]["result"])
+            data = [response["data"]["result"][i]["values"] for i in range(n_result)]
+            data = [d for ds in data for d in ds]
+        # Unit conversion
+        unit = policy["limit"]["unit"]
+        result = [
+            [
+                d[0],
+                float(d[1])
+                * self.prometheus_scrape_interval
+                / self.convert_seconds[unit]
+                / self.convert_resource[unit],
+            ]
+            for d in data
+        ]
+        # Sort by time
+        result.sort(key=lambda d: d[0])
+        return result
 
-    def get_output(self, policy: dict, usage: list) -> dict:
+    def get_retry_time(self, policy: dict, data: list) -> str:
+        """
+        Calculate when a user can retry launching their server after exceeding their quota limit.
+        """
+        x, y = zip(*data)
+        cumulative_sum = list(itertools.accumulate(y))
+        # Calculate difference between policy limit and current usage
+        delta_resource = cumulative_sum[-1] - policy["limit"]["value"]
+        self.log.debug(f"{delta_resource=}")
+        # Find timestamp when usage falls below delta_resource
+        index_retry = min(
+            i for i, v in enumerate(cumulative_sum) if v >= delta_resource
+        )
+        # Calculate retry_time = timestamp + rolling window
+        retry_time = datetime.datetime.fromtimestamp(
+            x[index_retry], tz=datetime.UTC
+        ) + datetime.timedelta(days=policy["window"])
+        return retry_time.strftime("%Y-%m-%dT%H:%M:%SZ")
+
+    def get_output(self, policy: dict, data: list) -> dict:
         """
         Formats the output returned by the quota system.
         """
         output: dict = {}
-        value = float(usage[1])
+        self.log.debug(f"{data=}")
+        value = [sum(x) for x in zip(*data)][1]
         limit = policy["limit"]["value"]
         if value < limit:
             output["allow_server_launch"] = True
@@ -145,15 +183,13 @@ class UsageQuotaManager(UsageQuotaConfig):
             output["error"] = {
                 "code": "quota-exceeded",
                 "message": f"Current {policy['resource']} usage = {value:.2f} {policy['limit']['unit']} is over the quota limit of {limit} {policy['limit']['unit']} over the last {policy['window']} days.",
-                "retry_time": "TBC",  # TODO: calculate retry_time
+                "retry_time": self.get_retry_time(policy, data),
             }
         policy.update({"used": value})
         output["quota"] = policy
-        output["timestamp"] = datetime.datetime.fromtimestamp(
-            usage[0], datetime.timezone.utc
-        ).strftime(
+        output["timestamp"] = datetime.datetime.now(datetime.UTC).strftime(
             "%Y-%m-%dT%H:%M:%SZ"
-        )  # convert from unix timestamp to string formatted with datetime
+        )
         return output
 
     async def enforce(self, spawner: KubeSpawner) -> dict:
