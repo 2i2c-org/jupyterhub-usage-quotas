@@ -136,9 +136,7 @@
                 </div>
                 <div class="metric-usage">{{ "%.1f"|format(usage_data.usage_gb) }} GiB used / {{ "%.1f"|format(usage_data.quota_gb) }} GiB quota</div>
                 <div class="metric-remaining"{% if usage_data.percentage >= 90 %} style="color: #ef4444;"{% endif %}>{{ "%.1f"|format(usage_data.quota_gb - usage_data.usage_gb) }} GiB remaining</div>
-                {% if usage_data.last_updated is defined %}
                 <div class="metric-last-updated">Last updated: <time datetime="{{ usage_data.last_updated }}">{{ usage_data.last_updated }}</time></div>
-                {% endif %}
             </div>
             {% endif %}
         </div>
