@@ -34,6 +34,7 @@ def create_fastapi_app(
     Returns:
         Configured FastAPI application
     """
+
     @asynccontextmanager
     async def lifespan(app: FastAPI):
         yield
@@ -44,19 +45,14 @@ def create_fastapi_app(
         loader=FileSystemLoader(get_template_path()), autoescape=True
     )
 
-    SERVICE_PREFIX = config.service_prefix
-    OAUTH_CALLBACK_PATH = f"{SERVICE_PREFIX}/oauth_callback"
-    PUBLIC_HUB_URL = config.public_hub_url
-    SESSION_SECRET_KEY = config.session_secret_key
-
     auth = HubOAuth(
-        oauth_redirect_uri=OAUTH_CALLBACK_PATH,
+        oauth_redirect_uri=f"{config.service_prefix}/oauth_callback",
         cache_max_age=60,
     )
 
     app.add_middleware(
         SessionMiddleware,
-        secret_key=SESSION_SECRET_KEY,
+        secret_key=config.session_secret_key,
         session_cookie="jupyterhub_usage_session",
         max_age=3600,
         same_site="lax",
@@ -86,7 +82,7 @@ def create_fastapi_app(
             f"<script>window.top.location.href={json.dumps(redirect_url)};</script>"
         )
 
-    @app.get(SERVICE_PREFIX)
+    @app.get(config.service_prefix)
     async def home(request: Request):
         """Home page that shows usage quota information.
 
@@ -107,7 +103,7 @@ def create_fastapi_app(
         html_content = template.render(usage_data=usage_data)
         return HTMLResponse(html_content)
 
-    @app.get(OAUTH_CALLBACK_PATH)
+    @app.get(f"{config.service_prefix}/oauth_callback")
     async def oauth_callback(request: Request, code: str, state: str):
         """Handle the OAuth2 callback from JupyterHub.
 
@@ -145,7 +141,7 @@ def create_fastapi_app(
         request.session["token"] = token
         request.session.pop("oauth_state", None)
 
-        return RedirectResponse(url=f"{PUBLIC_HUB_URL}/hub/usage")
+        return RedirectResponse(url=f"{config.public_hub_url}/hub/usage")
 
     return app
 

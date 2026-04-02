@@ -17,7 +17,9 @@ class StorageQuotaClient(PrometheusClient):
     Extends PrometheusClient with storage-specific query methods.
     """
 
-    def __init__(self, prometheus_url: str, namespace: str = "", dev_mode: bool = False, **kwargs):
+    def __init__(
+        self, prometheus_url: str, namespace: str = "", dev_mode: bool = False, **kwargs
+    ):
         """Initialize storage quota client.
 
         Args:
@@ -143,9 +145,9 @@ class StorageQuotaClient(PrometheusClient):
         """
         # Check if we should use mock data (all three conditions must be met)
         use_mock_data = (
-            self.dev_mode and
-            str(self.prometheus_url) == "http://127.0.0.1:9090" and
-            not self.namespace
+            self.dev_mode
+            and str(self.prometheus_url) == "http://127.0.0.1:9090"
+            and not self.namespace
         )
 
         if use_mock_data:
@@ -156,20 +158,28 @@ class StorageQuotaClient(PrometheusClient):
             )
             return self.get_mock_data(username)
 
-        logger.info(f"Fetching usage data for user: {username}")
+        logger.debug(f"Fetching usage data for user: {username}")
 
-        base_quota_metric = f'dirsize_hard_limit_bytes{{namespace!="", directory="{username}"}}'
-        base_usage_metric = f'dirsize_total_size_bytes{{namespace!="", directory="{username}"}}'
+        base_quota_metric = (
+            f'dirsize_hard_limit_bytes{{namespace!="", directory="{username}"}}'
+        )
+        base_usage_metric = (
+            f'dirsize_total_size_bytes{{namespace!="", directory="{username}"}}'
+        )
 
         quota_value_query = self.with_label_replace(base_quota_metric)
         usage_value_query = self.with_label_replace(base_usage_metric)
-        usage_timestamp_query = self.with_label_replace(f"timestamp({base_usage_metric})")
+        usage_timestamp_query = self.with_label_replace(
+            f"timestamp({base_usage_metric})"
+        )
 
         try:
-            quota_value_data, usage_value_data, usage_timestamp_data = await asyncio.gather(
-                self.query(quota_value_query),
-                self.query(usage_value_query),
-                self.query(usage_timestamp_query),
+            quota_value_data, usage_value_data, usage_timestamp_data = (
+                await asyncio.gather(
+                    self.query(quota_value_query),
+                    self.query(usage_value_query),
+                    self.query(usage_timestamp_query),
+                )
             )
         except Exception as e:
             logger.error(f"Error fetching usage data for {username}: {e}")
@@ -180,7 +190,9 @@ class StorageQuotaClient(PrometheusClient):
 
         quota_bytes = self.parse_value_result(quota_value_data, self.namespace)
         usage_bytes = self.parse_value_result(usage_value_data, self.namespace)
-        last_updated_dt = self.parse_timestamp_result(usage_timestamp_data, self.namespace)
+        last_updated_dt = self.parse_timestamp_result(
+            usage_timestamp_data, self.namespace
+        )
 
         if quota_bytes is None or usage_bytes is None or last_updated_dt is None:
             return {
