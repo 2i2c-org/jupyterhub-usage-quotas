@@ -88,7 +88,6 @@ class TestOAuthCallbackRoute:
         )
 
         assert response.status_code == 307
-        # Redirects to /hub/usage (embedded view with JupyterHub nav bar)
         assert response.headers["Location"] == "http://test-hub:8000/hub/usage"
 
         session = get_session(client, app)
@@ -174,7 +173,6 @@ class TestOAuthCallbackRoute:
         )
 
         assert response.status_code == 307
-        # Redirects to /hub/usage (embedded view with JupyterHub nav bar)
         assert response.headers["Location"] == "http://test-hub:8000/hub/usage"
 
         session = get_session(client, app)

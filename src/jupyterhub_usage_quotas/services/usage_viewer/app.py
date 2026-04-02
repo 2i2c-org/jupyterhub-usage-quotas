@@ -39,19 +39,16 @@ def create_fastapi_app(
         loader=FileSystemLoader(get_template_path()), autoescape=True
     )
 
-    # Configuration from config object
     SERVICE_PREFIX = config.service_prefix
     OAUTH_CALLBACK_PATH = f"{SERVICE_PREFIX}/oauth_callback"
     PUBLIC_HUB_URL = config.public_hub_url
     SESSION_SECRET_KEY = config.session_secret_key
 
-    # HubOAuth configuration
     auth = HubOAuth(
         oauth_redirect_uri=OAUTH_CALLBACK_PATH,
         cache_max_age=60,
     )
 
-    # Session middleware
     app.add_middleware(
         SessionMiddleware,
         secret_key=SESSION_SECRET_KEY,
@@ -61,7 +58,6 @@ def create_fastapi_app(
         https_only=not config.dev_mode,
     )
 
-    # OAuth dependency
     async def get_current_user(request: Request):
         """Check if the user is logged in, redirecting to JupyterHub if not."""
         token = request.session.get("token")
@@ -85,7 +81,6 @@ def create_fastapi_app(
             f"<script>window.top.location.href={json.dumps(redirect_url)};</script>"
         )
 
-    # Routes
     @app.get(SERVICE_PREFIX)
     async def home(request: Request):
         """Home page that shows usage quota information.

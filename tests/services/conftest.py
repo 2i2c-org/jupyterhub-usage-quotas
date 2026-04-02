@@ -2,7 +2,6 @@
 
 import os
 import sys
-from unittest.mock import AsyncMock
 
 import pytest
 from fastapi import Request
@@ -158,7 +157,7 @@ def mock_session_user():
     }
 
 
-def _make_mock_manager(mocker, usage_data: dict) -> AsyncMock:
+def _make_mock_manager(mocker, usage_data: dict):
     """Helper to create a mock storage client with get_user_storage_usage returning usage_data"""
 
     async def mock_get_user_storage_usage(username):

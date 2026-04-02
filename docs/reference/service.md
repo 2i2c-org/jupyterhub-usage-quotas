@@ -18,7 +18,7 @@ The service:
 2. Queries Prometheus for storage metrics using the `dirsize_hard_limit_bytes` and `dirsize_total_size_bytes` metrics (provided by [jupyterhub-home-nfs](https://github.com/2i2c-org/jupyterhub-home-nfs) or equivalent)
 3. Displays a usage dashboard embedded in JupyterHub via an iframe to show users their current storage usage and quota
 
-When `dev_mode` is enabled (via `--dev-mode` flag), the service can return randomly generated mock data, which is useful for development without a Prometheus instance. Mock data is used when dev mode is enabled AND both Prometheus settings (URL and namespace) are unconfigured.
+When `dev_mode` is enabled (via `--dev-mode` flag), the service can return randomly generated mock data, which is useful for development without a Prometheus instance. Mock data is only used when ALL three conditions are met: (1) dev_mode is True, AND (2) prometheus_url is the default (`http://127.0.0.1:9090`), AND (3) prometheus_namespace is empty. If either prometheus_url or prometheus_namespace is configured, the service will query Prometheus even when dev_mode is True.
 
 ## JupyterHub configuration
 
@@ -46,8 +46,10 @@ c.JupyterHub.services = [
             "-m",
             "jupyterhub_usage_quotas.services.usage_viewer",
             "--port=9000",
+            "--public-hub-url=<your-public-hub-url>",
             "--prometheus-url=http://<prometheus-host>:9090",
             "--prometheus-namespace=<namespace-of-the-hub>",
+            "--session-secret-key=<your-secret-key>",
             # Optional: Enable development mode for mock data
             # "--dev-mode",
         ],
@@ -80,15 +82,16 @@ The service is configured via CLI flags (preferred) or traitlet configuration:
 | `--dev-mode` | `dev_mode` | `False` | Enable development mode with mock data |
 | `--port` | `service_port` | `9000` | Port to bind the service to |
 | `--host` | `service_host` | `0.0.0.0` | Host to bind the service to |
+| `--session-secret-key` | `session_secret_key` | **(required)** | Secret key for session cookie encryption |
+| `--public-hub-url` | `public_hub_url` | **(required)** | Public URL of the JupyterHub instance |
 
 ### Environment variables
 
-JupyterHub automatically sets the following variables when managing the service as a subprocess:
+All configuration options can be set via environment variables as alternatives to CLI flags:
 
 | Variable | Description |
 |---|---|
-| `JUPYTERHUB_API_TOKEN` | API token for the Hub |
-| `JUPYTERHUB_API_URL` | Internal Hub API URL |
-| `JUPYTERHUB_SERVICE_PREFIX` | URL prefix for this service |
-| `JUPYTERHUB_PUBLIC_HUB_URL` | Public URL for the Hub (used for constructing OAuth redirect URIs) |
-| `SESSION_SECRET_KEY` | Secret key for session middleware (optional, auto-generated if not set) |
+| `JUPYTERHUB_PUBLIC_HUB_URL` | Public URL of the JupyterHub instance **(required)** |
+| `JUPYTERHUB_USAGE_QUOTAS_SESSION_SECRET_KEY` | Secret key for session cookie encryption **(required)** |
+| `JUPYTERHUB_USAGE_QUOTAS_PROMETHEUS_URL` | Prometheus server endpoint (default: `http://127.0.0.1:9090`) |
+| `JUPYTERHUB_USAGE_QUOTAS_PROMETHEUS_NAMESPACE` | Kubernetes namespace to filter metrics by (default: empty) |

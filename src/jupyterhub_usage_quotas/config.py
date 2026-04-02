@@ -207,7 +207,9 @@ class UsageViewerConfig(LoggingConfigurable):
 
     @default("prometheus_url")
     def _prometheus_url_default(self):
-        return os.environ.get("JUPYTERHUB_USAGE_QUOTAS_PROMETHEUS_URL", "http://127.0.0.1:9090")
+        return os.environ.get(
+            "JUPYTERHUB_USAGE_QUOTAS_PROMETHEUS_URL", "http://127.0.0.1:9090"
+        )
 
     prometheus_namespace = Unicode(
         help="Prometheus namespace for filtering storage quota metrics in multi-tenant environments. Leave empty for single-tenant or development. Can be set via JUPYTERHUB_USAGE_QUOTAS_PROMETHEUS_NAMESPACE environment variable.",

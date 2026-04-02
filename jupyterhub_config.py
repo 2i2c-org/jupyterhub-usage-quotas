@@ -93,6 +93,7 @@ c.JupyterHub.services = [
             "-m",
             "jupyterhub_usage_quotas.services.usage_viewer",
             "--port=9000",
+            "--public-hub-url=http://localhost:8000",
             "--prometheus-url=http://localhost:9090",
             "--prometheus-namespace=staging",
             "--session-secret-key=use-a-secure-random-key-in-production",
