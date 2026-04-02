@@ -162,6 +162,7 @@ class UsageViewer(Application, UsageViewerConfig):
         "host": "UsageViewer.service_host",
         "prometheus-url": "UsageViewer.prometheus_url",
         "prometheus-namespace": "UsageViewer.prometheus_namespace",
+        "dev-mode": "UsageViewer.dev_mode",
     }
 
     def initialize(self, argv=None):
@@ -171,13 +172,18 @@ class UsageViewer(Application, UsageViewerConfig):
         self.storage_client = StorageQuotaClient(
             prometheus_url=self.prometheus_url,
             namespace=self.prometheus_namespace,
+            dev_mode=self.dev_mode,
         )
 
         self.log.info("Initialized Usage Viewer service")
         self.log.info(f"Prometheus URL: {self.prometheus_url}")
         self.log.info(
-            f"Prometheus Namespace: {self.prometheus_namespace or '(empty - using mock data)'}"
+            f"Prometheus Namespace: {self.prometheus_namespace or '(empty)'}"
         )
+        if self.dev_mode:
+            self.log.warning("Development mode ENABLED - may use mock data for storage quotas")
+        else:
+            self.log.info("Development mode disabled - querying Prometheus for real data")
 
     def start(self):
         """Start the FastAPI service."""

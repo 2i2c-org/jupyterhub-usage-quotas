@@ -104,7 +104,32 @@ jupyterhub
 
 JupyterHub will launch the service automatically using the `command` configured in `jupyterhub_config.py` and inject the required `JUPYTERHUB_*` environment variables. Navigate to http://localhost:8000, log in, and click **Usage** in the navbar.
 
-Leaving `PROMETHEUS_NAMESPACE` unset (the default) will have the service return mock data, which is useful for local development without a real Prometheus instance.
+### Using mock data for local development
+
+To enable mock data for local development without a real Prometheus instance, use the `--dev-mode` flag when starting the service via the JupyterHub configuration:
+
+```python
+c.JupyterHub.services = [
+    {
+        "name": "usage-quota",
+        "command": [
+            "python",
+            "-m",
+            "jupyterhub_usage_quotas.services.usage_viewer",
+            "--port=9000",
+            "--dev-mode",  # Enables mock data for development
+        ],
+    }
+]
+```
+
+Alternatively, you can enable dev mode by setting the configuration directly:
+
+```python
+c.UsageViewer.dev_mode = True
+```
+
+When `dev_mode` is enabled and both `prometheus_namespace` and `prometheus_url` are unconfigured (defaults), the service will return randomly generated mock data.
 
 ## Running hatch scripts
 

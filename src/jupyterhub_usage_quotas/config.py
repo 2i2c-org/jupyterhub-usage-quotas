@@ -210,6 +210,27 @@ class UsageViewerConfig(LoggingConfigurable):
         help="Prometheus namespace for filtering storage quota metrics in multi-tenant environments. Leave empty for single-tenant or development.",
     ).tag(config=True)
 
+    dev_mode = Bool(
+        False,
+        help="""
+        Enable development mode with mock data.
+
+        When True, the service returns mock storage usage data instead of querying
+        Prometheus. This is useful for local development without a real Prometheus
+        instance.
+
+        Mock data is only used when ALL three conditions are met:
+        - dev_mode is True, AND
+        - prometheus_url is the default (http://127.0.0.1:9090), AND
+        - prometheus_namespace is empty
+
+        If either prometheus_url or prometheus_namespace is configured, the service
+        will query Prometheus even when dev_mode is True.
+
+        Default: False (production mode - always query Prometheus)
+        """,
+    ).tag(config=True)
+
     service_port = Integer(
         9000,
         help="Port to bind the usage viewer service to",

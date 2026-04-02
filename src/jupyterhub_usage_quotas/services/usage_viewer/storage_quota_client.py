@@ -17,16 +17,18 @@ class StorageQuotaClient(PrometheusClient):
     Extends PrometheusClient with storage-specific query methods.
     """
 
-    def __init__(self, prometheus_url: str, namespace: str = "", **kwargs):
+    def __init__(self, prometheus_url: str, namespace: str = "", dev_mode: bool = False, **kwargs):
         """Initialize storage quota client.
 
         Args:
             prometheus_url: URL of the Prometheus server
             namespace: Prometheus namespace for filtering metrics
+            dev_mode: Whether to enable development mode with mock data
             **kwargs: Additional arguments passed to PrometheusClient
         """
         super().__init__(prometheus_url, **kwargs)
         self.namespace = namespace
+        self.dev_mode = dev_mode
 
     @staticmethod
     def find_matching_result(data: dict[str, Any], namespace: str) -> list | None:
@@ -137,9 +139,18 @@ class StorageQuotaClient(PrometheusClient):
         Returns:
             Dictionary with usage information or error dict if unavailable
         """
-        if not self.namespace:
+        # Check if we should use mock data (all three conditions must be met)
+        use_mock_data = (
+            self.dev_mode and
+            str(self.prometheus_url) == "http://127.0.0.1:9090" and
+            not self.namespace
+        )
+
+        if use_mock_data:
             logger.warning(
-                "Namespace is not set — returning mock data for development"
+                "Development mode is enabled with unconfigured Prometheus settings — returning mock data. "
+                f"(dev_mode={self.dev_mode}, prometheus_url={str(self.prometheus_url)}, "
+                f"namespace={self.namespace or '(empty)'})"
             )
             return self.get_mock_data(username)
 

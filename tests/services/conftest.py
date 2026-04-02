@@ -85,6 +85,7 @@ def app(mock_env_vars, mocker):
     storage_client = StorageQuotaClient(
         prometheus_url=os.environ.get("PROMETHEUS_URL", "http://prometheus:9090"),
         namespace=os.environ.get("PROMETHEUS_NAMESPACE", ""),
+        dev_mode=False,  # Tests use mocked Prometheus responses, not dev mode mock data
     )
 
     # Create app with storage_quota_client (HubOAuth is now mocked)

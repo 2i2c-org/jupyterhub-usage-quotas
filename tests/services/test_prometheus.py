@@ -177,8 +177,12 @@ class TestPrometheusMalformedResponses:
 
     @pytest.mark.asyncio
     async def test_handles_empty_string_namespace(self):
-        """Should fall back to mock data when namespace is empty"""
-        client = StorageQuotaClient("http://prometheus:9090", namespace="")
+        """Should fall back to mock data when namespace is empty AND dev_mode is True"""
+        client = StorageQuotaClient(
+            "http://127.0.0.1:9090",  # default URL
+            namespace="",
+            dev_mode=True,  # Enable mock data
+        )
 
         usage_data = await client.get_user_storage_usage(username="testuser")
 
@@ -360,7 +364,7 @@ class TestPrometheusClientQuery:
         with aioresponses() as mock:
             mock.get(
                 "http://prometheus:9090/api/v1/query?query=up",
-                exception=aiohttp.ClientError("Connection refused")
+                exception=aiohttp.ClientError("Connection refused"),
             )
             with pytest.raises(aiohttp.ClientError):
                 await client.query("up")
@@ -376,7 +380,7 @@ class TestPrometheusClientQuery:
             mock.get(
                 "http://prometheus:9090/api/v1/query?query=up",
                 status=500,
-                body="Internal Server Error"
+                body="Internal Server Error",
             )
             with pytest.raises(aiohttp.ClientResponseError):
                 await client.query("up")
@@ -401,7 +405,7 @@ class TestPrometheusClientContextManager:
             with aioresponses() as mock:
                 mock.get(
                     "http://prometheus:9090/api/v1/query?query=up",
-                    payload={"status": "success", "data": {"result": []}}
+                    payload={"status": "success", "data": {"result": []}},
                 )
                 await client.query("up")
             underlying = client.session
@@ -415,7 +419,9 @@ class TestGetMockDataErrorScenario:
     def test_returns_error_dict_when_scenario_is_error(self, monkeypatch):
         """Should return an error dict when random.choice yields 'error'"""
         monkeypatch.setattr(random, "choice", lambda _: "error")
-        result = StorageQuotaClient("http://test", namespace="").get_mock_data("testuser")
+        result = StorageQuotaClient("http://test", namespace="").get_mock_data(
+            "testuser"
+        )
 
         assert result["username"] == "testuser"
         assert "error" in result
@@ -424,7 +430,9 @@ class TestGetMockDataErrorScenario:
     def test_returns_usage_dict_when_scenario_is_numeric(self, monkeypatch):
         """Should return usage data when random.choice yields a numeric scenario"""
         monkeypatch.setattr(random, "choice", lambda _: 0.50)
-        result = StorageQuotaClient("http://test", namespace="").get_mock_data("testuser")
+        result = StorageQuotaClient("http://test", namespace="").get_mock_data(
+            "testuser"
+        )
 
         assert result["username"] == "testuser"
         assert "error" not in result
@@ -453,7 +461,9 @@ class TestPrometheusEdgeCaseValues:
             },
         }
 
-        result = StorageQuotaClient.parse_value_result(large_value_response, namespace="prod")
+        result = StorageQuotaClient.parse_value_result(
+            large_value_response, namespace="prod"
+        )
         assert result == 1125899906842624
 
     @pytest.mark.asyncio
