@@ -114,6 +114,8 @@ class StorageQuotaClient(PrometheusClient):
                 "error": "Unable to reach Prometheus. Please try again later.",
             }
 
+        # At this point, scenario must be a float (type narrowing to make mypy happy)
+        assert isinstance(scenario, float)
         mock_quota_bytes = 10_737_418_240  # 10 GiB
         mock_usage_bytes = int(mock_quota_bytes * scenario)
         usage_gb = mock_usage_bytes / (1024**3)
