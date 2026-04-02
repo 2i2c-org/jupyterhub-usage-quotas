@@ -22,11 +22,16 @@ from jupyterhub_usage_quotas.services.usage_viewer.storage_quota_client import (
 logger = logging.getLogger(__name__)
 
 
-def create_fastapi_app(storage_client: StorageQuotaClient) -> FastAPI:
+def create_fastapi_app(
+    storage_client: StorageQuotaClient, dev_mode: bool = False
+) -> FastAPI:
     """Create and configure the FastAPI application.
 
     Args:
         storage_client: StorageQuotaClient instance for querying storage data
+        dev_mode: Enable development mode. When True, session cookies are sent
+            over HTTP (https_only=False). When False (default), cookies require
+            HTTPS for security (https_only=True).
 
     Returns:
         Configured FastAPI application
@@ -59,7 +64,7 @@ def create_fastapi_app(storage_client: StorageQuotaClient) -> FastAPI:
         session_cookie="jupyterhub_usage_session",
         max_age=3600,
         same_site="lax",
-        https_only=False,
+        https_only=not dev_mode,
     )
 
     # OAuth dependency
@@ -177,13 +182,15 @@ class UsageViewer(Application, UsageViewerConfig):
 
         self.log.info("Initialized Usage Viewer service")
         self.log.info(f"Prometheus URL: {self.prometheus_url}")
-        self.log.info(
-            f"Prometheus Namespace: {self.prometheus_namespace or '(empty)'}"
-        )
+        self.log.info(f"Prometheus Namespace: {self.prometheus_namespace or '(empty)'}")
         if self.dev_mode:
-            self.log.warning("Development mode ENABLED - may use mock data for storage quotas")
+            self.log.warning(
+                "Development mode ENABLED - may use mock data for storage quotas"
+            )
         else:
-            self.log.info("Development mode disabled - querying Prometheus for real data")
+            self.log.info(
+                "Development mode disabled - querying Prometheus for real data"
+            )
 
     def start(self):
         """Start the FastAPI service."""
@@ -191,7 +198,7 @@ class UsageViewer(Application, UsageViewerConfig):
             f"Starting Usage Viewer service on {self.service_host}:{self.service_port}"
         )
 
-        app = create_fastapi_app(self.storage_client)
+        app = create_fastapi_app(self.storage_client, dev_mode=self.dev_mode)
 
         uvicorn.run(
             app,

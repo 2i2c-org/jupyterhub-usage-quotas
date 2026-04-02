@@ -89,7 +89,8 @@ def app(mock_env_vars, mocker):
     )
 
     # Create app with storage_quota_client (HubOAuth is now mocked)
-    app = create_fastapi_app(storage_client)
+    # Use dev_mode=True in tests so https_only=False (TestClient uses HTTP)
+    app = create_fastapi_app(storage_client, dev_mode=True)
 
     return app
 
