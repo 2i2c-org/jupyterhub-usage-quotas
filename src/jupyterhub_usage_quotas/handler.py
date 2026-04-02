@@ -11,11 +11,14 @@ from tornado import web
 class UsageHandler(BaseHandler):
     """Handler that displays the usage-quota service in an iframe."""
 
+    service_prefix = "/services/usage-quota/"
+
     @property
     def template_namespace(self):
-        """Add current user to template namespace."""
+        """Add current user and service prefix to template namespace."""
         ns = super().template_namespace
         ns["user"] = self.current_user
+        ns["jupyterhub_usage_quotas_service_prefix"] = self.service_prefix
         return ns
 
     @web.authenticated
