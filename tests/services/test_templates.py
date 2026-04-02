@@ -42,13 +42,17 @@ class TestUsageTemplateWithNormalUsage:
         assert metric_remaining is not None
         assert "5.0 GiB remaining" in metric_remaining.text
 
-    def test_progress_bar_width_matches_percentage(self, jinja_env, usage_data_50_percent):
+    def test_progress_bar_width_matches_percentage(
+        self, jinja_env, usage_data_50_percent
+    ):
         soup = render_template(jinja_env, usage_data_50_percent)
         progress_fill = soup.find(class_="progress-fill")
         assert progress_fill is not None
         assert "width: 50.0%" in progress_fill.get("style", "")
 
-    def test_uses_normal_styling_below_90_percent(self, jinja_env, usage_data_50_percent):
+    def test_uses_normal_styling_below_90_percent(
+        self, jinja_env, usage_data_50_percent
+    ):
         soup = render_template(jinja_env, usage_data_50_percent)
         progress_fill = soup.find(class_="progress-fill")
         style = progress_fill.get("style", "")
@@ -72,7 +76,9 @@ class TestUsageTemplateWithNormalUsage:
 class TestUsageTemplateWithHighUsage:
     """Test template rendering with high usage (>= 90%)"""
 
-    def test_displays_sad_folder_icon_at_95_percent(self, jinja_env, usage_data_95_percent):
+    def test_displays_sad_folder_icon_at_95_percent(
+        self, jinja_env, usage_data_95_percent
+    ):
         soup = render_template(jinja_env, usage_data_95_percent)
         circles = soup.find_all("circle")
         assert len(circles) == 2
@@ -82,7 +88,9 @@ class TestUsageTemplateWithHighUsage:
         progress_fill = soup.find(class_="progress-fill")
         assert "background: #ef4444" in progress_fill.get("style", "")
 
-    def test_remaining_storage_is_red_at_high_usage(self, jinja_env, usage_data_95_percent):
+    def test_remaining_storage_is_red_at_high_usage(
+        self, jinja_env, usage_data_95_percent
+    ):
         soup = render_template(jinja_env, usage_data_95_percent)
         metric_remaining = soup.find(class_="metric-remaining")
         style = metric_remaining.get("style", "")
@@ -94,7 +102,9 @@ class TestUsageTemplateWithHighUsage:
         style = progress_fill.get("style", "")
         assert "#ef4444" in style
 
-    def test_progress_label_is_red_at_high_usage(self, jinja_env, usage_data_95_percent):
+    def test_progress_label_is_red_at_high_usage(
+        self, jinja_env, usage_data_95_percent
+    ):
         soup = render_template(jinja_env, usage_data_95_percent)
         progress_label = soup.find(class_="progress-label")
         style = progress_label.get("style", "")
@@ -112,14 +122,18 @@ class TestUsageTemplateWithErrors:
         assert error_message is not None
         assert "Unable to reach Prometheus" in error_message.text
 
-    def test_displays_error_icon_not_folder(self, jinja_env, usage_data_prometheus_error):
+    def test_displays_error_icon_not_folder(
+        self, jinja_env, usage_data_prometheus_error
+    ):
         soup = render_template(jinja_env, usage_data_prometheus_error)
         svgs = soup.find_all("svg", class_="icon")
         assert len(svgs) > 0
         svg = svgs[0]
         assert 'stroke="#ef4444"' in str(svg) or svg.get("stroke") == "#ef4444"
 
-    def test_error_state_has_no_progress_bar(self, jinja_env, usage_data_prometheus_error):
+    def test_error_state_has_no_progress_bar(
+        self, jinja_env, usage_data_prometheus_error
+    ):
         soup = render_template(jinja_env, usage_data_prometheus_error)
         progress_track = soup.find(class_="progress-track")
         assert progress_track is None
@@ -130,7 +144,9 @@ class TestUsageTemplateWithErrors:
         assert error_message is not None
         assert "No storage data found" in error_message.text
 
-    def test_error_message_has_red_styling(self, jinja_env, usage_data_prometheus_error):
+    def test_error_message_has_red_styling(
+        self, jinja_env, usage_data_prometheus_error
+    ):
         template = jinja_env.get_template("usage.html")
         html_content = template.render(usage_data=usage_data_prometheus_error)
         assert ".error-message" in html_content
@@ -163,6 +179,7 @@ class TestUsageTemplateEdgeCases:
         metric_usage = soup.find(class_="metric-usage")
         assert "512.0 GiB used" in metric_usage.text
         assert "1024.0 GiB quota" in metric_usage.text
+
 
 class TestUsageTemplateFooter:
     """Test footer and informational text"""

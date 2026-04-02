@@ -152,5 +152,3 @@ class TestOAuthCallbackRoute:
 
         session = get_session(client, app)
         assert "oauth_state" not in session
-
-

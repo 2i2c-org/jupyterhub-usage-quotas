@@ -75,8 +75,8 @@ def app(mock_env_vars, mocker):
     )
 
     # NOW import and create the app
-    from jupyterhub_usage_quotas.services.usage_viewer.app import create_fastapi_app
     from jupyterhub_usage_quotas.config import UsageViewerConfig
+    from jupyterhub_usage_quotas.services.usage_viewer.app import create_fastapi_app
     from jupyterhub_usage_quotas.services.usage_viewer.storage_quota_client import (
         StorageQuotaClient,
     )
@@ -91,8 +91,12 @@ def app(mock_env_vars, mocker):
     # Create config object with values from environment (dev_mode=True so https_only=False for TestClient)
     config = UsageViewerConfig(
         dev_mode=True,
-        service_prefix=os.environ.get("JUPYTERHUB_SERVICE_PREFIX", "/services/usage-quota").rstrip("/"),
-        public_hub_url=os.environ.get("JUPYTERHUB_PUBLIC_HUB_URL", "http://localhost:8000").rstrip("/"),
+        service_prefix=os.environ.get(
+            "JUPYTERHUB_SERVICE_PREFIX", "/services/usage-quota"
+        ).rstrip("/"),
+        public_hub_url=os.environ.get(
+            "JUPYTERHUB_PUBLIC_HUB_URL", "http://localhost:8000"
+        ).rstrip("/"),
         session_secret_key=os.environ.get("SESSION_SECRET_KEY", "test-secret-key"),
     )
 
@@ -122,7 +126,9 @@ def mock_env_vars(monkeypatch):
     monkeypatch.setenv("JUPYTERHUB_API_URL", "http://test-hub:8081/hub/api")
     monkeypatch.setenv("JUPYTERHUB_SERVICE_PREFIX", "/services/usage-quota/")
     monkeypatch.setenv("JUPYTERHUB_PUBLIC_HUB_URL", "http://test-hub:8000")
-    monkeypatch.setenv("JUPYTERHUB_USAGE_QUOTAS_PROMETHEUS_URL", "http://prometheus:9090")
+    monkeypatch.setenv(
+        "JUPYTERHUB_USAGE_QUOTAS_PROMETHEUS_URL", "http://prometheus:9090"
+    )
     monkeypatch.setenv("JUPYTERHUB_USAGE_QUOTAS_PROMETHEUS_NAMESPACE", "prod")
     monkeypatch.setenv("JUPYTERHUB_USAGE_QUOTAS_SESSION_SECRET_KEY", "0" * 64)
     return monkeypatch

@@ -4,13 +4,13 @@ import json
 import logging
 from contextlib import asynccontextmanager
 
+import uvicorn
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from jinja2 import Environment, FileSystemLoader
 from jupyterhub.services.auth import HubOAuth
 from starlette.middleware.sessions import SessionMiddleware
 from traitlets.config import Application
-import uvicorn
 
 from jupyterhub_usage_quotas import get_template_path
 from jupyterhub_usage_quotas.config import UsageViewerConfig
@@ -112,12 +112,12 @@ def create_fastapi_app(
         original page the user was trying to access.
 
         Args:
-            request (Request): The incoming request object containing session data.
-            code (str): The authorization code provided by JupyterHub's OAuth2 server.
-            state (str): The state parameter for CSRF protection validation.
+            request: The incoming request object containing session data.
+            code: The authorization code provided by JupyterHub's OAuth2 server.
+            state: The state parameter for CSRF protection validation.
 
         Returns:
-            RedirectResponse: Redirects to the original requested URL on success.
+            Redirects to the original requested URL on success.
 
         Raises:
             HTTPException:

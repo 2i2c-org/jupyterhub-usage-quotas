@@ -15,19 +15,17 @@ class StorageQuotaClient(PrometheusClient):
     """Client for storage quota operations using Prometheus.
 
     Extends PrometheusClient with storage-specific query methods.
+
+    Args:
+        prometheus_url: URL of the Prometheus server
+        namespace: Prometheus namespace for filtering metrics
+        dev_mode: Whether to enable development mode with mock data
+        **kwargs: Additional arguments passed to PrometheusClient
     """
 
     def __init__(
         self, prometheus_url: str, namespace: str = "", dev_mode: bool = False, **kwargs
     ):
-        """Initialize storage quota client.
-
-        Args:
-            prometheus_url: URL of the Prometheus server
-            namespace: Prometheus namespace for filtering metrics
-            dev_mode: Whether to enable development mode with mock data
-            **kwargs: Additional arguments passed to PrometheusClient
-        """
         super().__init__(prometheus_url, **kwargs)
         self.namespace = namespace
         self.dev_mode = dev_mode

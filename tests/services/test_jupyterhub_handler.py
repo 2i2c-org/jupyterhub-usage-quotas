@@ -33,7 +33,9 @@ class TestUsageHandler:
             ns = handler.template_namespace
 
         assert ns["user"] == mock_user
-        assert ns["jupyterhub_usage_quotas_service_prefix"] == UsageHandler.service_prefix
+        assert (
+            ns["jupyterhub_usage_quotas_service_prefix"] == UsageHandler.service_prefix
+        )
         assert "hub" in ns
 
     @pytest.mark.asyncio

@@ -234,12 +234,12 @@ run = "pytest {args:--cov=src/jupyterhub_usage_quotas --cov-report=term-missing 
 description = """Check the style of the codebase."""
 dependencies = [
     "pydoclint",
+    "pre-commit",
 ]
 detached = true
 
 [tool.hatch.envs.style.scripts]
-docstrings = "pydoclint"
-check = ["docstrings"]
+check = ["pre-commit run --all-files"]
 
 [tool.hatch.envs.audit]
 description = """Check dependencies for security vulnerabilities."""
