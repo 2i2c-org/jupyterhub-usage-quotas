@@ -70,7 +70,7 @@ def create_fastapi_app(
             request.session.clear()
 
         # Generate state for OAuth flow and store in session
-        state = secrets.token_hex(16)
+        state = auth.generate_state()
         request.session["oauth_state"] = state
 
         redirect_url = f"{auth.login_url}&state={state}"
