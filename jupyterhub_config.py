@@ -88,7 +88,6 @@ c.JupyterHub.services = [
         "url": "http://localhost:9000",
         "display": False,  # Don't show in Services menu - we have a custom navbar link
         "oauth_no_confirm": True,
-        "oauth_redirect_uri": "/services/usage-quota/oauth_callback",
         "command": [
             "python",
             "-m",
@@ -96,6 +95,8 @@ c.JupyterHub.services = [
             "--port=9000",
             "--prometheus-url=http://localhost:9090",
             "--prometheus-namespace=staging",
+            "--session-secret-key=use-a-secure-random-key-in-production",
+            "--dev-mode=true",
         ],
     }
 ]

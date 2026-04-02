@@ -55,7 +55,7 @@ class TestUsageHandler:
         handler.current_user = None
         handler.request.method = "GET"
         handler.get_login_url.return_value = "/hub/login"
-        handler.request.uri = "/services/usage/"
+        handler.request.uri = "/services/usage-quota/"
 
         UsageHandler.get(handler)
 

@@ -3,10 +3,11 @@ Traitlets based configuration for jupyterhub_usage_quotas
 """
 
 import copy
+import os
 import typing
 
 import jsonschema
-from traitlets import Bool, Dict, Integer, List, TraitError, Unicode, validate
+from traitlets import Bool, Dict, Integer, List, TraitError, Unicode, default, validate
 from traitlets.config import LoggingConfigurable
 
 Schema = typing.Dict[str, typing.Any]
@@ -201,14 +202,20 @@ class UsageViewerConfig(LoggingConfigurable):
     """
 
     prometheus_url = Unicode(
-        "http://127.0.0.1:9090",
-        help="The url of the Prometheus server, usually of the form 'http://<k8s-service-name>.<k8s-namespace>.svc.cluster.local' in a Kubernetes cluster. Defaults to 'http://localhost:9090' for local development if left blank.",
+        help="The url of the Prometheus server, usually of the form 'http://<k8s-service-name>.<k8s-namespace>.svc.cluster.local' in a Kubernetes cluster. Defaults to 'http://127.0.0.1:9090' for local development if left blank. Can be set via JUPYTERHUB_USAGE_QUOTAS_PROMETHEUS_URL environment variable.",
     ).tag(config=True)
 
+    @default("prometheus_url")
+    def _prometheus_url_default(self):
+        return os.environ.get("JUPYTERHUB_USAGE_QUOTAS_PROMETHEUS_URL", "http://127.0.0.1:9090")
+
     prometheus_namespace = Unicode(
-        "",
-        help="Prometheus namespace for filtering storage quota metrics in multi-tenant environments. Leave empty for single-tenant or development.",
+        help="Prometheus namespace for filtering storage quota metrics in multi-tenant environments. Leave empty for single-tenant or development. Can be set via JUPYTERHUB_USAGE_QUOTAS_PROMETHEUS_NAMESPACE environment variable.",
     ).tag(config=True)
+
+    @default("prometheus_namespace")
+    def _prometheus_namespace_default(self):
+        return os.environ.get("JUPYTERHUB_USAGE_QUOTAS_PROMETHEUS_NAMESPACE", "")
 
     dev_mode = Bool(
         False,
@@ -240,3 +247,46 @@ class UsageViewerConfig(LoggingConfigurable):
         "0.0.0.0",
         help="Host to bind the usage viewer service to",
     ).tag(config=True)
+
+    service_prefix = Unicode(
+        help="URL prefix for the service. Automatically set by JupyterHub when running as a managed service. Defaults to /services/usage-quota.",
+    ).tag(config=True)
+
+    @default("service_prefix")
+    def _service_prefix_default(self):
+        # Try environment variable first (set by JupyterHub)
+        prefix = os.environ.get("JUPYTERHUB_SERVICE_PREFIX")
+        if prefix:
+            return prefix.rstrip("/")
+        return "/services/usage-quota"
+
+    public_hub_url = Unicode(
+        help="Public URL of the JupyterHub instance. Required. Automatically set by JupyterHub via JUPYTERHUB_PUBLIC_HUB_URL environment variable.",
+    ).tag(config=True)
+
+    @default("public_hub_url")
+    def _public_hub_url_default(self):
+        # Try environment variable first (set by JupyterHub)
+        url = os.environ.get("JUPYTERHUB_PUBLIC_HUB_URL", "")
+        if not url:
+            raise TraitError(
+                "public_hub_url is required but not set. "
+                "Set it via config (c.UsageViewer.public_hub_url) or "
+                "JUPYTERHUB_PUBLIC_HUB_URL environment variable."
+            )
+        return url.rstrip("/")
+
+    session_secret_key = Unicode(
+        help="Secret key for session cookie encryption. Required for secure sessions. Set via config or JUPYTERHUB_USAGE_QUOTAS_SESSION_SECRET_KEY environment variable.",
+    ).tag(config=True)
+
+    @default("session_secret_key")
+    def _session_secret_key_default(self):
+        key = os.environ.get("JUPYTERHUB_USAGE_QUOTAS_SESSION_SECRET_KEY", "")
+        if not key:
+            raise TraitError(
+                "session_secret_key is required but not set. "
+                "Set it via config (c.UsageViewer.session_secret_key) or "
+                "JUPYTERHUB_USAGE_QUOTAS_SESSION_SECRET_KEY environment variable."
+            )
+        return key

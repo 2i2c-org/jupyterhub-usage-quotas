@@ -10,7 +10,7 @@ class TestHomeRoute:
         self, client, mock_env_vars
     ):
         """Unauthenticated user should get JS redirect to JupyterHub OAuth"""
-        response = client.get("/services/usage/", follow_redirects=False)
+        response = client.get("/services/usage-quota", follow_redirects=False)
 
         assert response.status_code == 200
         assert "window.top.location.href" in response.text
@@ -26,7 +26,7 @@ class TestHomeRoute:
         """Authenticated user should see usage data"""
         set_session(client, app, {"token": "test-token"})
 
-        response = client.get("/services/usage/")
+        response = client.get("/services/usage-quota")
 
         assert response.status_code == 200
         assert "Home storage" in response.text
@@ -40,7 +40,7 @@ class TestHomeRoute:
         """User should see error message when Prometheus is unavailable"""
         set_session(client, app, {"token": "test-token"})
 
-        response = client.get("/services/usage/")
+        response = client.get("/services/usage-quota")
 
         assert response.status_code == 200
         assert "Unable to reach Prometheus" in response.text
@@ -52,7 +52,7 @@ class TestHomeRoute:
         """User should see error when no quota data exists"""
         set_session(client, app, {"token": "test-token"})
 
-        response = client.get("/services/usage/")
+        response = client.get("/services/usage-quota")
 
         assert response.status_code == 200
         assert "No storage data found" in response.text
@@ -63,7 +63,7 @@ class TestHomeRoute:
         """User with high usage should see warning styling"""
         set_session(client, app, {"token": "test-token"})
 
-        response = client.get("/services/usage/")
+        response = client.get("/services/usage-quota")
 
         assert response.status_code == 200
         assert "95.0%" in response.text
@@ -83,7 +83,7 @@ class TestOAuthCallbackRoute:
         set_session(client, app, {"oauth_state": mock_oauth_state})
 
         response = client.get(
-            f"/services/usage/oauth_callback?code=auth123&state={mock_oauth_state}",
+            f"/services/usage-quota/oauth_callback?code=auth123&state={mock_oauth_state}",
             follow_redirects=False,
         )
 
@@ -101,7 +101,7 @@ class TestOAuthCallbackRoute:
         set_session(client, app, {"oauth_state": "expected_state"})
 
         response = client.get(
-            "/services/usage/oauth_callback?code=auth123&state=wrong_state",
+            "/services/usage-quota/oauth_callback?code=auth123&state=wrong_state",
             follow_redirects=False,
         )
 
@@ -111,7 +111,7 @@ class TestOAuthCallbackRoute:
     def test_callback_with_missing_state_returns_400(self, client, mock_env_vars):
         """Missing state should return 400 error"""
         response = client.get(
-            "/services/usage/oauth_callback?code=auth123&state=somestate",
+            "/services/usage-quota/oauth_callback?code=auth123&state=somestate",
             follow_redirects=False,
         )
 
@@ -133,7 +133,7 @@ class TestOAuthCallbackRoute:
         set_session(client, app, {"oauth_state": mock_oauth_state})
 
         response = client.get(
-            f"/services/usage/oauth_callback?code=badcode&state={mock_oauth_state}",
+            f"/services/usage-quota/oauth_callback?code=badcode&state={mock_oauth_state}",
             follow_redirects=False,
         )
 
@@ -149,7 +149,7 @@ class TestOAuthCallbackRoute:
         set_session(client, app, {"oauth_state": mock_oauth_state})
 
         response = client.get(
-            f"/services/usage/oauth_callback?code=auth123&state={mock_oauth_state}",
+            f"/services/usage-quota/oauth_callback?code=auth123&state={mock_oauth_state}",
             follow_redirects=False,
         )
 
@@ -169,7 +169,7 @@ class TestOAuthCallbackRoute:
         set_session(client, app, {"oauth_state": mock_oauth_state})
 
         response = client.get(
-            f"/services/usage/oauth_callback?code=auth123&state={mock_oauth_state}",
+            f"/services/usage-quota/oauth_callback?code=auth123&state={mock_oauth_state}",
             follow_redirects=False,
         )
 
@@ -192,7 +192,7 @@ class TestOAuthCallbackRoute:
         assert "oauth_state" in session
 
         response = client.get(
-            f"/services/usage/oauth_callback?code=auth123&state={mock_oauth_state}",
+            f"/services/usage-quota/oauth_callback?code=auth123&state={mock_oauth_state}",
             follow_redirects=False,
         )
 
@@ -206,23 +206,23 @@ class TestServicePrefixConfiguration:
     """Test that SERVICE_PREFIX is properly used in routes"""
 
     def test_home_route_uses_service_prefix(self, client, mock_env_vars):
-        response = client.get("/services/usage/", follow_redirects=False)
+        response = client.get("/services/usage-quota", follow_redirects=False)
         assert response.status_code in [200, 307]
 
     def test_callback_route_uses_service_prefix(self, client, mock_env_vars):
         response = client.get(
-            "/services/usage/oauth_callback?code=test&state=test",
+            "/services/usage-quota/oauth_callback?code=test&state=test",
             follow_redirects=False,
         )
         assert response.status_code == 400
 
     def test_oauth_callback_includes_correct_redirect_uri(self, client, mock_env_vars):
-        response = client.get("/services/usage/", follow_redirects=False)
+        response = client.get("/services/usage-quota", follow_redirects=False)
 
         assert response.status_code == 200
         assert "window.top.location.href" in response.text
 
         # The JS redirect should include the correct redirect_uri (URL-encoded)
         assert "redirect_uri=" in response.text
-        # Check for URL-encoded version: /services/usage/oauth_callback -> %2Fservices%2Fusage%2Foauth_callback
+        # Check for URL-encoded version: /services/usage-quota/oauth_callback -> %2Fservices%2Fusage%2Foauth_callback
         assert "oauth_callback" in response.text

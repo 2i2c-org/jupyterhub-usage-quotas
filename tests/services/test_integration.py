@@ -9,7 +9,7 @@ class TestEndToEndUserFlow:
     ):
         """Test: unauthenticated → OAuth → view usage"""
         with client:
-            response = client.get("/services/usage/", follow_redirects=False)
+            response = client.get("/services/usage-quota", follow_redirects=False)
             # Unauthenticated users get JS redirect (not HTTP 307)
             assert response.status_code == 200
             assert "window.top.location.href" in response.text
@@ -25,14 +25,14 @@ class TestEndToEndUserFlow:
             mock_hub_auth.generate_state = lambda next_url="/": state
 
             response = client.get(
-                f"/services/usage/oauth_callback?code=auth123&state={state}",
+                f"/services/usage-quota/oauth_callback?code=auth123&state={state}",
                 follow_redirects=False,
             )
             assert response.status_code == 307
             # Redirects to /hub/usage (embedded view with JupyterHub nav bar)
             assert response.headers["Location"] == "http://test-hub:8000/hub/usage"
 
-            response = client.get("/services/usage/", follow_redirects=False)
+            response = client.get("/services/usage-quota", follow_redirects=False)
             assert response.status_code == 200
             assert "Home storage" in response.text
             assert "50.0%" in response.text
