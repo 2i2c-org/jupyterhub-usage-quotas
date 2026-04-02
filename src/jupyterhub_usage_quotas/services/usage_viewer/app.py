@@ -2,6 +2,7 @@
 
 import json
 import logging
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
@@ -33,7 +34,12 @@ def create_fastapi_app(
     Returns:
         Configured FastAPI application
     """
-    app = FastAPI()
+    @asynccontextmanager
+    async def lifespan(app: FastAPI):
+        yield
+        await storage_client.close()
+
+    app = FastAPI(lifespan=lifespan)
     jinja_env = Environment(
         loader=FileSystemLoader(get_template_path()), autoescape=True
     )
