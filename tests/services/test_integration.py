@@ -1,11 +1,13 @@
 """Integration tests for end-to-end user flows"""
 
+import re
+
 
 class TestEndToEndUserFlow:
     """Test complete user flows from start to finish"""
 
     def test_complete_unauthenticated_to_viewing_usage(
-        self, client, app, mock_env_vars, mock_prometheus_client, mock_hub_auth
+        self, client, app, mock_env_vars, mock_prometheus_client
     ):
         """Test: unauthenticated → OAuth → view usage"""
         with client:
@@ -16,13 +18,8 @@ class TestEndToEndUserFlow:
             assert "oauth2/authorize" in response.text
 
             # Extract state from JS redirect
-            import re
-
             match = re.search(r'state=([^"&]+)', response.text)
             state = match.group(1)
-
-            # Update mock to return the generated state
-            mock_hub_auth.generate_state = lambda next_url="/": state
 
             response = client.get(
                 f"/services/usage-quota/oauth_callback?code=auth123&state={state}",

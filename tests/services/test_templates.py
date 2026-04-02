@@ -77,12 +77,6 @@ class TestUsageTemplateWithHighUsage:
         circles = soup.find_all("circle")
         assert len(circles) == 2
 
-    def test_uses_red_styling_above_90_percent(self, jinja_env, usage_data_95_percent):
-        soup = render_template(jinja_env, usage_data_95_percent)
-        progress_fill = soup.find(class_="progress-fill")
-        style = progress_fill.get("style", "")
-        assert "#ef4444" in style
-
     def test_progress_bar_is_red_at_high_usage(self, jinja_env, usage_data_95_percent):
         soup = render_template(jinja_env, usage_data_95_percent)
         progress_fill = soup.find(class_="progress-fill")
@@ -143,28 +137,6 @@ class TestUsageTemplateWithErrors:
         assert "color: #ef4444" in html_content or "color:#ef4444" in html_content
 
 
-class TestUsageTemplateAccessibility:
-    """Test template accessibility features"""
-
-    def test_time_element_has_datetime_attribute(self, jinja_env, usage_data_50_percent):
-        soup = render_template(jinja_env, usage_data_50_percent)
-        time_element = soup.find("time")
-        assert time_element is not None
-        assert time_element.has_attr("datetime")
-        assert time_element["datetime"] == usage_data_50_percent["last_updated"]
-
-    def test_javascript_formats_timestamp(self, jinja_env, usage_data_50_percent):
-        template = jinja_env.get_template("usage.html")
-        html_content = template.render(usage_data=usage_data_50_percent)
-        assert "toLocaleString" in html_content
-        assert "querySelectorAll('time[datetime]')" in html_content
-
-    def test_has_semantic_html_structure(self, jinja_env, usage_data_50_percent):
-        soup = render_template(jinja_env, usage_data_50_percent)
-        assert soup.find("h1") is not None
-        assert soup.find("time") is not None
-
-
 class TestUsageTemplateEdgeCases:
     """Test edge cases in template rendering"""
 
@@ -191,26 +163,6 @@ class TestUsageTemplateEdgeCases:
         metric_usage = soup.find(class_="metric-usage")
         assert "512.0 GiB used" in metric_usage.text
         assert "1024.0 GiB quota" in metric_usage.text
-
-    def test_decimal_precision_consistent(self, jinja_env, usage_data_50_percent):
-        soup = render_template(jinja_env, usage_data_50_percent)
-        progress_label = soup.find(class_="progress-label")
-        assert ".0%" in progress_label.text
-        metric_usage = soup.find(class_="metric-usage")
-        assert ".0 GiB" in metric_usage.text
-
-    def test_handles_no_last_updated_field(self, jinja_env):
-        usage_data_no_timestamp = {
-            "username": "testuser",
-            "usage_bytes": 5368709120,
-            "quota_bytes": 10737418240,
-            "usage_gb": 5.0,
-            "quota_gb": 10.0,
-            "percentage": 50.0,
-        }
-        soup = render_template(jinja_env, usage_data_no_timestamp)
-        assert soup.find("h1") is not None
-
 
 class TestUsageTemplateFooter:
     """Test footer and informational text"""

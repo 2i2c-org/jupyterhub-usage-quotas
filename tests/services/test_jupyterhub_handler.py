@@ -57,6 +57,9 @@ class TestUsageHandler:
         handler.get_login_url.return_value = "/hub/login"
         handler.request.uri = "/services/usage-quota/"
 
+        # No await: @web.authenticated wraps the async method in a synchronous
+        # guard that calls self.redirect() and returns None (not a coroutine)
+        # when current_user is None.
         UsageHandler.get(handler)
 
         handler.redirect.assert_called_once()

@@ -204,24 +204,21 @@ class TestPrometheusMalformedResponses:
 class TestPrometheusMultipleNamespaces:
     """Test namespace filtering"""
 
-    @pytest.mark.asyncio
-    async def test_filters_correct_namespace_with_multiple_results(self):
+    def test_filters_correct_namespace_with_multiple_results(self):
         """Should select metric matching configured namespace"""
         value_bytes = StorageQuotaClient.parse_value_result(
             PROMETHEUS_MULTIPLE_NAMESPACES_QUOTA, namespace="prod"
         )
         assert value_bytes == 10737418240  # prod namespace value (10 GB)
 
-    @pytest.mark.asyncio
-    async def test_filters_staging_namespace(self):
+    def test_filters_staging_namespace(self):
         """Should correctly filter staging namespace"""
         value_bytes = StorageQuotaClient.parse_value_result(
             PROMETHEUS_MULTIPLE_NAMESPACES_QUOTA, namespace="staging"
         )
         assert value_bytes == 5368709120  # staging namespace value (5 GB)
 
-    @pytest.mark.asyncio
-    async def test_returns_none_when_namespace_not_found(self):
+    def test_returns_none_when_namespace_not_found(self):
         """Should return None if namespace doesn't exist in results"""
         assert (
             StorageQuotaClient.parse_value_result(
@@ -392,12 +389,6 @@ class TestPrometheusClientContextManager:
     """Test async context manager protocol"""
 
     @pytest.mark.asyncio
-    async def test_async_context_manager_returns_self(self):
-        """__aenter__ should return the client instance"""
-        async with PrometheusClient(prometheus_url="http://prometheus:9090") as client:
-            assert isinstance(client, PrometheusClient)
-
-    @pytest.mark.asyncio
     async def test_async_context_manager_closes_on_exit(self):
         """__aexit__ should close the underlying aiohttp session"""
         async with PrometheusClient(prometheus_url="http://prometheus:9090") as client:
@@ -445,8 +436,7 @@ class TestGetMockDataErrorScenario:
 class TestPrometheusEdgeCaseValues:
     """Test edge case values in Prometheus data"""
 
-    @pytest.mark.asyncio
-    async def test_handles_very_large_values(self):
+    def test_handles_very_large_values(self):
         """Should handle very large byte values (petabytes)"""
         large_value_response = {
             "status": "success",

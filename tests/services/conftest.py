@@ -98,33 +98,15 @@ def app(mock_env_vars, mocker):
 
     # Create app with storage_client and config (HubOAuth is now mocked)
     app = create_fastapi_app(storage_client, config=config)
+    app.state.mock_auth = mock_auth
 
     return app
 
 
 @pytest.fixture
-def mock_hub_auth(app, mocker):
-    """Return the mocked HubOAuth instance for tests that need to customize it"""
-    # The mock was already set up in the app fixture
-    # This fixture just provides access to it for tests that need to customize behavior
-
-    async def mock_token_for_code(code, sync=False):
-        if code == "badcode":
-            return None
-        return "test-token"
-
-    async def mock_user_for_token(token, use_cache=True, sync=False):
-        if token == "valid-token" or token == "test-token":
-            return {"name": "testuser", "admin": False, "groups": ["users"]}
-        return None
-
-    mock_auth = mocker.MagicMock()
-    mock_auth.token_for_code = mock_token_for_code
-    mock_auth.user_for_token = mock_user_for_token
-    mock_auth.generate_state = mocker.MagicMock(return_value="test-state-123")
-    mock_auth.login_url = "http://localhost:8000/hub/oauth_login"
-
-    return mock_auth
+def mock_hub_auth(app):
+    """Return the actual mocked HubOAuth instance wired into the app."""
+    return app.state.mock_auth
 
 
 @pytest.fixture
@@ -144,17 +126,6 @@ def mock_env_vars(monkeypatch):
     monkeypatch.setenv("JUPYTERHUB_USAGE_QUOTAS_PROMETHEUS_NAMESPACE", "prod")
     monkeypatch.setenv("JUPYTERHUB_USAGE_QUOTAS_SESSION_SECRET_KEY", "0" * 64)
     return monkeypatch
-
-
-@pytest.fixture
-def mock_session_user():
-    """Mock authenticated user session data"""
-    return {
-        "name": "testuser",
-        "admin": False,
-        "groups": ["users"],
-        "server": "/user/testuser/",
-    }
 
 
 def _make_mock_manager(mocker, usage_data: dict):
