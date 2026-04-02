@@ -1,5 +1,9 @@
+import logging
+
 import aiohttp
 from yarl import URL
+
+logger = logging.getLogger(__name__)
 
 
 class Client:
@@ -19,6 +23,12 @@ class Client:
         if self.session and not self.session.closed:
             await self.session.close()
 
+    async def __aenter__(self):
+        return self
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        await self.close()
+
 
 class PrometheusClient(Client):
     def __init__(self, prometheus_url: str, **kwargs):
@@ -36,6 +46,9 @@ class PrometheusClient(Client):
                 response.raise_for_status()
                 data = await response.json()
                 return data
+        except aiohttp.ClientError as e:
+            logger.error(f"Error querying Prometheus: {e}")
+            raise
         except Exception as e:
-            print(f"Error querying prometheus: {e}")
+            logger.error(f"Unexpected error: {e}")
             raise

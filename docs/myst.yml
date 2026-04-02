@@ -25,6 +25,7 @@ project:
     - title: Reference
       children:
       - file: reference/configuration.md
+      - file: reference/service.md
       - file: reference/UsageQuotaConfig.md
         hidden: true
       - file: reference/CHANGELOG.md

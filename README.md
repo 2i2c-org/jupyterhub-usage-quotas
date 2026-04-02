@@ -9,6 +9,7 @@ This library implements compute usage quotas for Jupyter servers at server start
 - Metric based accounting for compute usage with Prometheus
 - Flexible and declarative usage policies, such as quota sizes and quota time windows
 - Server startup-time enforcement
+- User-facing storage usage dashboard (optional)
 
 ## Installation
 
@@ -16,6 +17,12 @@ The [PyPI package](https://pypi.org/project/jupyterhub-usage-quotas/) can be ins
 
 ```bash
 pip install jupyterhub-usage-quotas
+```
+
+To also install the user-facing storage usage dashboard service:
+
+```bash
+pip install "jupyterhub-usage-quotas[service]"
 ```
 
 For local development, see the [development guide](./DEVELOPMENT.md)

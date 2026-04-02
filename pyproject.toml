@@ -55,6 +55,11 @@ dependencies = [
 jupyterhub_usage_quotas = "jupyterhub_usage_quotas.app:main"
 
 [project.optional-dependencies]
+service = [
+    "fastapi[standard]",
+    "itsdangerous>=2.0",
+    "jinja2>=3.0",
+]
 dev = []
 
 ################################################################################
@@ -205,6 +210,7 @@ description = """
 Run test suite
 """
 inherits = ["default"]
+features = ["service"]
 dependencies = [
     "pytest",
     "pytest-cov",
@@ -214,6 +220,8 @@ dependencies = [
     "pytest-xdist",
     "pytest-aiohttp>=1.1.0",
     "pytest-asyncio>=0.26.0",
+    "aioresponses>=0.7.0",
+    "beautifulsoup4",
 ]
 
 [[tool.hatch.envs.test.matrix]]
@@ -226,12 +234,12 @@ run = "pytest {args:--cov=src/jupyterhub_usage_quotas --cov-report=term-missing 
 description = """Check the style of the codebase."""
 dependencies = [
     "pydoclint",
+    "pre-commit",
 ]
 detached = true
 
 [tool.hatch.envs.style.scripts]
-docstrings = "pydoclint"
-check = ["docstrings"]
+check = ["pre-commit run --all-files"]
 
 [tool.hatch.envs.audit]
 description = """Check dependencies for security vulnerabilities."""
