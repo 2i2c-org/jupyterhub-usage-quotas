@@ -1,6 +1,6 @@
 """Tests for FastAPI routes"""
 
-from tests.service.conftest import get_session, set_session
+from tests.services.conftest import get_session, set_session
 
 
 class TestHomeRoute:
@@ -83,13 +83,13 @@ class TestOAuthCallbackRoute:
         set_session(client, app, {"oauth_state": mock_oauth_state})
 
         response = client.get(
-            f"/services/usage/oauth_redirect?code=auth123&state={mock_oauth_state}",
+            f"/services/usage/oauth_callback?code=auth123&state={mock_oauth_state}",
             follow_redirects=False,
         )
 
         assert response.status_code == 307
         # Redirects to /hub/usage (embedded view with JupyterHub nav bar)
-        assert response.headers["Location"] == "http://localhost:8000/hub/usage"
+        assert response.headers["Location"] == "http://test-hub:8000/hub/usage"
 
         session = get_session(client, app)
         assert "token" in session
@@ -101,7 +101,7 @@ class TestOAuthCallbackRoute:
         set_session(client, app, {"oauth_state": "expected_state"})
 
         response = client.get(
-            "/services/usage/oauth_redirect?code=auth123&state=wrong_state",
+            "/services/usage/oauth_callback?code=auth123&state=wrong_state",
             follow_redirects=False,
         )
 
@@ -111,7 +111,7 @@ class TestOAuthCallbackRoute:
     def test_callback_with_missing_state_returns_400(self, client, mock_env_vars):
         """Missing state should return 400 error"""
         response = client.get(
-            "/services/usage/oauth_redirect?code=auth123&state=somestate",
+            "/services/usage/oauth_callback?code=auth123&state=somestate",
             follow_redirects=False,
         )
 
@@ -133,7 +133,7 @@ class TestOAuthCallbackRoute:
         set_session(client, app, {"oauth_state": mock_oauth_state})
 
         response = client.get(
-            f"/services/usage/oauth_redirect?code=badcode&state={mock_oauth_state}",
+            f"/services/usage/oauth_callback?code=badcode&state={mock_oauth_state}",
             follow_redirects=False,
         )
 
@@ -149,7 +149,7 @@ class TestOAuthCallbackRoute:
         set_session(client, app, {"oauth_state": mock_oauth_state})
 
         response = client.get(
-            f"/services/usage/oauth_redirect?code=auth123&state={mock_oauth_state}",
+            f"/services/usage/oauth_callback?code=auth123&state={mock_oauth_state}",
             follow_redirects=False,
         )
 
@@ -169,13 +169,13 @@ class TestOAuthCallbackRoute:
         set_session(client, app, {"oauth_state": mock_oauth_state})
 
         response = client.get(
-            f"/services/usage/oauth_redirect?code=auth123&state={mock_oauth_state}",
+            f"/services/usage/oauth_callback?code=auth123&state={mock_oauth_state}",
             follow_redirects=False,
         )
 
         assert response.status_code == 307
         # Redirects to /hub/usage (embedded view with JupyterHub nav bar)
-        assert response.headers["Location"] == "http://localhost:8000/hub/usage"
+        assert response.headers["Location"] == "http://test-hub:8000/hub/usage"
 
         session = get_session(client, app)
         assert "token" in session
@@ -192,7 +192,7 @@ class TestOAuthCallbackRoute:
         assert "oauth_state" in session
 
         response = client.get(
-            f"/services/usage/oauth_redirect?code=auth123&state={mock_oauth_state}",
+            f"/services/usage/oauth_callback?code=auth123&state={mock_oauth_state}",
             follow_redirects=False,
         )
 
@@ -211,12 +211,12 @@ class TestServicePrefixConfiguration:
 
     def test_callback_route_uses_service_prefix(self, client, mock_env_vars):
         response = client.get(
-            "/services/usage/oauth_redirect?code=test&state=test",
+            "/services/usage/oauth_callback?code=test&state=test",
             follow_redirects=False,
         )
         assert response.status_code == 400
 
-    def test_oauth_redirect_includes_correct_redirect_uri(self, client, mock_env_vars):
+    def test_oauth_callback_includes_correct_redirect_uri(self, client, mock_env_vars):
         response = client.get("/services/usage/", follow_redirects=False)
 
         assert response.status_code == 200
@@ -224,5 +224,5 @@ class TestServicePrefixConfiguration:
 
         # The JS redirect should include the correct redirect_uri (URL-encoded)
         assert "redirect_uri=" in response.text
-        # Check for URL-encoded version: /services/usage/oauth_redirect -> %2Fservices%2Fusage%2Foauth_redirect
-        assert "oauth_redirect" in response.text
+        # Check for URL-encoded version: /services/usage/oauth_callback -> %2Fservices%2Fusage%2Foauth_callback
+        assert "oauth_callback" in response.text

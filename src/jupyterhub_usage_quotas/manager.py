@@ -124,7 +124,8 @@ class UsageQuotaManager(UsageQuotaConfig):
         self.log.debug(f"{response=}")
         if not response["data"]["result"]:
             unix_timestamp = (
-                datetime.datetime.utcnow() - datetime.datetime(1970, 1, 1)
+                datetime.datetime.now(datetime.UTC)
+                - datetime.datetime(1970, 1, 1, tzinfo=datetime.UTC)
             ).total_seconds()
             usage = [unix_timestamp, "0"]
         else:

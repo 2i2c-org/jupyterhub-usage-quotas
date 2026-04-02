@@ -1,5 +1,6 @@
 """Shared pytest fixtures for jupyterhub-usage-quotas service tests"""
 
+import os
 import sys
 from unittest.mock import AsyncMock
 
@@ -44,21 +45,13 @@ def get_session(client: TestClient, app) -> dict:
 
 
 @pytest.fixture
-def app(mock_env_vars):
+def app(mock_env_vars, mocker):
     """Provide the FastAPI application instance with reloaded environment variables"""
-    if "jupyterhub_usage_quotas.service.app" in sys.modules:
-        del sys.modules["jupyterhub_usage_quotas.service.app"]
+    # Clear any cached modules FIRST
+    if "jupyterhub_usage_quotas.services.usage_viewer.app" in sys.modules:
+        del sys.modules["jupyterhub_usage_quotas.services.usage_viewer.app"]
 
-    from jupyterhub_usage_quotas.service.app import app
-
-    return app
-
-
-@pytest.fixture(autouse=True)
-def mock_hub_auth(mocker, app):
-    """Mock HubOAuth to avoid real HTTP calls (autouse=True means it applies to all tests)"""
-
-    # Create async mock functions
+    # Set up HubOAuth mock BEFORE importing
     async def mock_token_for_code(code, sync=False):
         if code == "badcode":
             return None
@@ -69,26 +62,60 @@ def mock_hub_auth(mocker, app):
             return {"name": "testuser", "admin": False, "groups": ["users"]}
         return None
 
-    # Mock the auth methods directly
-    mocker.patch(
-        "jupyterhub_usage_quotas.service.app.auth.token_for_code",
-        side_effect=mock_token_for_code,
-    )
-    mocker.patch(
-        "jupyterhub_usage_quotas.service.app.auth.user_for_token",
-        side_effect=mock_user_for_token,
-    )
+    # Create a mock auth object
+    mock_auth = mocker.MagicMock()
+    mock_auth.token_for_code = mock_token_for_code
+    mock_auth.user_for_token = mock_user_for_token
+    mock_auth.generate_state = mocker.MagicMock(return_value="test-state-123")
+    mock_auth.login_url = "http://localhost:8000/hub/api/oauth2/authorize?client_id=service-usage-quota&redirect_uri=http://localhost:8000/services/usage-quota/oauth_callback&response_type=code"
 
-    # Mock the generate_state method
+    # Mock HubOAuth constructor BEFORE importing the module
     mocker.patch(
-        "jupyterhub_usage_quotas.service.app.auth.generate_state",
-        return_value="test-state-123",
+        "jupyterhub_usage_quotas.services.usage_viewer.app.HubOAuth",
+        return_value=mock_auth,
     )
 
-    # Get the mocked auth object to return
-    from jupyterhub_usage_quotas.service.app import auth
+    # NOW import and create the app
+    from jupyterhub_usage_quotas.services.usage_viewer.app import create_fastapi_app
+    from jupyterhub_usage_quotas.services.usage_viewer.storage_quota_client import (
+        StorageQuotaClient,
+    )
 
-    return auth
+    # Create storage client directly for the Usage Viewer service
+    storage_client = StorageQuotaClient(
+        prometheus_url=os.environ.get("PROMETHEUS_URL", "http://prometheus:9090"),
+        namespace=os.environ.get("PROMETHEUS_NAMESPACE", ""),
+    )
+
+    # Create app with storage_quota_client (HubOAuth is now mocked)
+    app = create_fastapi_app(storage_client)
+
+    return app
+
+
+@pytest.fixture
+def mock_hub_auth(app, mocker):
+    """Return the mocked HubOAuth instance for tests that need to customize it"""
+    # The mock was already set up in the app fixture
+    # This fixture just provides access to it for tests that need to customize behavior
+
+    async def mock_token_for_code(code, sync=False):
+        if code == "badcode":
+            return None
+        return "test-token"
+
+    async def mock_user_for_token(token, use_cache=True, sync=False):
+        if token == "valid-token" or token == "test-token":
+            return {"name": "testuser", "admin": False, "groups": ["users"]}
+        return None
+
+    mock_auth = mocker.MagicMock()
+    mock_auth.token_for_code = mock_token_for_code
+    mock_auth.user_for_token = mock_user_for_token
+    mock_auth.generate_state = mocker.MagicMock(return_value="test-state-123")
+    mock_auth.login_url = "http://localhost:8000/hub/oauth_login"
+
+    return mock_auth
 
 
 @pytest.fixture
@@ -103,8 +130,7 @@ def mock_env_vars(monkeypatch):
     monkeypatch.setenv("JUPYTERHUB_API_TOKEN", "test-token-123")
     monkeypatch.setenv("JUPYTERHUB_API_URL", "http://test-hub:8081/hub/api")
     monkeypatch.setenv("JUPYTERHUB_SERVICE_PREFIX", "/services/usage/")
-    monkeypatch.setenv("JUPYTERHUB_EXTERNAL_URL", "http://localhost:8000")
-    monkeypatch.setenv("JUPYTERHUB_SERVICE_NAME", "usage-service")
+    monkeypatch.setenv("JUPYTERHUB_PUBLIC_HUB_URL", "http://test-hub:8000")
     monkeypatch.setenv("PROMETHEUS_URL", "http://prometheus:9090")
     monkeypatch.setenv("PROMETHEUS_NAMESPACE", "prod")
     monkeypatch.setenv("SESSION_SECRET_KEY", "0" * 64)
@@ -122,21 +148,22 @@ def mock_session_user():
     }
 
 
-def _make_mock_prometheus_client(mocker, usage_data: dict) -> AsyncMock:
-    mock_client = AsyncMock()
-    mock_client.__aenter__.return_value = mock_client
-    mock_client.__aexit__.return_value = None
-    mock_client.get_user_usage.return_value = usage_data
+def _make_mock_manager(mocker, usage_data: dict) -> AsyncMock:
+    """Helper to create a mock storage client with get_user_storage_usage returning usage_data"""
+
+    async def mock_get_user_storage_usage(username):
+        return usage_data
+
     mocker.patch(
-        "jupyterhub_usage_quotas.service.app.PrometheusClient", return_value=mock_client
+        "jupyterhub_usage_quotas.services.usage_viewer.storage_quota_client.StorageQuotaClient.get_user_storage_usage",
+        side_effect=mock_get_user_storage_usage,
     )
-    return mock_client
 
 
 @pytest.fixture
 def mock_prometheus_client(mocker):
-    """Mock PrometheusClient for route tests (50% usage)"""
-    return _make_mock_prometheus_client(
+    """Mock manager.get_storage_usage for route tests (50% usage)"""
+    _make_mock_manager(
         mocker,
         {
             "username": "testuser",
@@ -152,8 +179,8 @@ def mock_prometheus_client(mocker):
 
 @pytest.fixture
 def mock_prometheus_client_with_error(mocker):
-    """Mock PrometheusClient that returns an error"""
-    return _make_mock_prometheus_client(
+    """Mock manager.get_storage_usage that returns an error"""
+    _make_mock_manager(
         mocker,
         {
             "username": "testuser",
@@ -164,8 +191,8 @@ def mock_prometheus_client_with_error(mocker):
 
 @pytest.fixture
 def mock_prometheus_client_no_data(mocker):
-    """Mock PrometheusClient that returns no data error"""
-    return _make_mock_prometheus_client(
+    """Mock manager.get_storage_usage that returns no data error"""
+    _make_mock_manager(
         mocker,
         {
             "username": "testuser",
@@ -176,8 +203,8 @@ def mock_prometheus_client_no_data(mocker):
 
 @pytest.fixture
 def mock_prometheus_client_high_usage(mocker):
-    """Mock PrometheusClient that returns high usage (95%)"""
-    return _make_mock_prometheus_client(
+    """Mock manager.get_storage_usage that returns high usage (95%)"""
+    _make_mock_manager(
         mocker,
         {
             "username": "testuser",

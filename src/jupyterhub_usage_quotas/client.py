@@ -46,6 +46,9 @@ class PrometheusClient(Client):
                 response.raise_for_status()
                 data = await response.json()
                 return data
+        except aiohttp.ClientError as e:
+            logger.error(f"Error querying Prometheus: {e}")
+            raise
         except Exception as e:
-            logger.error(f"Error querying prometheus: {e}")
+            logger.error(f"Unexpected error: {e}")
             raise

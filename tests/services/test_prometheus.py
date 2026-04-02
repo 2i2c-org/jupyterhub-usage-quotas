@@ -7,8 +7,11 @@ import aiohttp
 import pytest
 from aioresponses import aioresponses
 
-from jupyterhub_usage_quotas.service.prometheus_client import PrometheusClient
-from tests.service.fixtures.prometheus_responses import (
+from jupyterhub_usage_quotas.client import PrometheusClient
+from jupyterhub_usage_quotas.services.usage_viewer.storage_quota_client import (
+    StorageQuotaClient,
+)
+from tests.services.fixtures.prometheus_responses import (
     PROMETHEUS_EMPTY_RESULT,
     PROMETHEUS_ERROR_RESPONSE,
     PROMETHEUS_MALFORMED_INVALID_VALUE,
@@ -26,48 +29,52 @@ from tests.service.fixtures.prometheus_responses import (
 
 
 class TestParseValueResult:
-    """Test the _parse_value_result helper"""
+    """Test the parse_value_result helper"""
 
     def test_parses_correct_namespace(self):
-        client = PrometheusClient()
-        client.namespace = "staging"
-        value_bytes = client._parse_value_result(PROMETHEUS_MULTI_NS_QUOTA)
+        value_bytes = StorageQuotaClient.parse_value_result(
+            PROMETHEUS_MULTI_NS_QUOTA, namespace="staging"
+        )
         assert value_bytes == 10737418240
 
     def test_parses_prod_namespace(self):
-        client = PrometheusClient()
-        client.namespace = "prod"
-        value_bytes = client._parse_value_result(PROMETHEUS_MULTI_NS_QUOTA)
+        value_bytes = StorageQuotaClient.parse_value_result(
+            PROMETHEUS_MULTI_NS_QUOTA, namespace="prod"
+        )
         assert value_bytes == 214748364800
 
     def test_returns_none_for_unknown_namespace(self):
-        client = PrometheusClient()
-        client.namespace = "nonexistent"
-        assert client._parse_value_result(PROMETHEUS_MULTI_NS_QUOTA) is None
+        assert (
+            StorageQuotaClient.parse_value_result(
+                PROMETHEUS_MULTI_NS_QUOTA, namespace="nonexistent"
+            )
+            is None
+        )
 
     def test_returns_none_for_failed_status(self):
-        client = PrometheusClient()
-        client.namespace = "prod"
-        assert client._parse_value_result({"status": "error", "error": "bad query"}) is None
+        assert (
+            StorageQuotaClient.parse_value_result(
+                {"status": "error", "error": "bad query"}, namespace="prod"
+            )
+            is None
+        )
 
     def test_returns_none_for_empty_results(self):
-        client = PrometheusClient()
-        client.namespace = "prod"
         assert (
-            client._parse_value_result(
-                {"status": "success", "data": {"resultType": "vector", "result": []}}
+            StorageQuotaClient.parse_value_result(
+                {"status": "success", "data": {"resultType": "vector", "result": []}},
+                namespace="prod",
             )
             is None
         )
 
 
 class TestGetUserUsageWithPrometheus:
-    """Test get_user_usage with mocked Prometheus responses"""
+    """Test get_user_storage_usage with mocked Prometheus responses"""
 
     @pytest.mark.asyncio
     async def test_returns_usage_data(self):
-        client = PrometheusClient()
-        client.namespace = "staging"
+        client = StorageQuotaClient("http://prometheus:9090", namespace="staging")
         client.query = AsyncMock(
             side_effect=[
                 PROMETHEUS_MULTI_NS_QUOTA,
@@ -76,7 +83,7 @@ class TestGetUserUsageWithPrometheus:
             ]
         )
 
-        usage_data = await client.get_user_usage("testuser")
+        usage_data = await client.get_user_storage_usage(username="testuser")
 
         assert usage_data["username"] == "testuser"
         assert usage_data["quota_bytes"] == 10737418240
@@ -85,20 +92,15 @@ class TestGetUserUsageWithPrometheus:
         assert "last_updated" in usage_data
         assert "error" not in usage_data
 
-        await client.close()
-
     @pytest.mark.asyncio
     async def test_returns_error_when_prometheus_unreachable(self):
-        client = PrometheusClient()
-        client.namespace = "prod"
+        client = StorageQuotaClient("http://prometheus:9090", namespace="prod")
         client.query = AsyncMock(side_effect=Exception("Connection refused"))
 
-        usage_data = await client.get_user_usage("testuser")
+        usage_data = await client.get_user_storage_usage(username="testuser")
 
         assert "error" in usage_data
         assert usage_data["username"] == "testuser"
-
-        await client.close()
 
     @pytest.mark.asyncio
     async def test_returns_error_when_no_results_for_user(self):
@@ -106,16 +108,13 @@ class TestGetUserUsageWithPrometheus:
             "status": "success",
             "data": {"resultType": "vector", "result": []},
         }
-        client = PrometheusClient()
-        client.namespace = "prod"
+        client = StorageQuotaClient("http://prometheus:9090", namespace="prod")
         client.query = AsyncMock(return_value=empty_response)
 
-        usage_data = await client.get_user_usage("unknownuser")
+        usage_data = await client.get_user_storage_usage(username="unknownuser")
 
         assert "error" in usage_data
         assert usage_data["username"] == "unknownuser"
-
-        await client.close()
 
 
 class TestPrometheusTimeouts:
@@ -124,31 +123,25 @@ class TestPrometheusTimeouts:
     @pytest.mark.asyncio
     async def test_handles_connection_timeout(self, mocker):
         """Should return error on connection timeout"""
-        client = PrometheusClient()
-        client.namespace = "prod"
+        client = StorageQuotaClient("http://prometheus:9090", namespace="prod")
         client.query = AsyncMock(side_effect=TimeoutError("Connection timeout"))
 
-        usage_data = await client.get_user_usage("testuser")
+        usage_data = await client.get_user_storage_usage(username="testuser")
 
         assert "error" in usage_data
         assert usage_data["username"] == "testuser"
         assert "Prometheus" in usage_data["error"]
 
-        await client.close()
-
     @pytest.mark.asyncio
     async def test_handles_aiohttp_timeout(self, mocker):
         """Should handle aiohttp.ServerTimeoutError"""
-        client = PrometheusClient()
-        client.namespace = "prod"
+        client = StorageQuotaClient("http://prometheus:9090", namespace="prod")
         client.query = AsyncMock(side_effect=aiohttp.ServerTimeoutError("Read timeout"))
 
-        usage_data = await client.get_user_usage("testuser")
+        usage_data = await client.get_user_storage_usage(username="testuser")
 
         assert "error" in usage_data
         assert usage_data["username"] == "testuser"
-
-        await client.close()
 
 
 class TestPrometheusMalformedResponses:
@@ -156,58 +149,52 @@ class TestPrometheusMalformedResponses:
 
     def test_handles_missing_data_field(self):
         """Should handle response missing 'data' field"""
-        client = PrometheusClient()
-        client.namespace = "prod"
-        result = client._find_matching_result(PROMETHEUS_MALFORMED_NO_DATA)
+        result = StorageQuotaClient.find_matching_result(
+            PROMETHEUS_MALFORMED_NO_DATA, namespace="prod"
+        )
         assert result is None
 
     def test_handles_missing_result_field(self):
         """Should handle response missing 'result' field"""
-        client = PrometheusClient()
-        client.namespace = "prod"
-        result = client._find_matching_result(PROMETHEUS_MALFORMED_NO_RESULT)
+        result = StorageQuotaClient.find_matching_result(
+            PROMETHEUS_MALFORMED_NO_RESULT, namespace="prod"
+        )
         assert result is None
 
     def test_handles_invalid_value_structure(self):
         """Should handle metrics with wrong value structure"""
-        client = PrometheusClient()
-        client.namespace = "prod"
-        result = client._parse_value_result(PROMETHEUS_MALFORMED_INVALID_VALUE)
+        result = StorageQuotaClient.parse_value_result(
+            PROMETHEUS_MALFORMED_INVALID_VALUE, namespace="prod"
+        )
         assert result is None
 
     def test_handles_non_numeric_values(self):
         """Should handle non-numeric metric values"""
-        client = PrometheusClient()
-        client.namespace = "prod"
-        result = client._parse_value_result(PROMETHEUS_MALFORMED_NON_NUMERIC)
+        result = StorageQuotaClient.parse_value_result(
+            PROMETHEUS_MALFORMED_NON_NUMERIC, namespace="prod"
+        )
         assert result is None
 
     @pytest.mark.asyncio
     async def test_handles_empty_string_namespace(self):
         """Should fall back to mock data when namespace is empty"""
-        client = PrometheusClient()
-        client.namespace = ""
+        client = StorageQuotaClient("http://prometheus:9090", namespace="")
 
-        usage_data = await client.get_user_usage("testuser")
+        usage_data = await client.get_user_storage_usage(username="testuser")
 
         assert usage_data["username"] == "testuser"
         assert "quota_bytes" in usage_data or "error" in usage_data
 
-        await client.close()
-
     @pytest.mark.asyncio
     async def test_handles_invalid_json_response(self, mocker):
         """Should handle non-JSON responses"""
-        client = PrometheusClient()
-        client.namespace = "prod"
+        client = StorageQuotaClient("http://prometheus:9090", namespace="prod")
         client.query = AsyncMock(side_effect=Exception("Invalid JSON"))
 
-        usage_data = await client.get_user_usage("testuser")
+        usage_data = await client.get_user_storage_usage(username="testuser")
 
         assert "error" in usage_data
         assert usage_data["username"] == "testuser"
-
-        await client.close()
 
 
 class TestPrometheusMultipleNamespaces:
@@ -216,25 +203,28 @@ class TestPrometheusMultipleNamespaces:
     @pytest.mark.asyncio
     async def test_filters_correct_namespace_with_multiple_results(self):
         """Should select metric matching configured namespace"""
-        client = PrometheusClient()
-        client.namespace = "prod"
-        value_bytes = client._parse_value_result(PROMETHEUS_MULTIPLE_NAMESPACES_QUOTA)
+        value_bytes = StorageQuotaClient.parse_value_result(
+            PROMETHEUS_MULTIPLE_NAMESPACES_QUOTA, namespace="prod"
+        )
         assert value_bytes == 10737418240  # prod namespace value (10 GB)
 
     @pytest.mark.asyncio
     async def test_filters_staging_namespace(self):
         """Should correctly filter staging namespace"""
-        client = PrometheusClient()
-        client.namespace = "staging"
-        value_bytes = client._parse_value_result(PROMETHEUS_MULTIPLE_NAMESPACES_QUOTA)
+        value_bytes = StorageQuotaClient.parse_value_result(
+            PROMETHEUS_MULTIPLE_NAMESPACES_QUOTA, namespace="staging"
+        )
         assert value_bytes == 5368709120  # staging namespace value (5 GB)
 
     @pytest.mark.asyncio
     async def test_returns_none_when_namespace_not_found(self):
         """Should return None if namespace doesn't exist in results"""
-        client = PrometheusClient()
-        client.namespace = "nonexistent"
-        assert client._parse_value_result(PROMETHEUS_MULTIPLE_NAMESPACES_QUOTA) is None
+        assert (
+            StorageQuotaClient.parse_value_result(
+                PROMETHEUS_MULTIPLE_NAMESPACES_QUOTA, namespace="nonexistent"
+            )
+            is None
+        )
 
 
 class TestPrometheusUnavailability:
@@ -243,51 +233,41 @@ class TestPrometheusUnavailability:
     @pytest.mark.asyncio
     async def test_handles_prometheus_server_down(self, mocker):
         """Should return error when Prometheus is unreachable"""
-        client = PrometheusClient()
-        client.namespace = "prod"
+        client = StorageQuotaClient("http://prometheus:9090", namespace="prod")
         client.query = AsyncMock(side_effect=aiohttp.ClientError("Connection refused"))
 
-        usage_data = await client.get_user_usage("testuser")
+        usage_data = await client.get_user_storage_usage(username="testuser")
 
         assert "error" in usage_data
         assert usage_data["username"] == "testuser"
         assert "Prometheus" in usage_data["error"]
 
-        await client.close()
-
     @pytest.mark.asyncio
     async def test_handles_prometheus_500_error(self):
         """Should handle Prometheus server errors"""
-        client = PrometheusClient()
-        client.namespace = "prod"
+        client = StorageQuotaClient("http://prometheus:9090", namespace="prod")
         client.query = AsyncMock(return_value=PROMETHEUS_ERROR_RESPONSE)
 
-        usage_data = await client.get_user_usage("testuser")
+        usage_data = await client.get_user_storage_usage(username="testuser")
 
         assert "error" in usage_data
         assert usage_data["username"] == "testuser"
-
-        await client.close()
 
     @pytest.mark.asyncio
     async def test_handles_prometheus_network_error(self, mocker):
         """Should handle network errors"""
-        client = PrometheusClient()
-        client.namespace = "prod"
+        client = StorageQuotaClient("http://prometheus:9090", namespace="prod")
         client.query = AsyncMock(side_effect=Exception("Network error"))
 
-        usage_data = await client.get_user_usage("testuser")
+        usage_data = await client.get_user_storage_usage(username="testuser")
 
         assert "error" in usage_data
         assert usage_data["username"] == "testuser"
 
-        await client.close()
-
     @pytest.mark.asyncio
     async def test_handles_partial_query_failure(self):
         """Should handle when one query succeeds but others fail"""
-        client = PrometheusClient()
-        client.namespace = "prod"
+        client = StorageQuotaClient("http://prometheus:9090", namespace="prod")
         client.query = AsyncMock(
             side_effect=[
                 PROMETHEUS_QUOTA_50_PERCENT,
@@ -296,12 +276,10 @@ class TestPrometheusUnavailability:
             ]
         )
 
-        usage_data = await client.get_user_usage("testuser")
+        usage_data = await client.get_user_storage_usage(username="testuser")
 
         assert "error" in usage_data
         assert usage_data["username"] == "testuser"
-
-        await client.close()
 
 
 class TestPrometheusUserWithNoData:
@@ -310,23 +288,19 @@ class TestPrometheusUserWithNoData:
     @pytest.mark.asyncio
     async def test_returns_error_for_user_with_no_quota(self):
         """Should return 'No storage data found' error"""
-        client = PrometheusClient()
-        client.namespace = "prod"
+        client = StorageQuotaClient("http://prometheus:9090", namespace="prod")
         client.query = AsyncMock(return_value=PROMETHEUS_EMPTY_RESULT)
 
-        usage_data = await client.get_user_usage("unknownuser")
+        usage_data = await client.get_user_storage_usage(username="unknownuser")
 
         assert "error" in usage_data
         assert usage_data["username"] == "unknownuser"
         assert "No storage data found" in usage_data["error"]
 
-        await client.close()
-
     @pytest.mark.asyncio
     async def test_returns_error_when_quota_exists_but_usage_missing(self):
         """Should handle quota data without usage data"""
-        client = PrometheusClient()
-        client.namespace = "prod"
+        client = StorageQuotaClient("http://prometheus:9090", namespace="prod")
         client.query = AsyncMock(
             side_effect=[
                 PROMETHEUS_QUOTA_50_PERCENT,
@@ -335,18 +309,15 @@ class TestPrometheusUserWithNoData:
             ]
         )
 
-        usage_data = await client.get_user_usage("testuser")
+        usage_data = await client.get_user_storage_usage(username="testuser")
 
         assert "error" in usage_data
         assert "No storage data found" in usage_data["error"]
 
-        await client.close()
-
     @pytest.mark.asyncio
     async def test_returns_error_when_usage_exists_but_quota_missing(self):
         """Should handle usage data without quota data"""
-        client = PrometheusClient()
-        client.namespace = "prod"
+        client = StorageQuotaClient("http://prometheus:9090", namespace="prod")
         client.query = AsyncMock(
             side_effect=[
                 PROMETHEUS_EMPTY_RESULT,
@@ -355,18 +326,15 @@ class TestPrometheusUserWithNoData:
             ]
         )
 
-        usage_data = await client.get_user_usage("testuser")
+        usage_data = await client.get_user_storage_usage(username="testuser")
 
         assert "error" in usage_data
         assert "No storage data found" in usage_data["error"]
 
-        await client.close()
-
     @pytest.mark.asyncio
     async def test_returns_error_when_timestamp_missing(self):
         """Should handle missing timestamp data"""
-        client = PrometheusClient()
-        client.namespace = "prod"
+        client = StorageQuotaClient("http://prometheus:9090", namespace="prod")
         client.query = AsyncMock(
             side_effect=[
                 PROMETHEUS_QUOTA_50_PERCENT,
@@ -375,22 +343,19 @@ class TestPrometheusUserWithNoData:
             ]
         )
 
-        usage_data = await client.get_user_usage("testuser")
+        usage_data = await client.get_user_storage_usage(username="testuser")
 
         assert "error" in usage_data
         assert "No storage data found" in usage_data["error"]
 
-        await client.close()
-
 
 class TestPrometheusClientQuery:
-    """Test the query method of PrometheusClient"""
+    """Test the query method of PrometheusClient from client.py"""
 
     @pytest.mark.asyncio
     async def test_query_raises_request_error(self):
         """Should propagate aiohttp.ClientError"""
-        client = PrometheusClient()
-        client.prometheus_url = "http://prometheus:9090"
+        client = PrometheusClient(prometheus_url="http://prometheus:9090")
 
         with aioresponses() as mock:
             mock.get(
@@ -405,8 +370,7 @@ class TestPrometheusClientQuery:
     @pytest.mark.asyncio
     async def test_query_raises_on_http_error_status(self):
         """Should propagate ClientResponseError on non-2xx responses"""
-        client = PrometheusClient()
-        client.prometheus_url = "http://prometheus:9090"
+        client = PrometheusClient(prometheus_url="http://prometheus:9090")
 
         with aioresponses() as mock:
             mock.get(
@@ -426,13 +390,13 @@ class TestPrometheusClientContextManager:
     @pytest.mark.asyncio
     async def test_async_context_manager_returns_self(self):
         """__aenter__ should return the client instance"""
-        async with PrometheusClient() as client:
+        async with PrometheusClient(prometheus_url="http://prometheus:9090") as client:
             assert isinstance(client, PrometheusClient)
 
     @pytest.mark.asyncio
     async def test_async_context_manager_closes_on_exit(self):
-        """__aexit__ should close the underlying aiohttp client"""
-        async with PrometheusClient() as client:
+        """__aexit__ should close the underlying aiohttp session"""
+        async with PrometheusClient(prometheus_url="http://prometheus:9090") as client:
             # Trigger lazy initialization by making a request
             with aioresponses() as mock:
                 mock.get(
@@ -440,19 +404,18 @@ class TestPrometheusClientContextManager:
                     payload={"status": "success", "data": {"result": []}}
                 )
                 await client.query("up")
-            underlying = client.client
+            underlying = client.session
 
         assert underlying.closed
 
 
 class TestGetMockDataErrorScenario:
-    """Test both branches of _get_mock_data"""
+    """Test both branches of get_mock_data"""
 
     def test_returns_error_dict_when_scenario_is_error(self, monkeypatch):
         """Should return an error dict when random.choice yields 'error'"""
         monkeypatch.setattr(random, "choice", lambda _: "error")
-        client = PrometheusClient()
-        result = client._get_mock_data("testuser")
+        result = StorageQuotaClient("http://test", namespace="").get_mock_data("testuser")
 
         assert result["username"] == "testuser"
         assert "error" in result
@@ -461,8 +424,7 @@ class TestGetMockDataErrorScenario:
     def test_returns_usage_dict_when_scenario_is_numeric(self, monkeypatch):
         """Should return usage data when random.choice yields a numeric scenario"""
         monkeypatch.setattr(random, "choice", lambda _: 0.50)
-        client = PrometheusClient()
-        result = client._get_mock_data("testuser")
+        result = StorageQuotaClient("http://test", namespace="").get_mock_data("testuser")
 
         assert result["username"] == "testuser"
         assert "error" not in result
@@ -478,9 +440,6 @@ class TestPrometheusEdgeCaseValues:
     @pytest.mark.asyncio
     async def test_handles_very_large_values(self):
         """Should handle very large byte values (petabytes)"""
-        client = PrometheusClient()
-        client.namespace = "prod"
-
         large_value_response = {
             "status": "success",
             "data": {
@@ -494,15 +453,13 @@ class TestPrometheusEdgeCaseValues:
             },
         }
 
-        result = client._parse_value_result(large_value_response)
+        result = StorageQuotaClient.parse_value_result(large_value_response, namespace="prod")
         assert result == 1125899906842624
 
     @pytest.mark.asyncio
     async def test_prevents_division_by_zero(self):
         """Should handle division by zero when quota is 0"""
-        client = PrometheusClient()
-        client.namespace = "prod"
-
+        client = StorageQuotaClient("http://prometheus:9090", namespace="prod")
         client.query = AsyncMock(
             side_effect=[
                 {
@@ -522,8 +479,6 @@ class TestPrometheusEdgeCaseValues:
             ]
         )
 
-        usage_data = await client.get_user_usage("testuser")
+        usage_data = await client.get_user_storage_usage(username="testuser")
 
         assert usage_data["percentage"] == 0
-
-        await client.close()

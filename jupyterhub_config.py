@@ -88,8 +88,15 @@ c.JupyterHub.services = [
         "url": "http://localhost:9000",
         "display": False,  # Don't show in Services menu - we have a custom navbar link
         "oauth_no_confirm": True,
-        "oauth_redirect_uri": "http://localhost:8000/services/usage-quota/oauth_redirect",
-        "command": ["fastapi", "run", "src/jupyterhub_usage_quotas/service/app.py", "--port", "9000"]
+        "oauth_redirect_uri": "/services/usage-quota/oauth_callback",
+        "command": [
+            "python",
+            "-m",
+            "jupyterhub_usage_quotas.services.usage_viewer",
+            "--port=9000",
+            "--prometheus-url=http://localhost:9090",
+            "--prometheus-namespace=staging",
+        ],
     }
 ]
 

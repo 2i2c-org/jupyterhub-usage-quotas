@@ -55,6 +55,11 @@ class UsageQuotaConfig(LoggingConfigurable):
         help="The url of the Prometheus server, usually of the form 'http://<k8s-service-name>.<k8s-namespace>.svc.cluster.local' in a Kubernetes cluster. Defaults to 'http://localhost:9090' for local development if left blank.",
     ).tag(config=True)
 
+    prometheus_namespace = Unicode(
+        "",
+        help="Prometheus namespace for filtering storage quota metrics in multi-tenant environments. Leave empty for single-tenant or development.",
+    ).tag(config=True)
+
     prometheus_usage_metrics = Dict(
         help="""
             Dict of Prometheus metrics to track usage. Must define at least one of:
@@ -192,3 +197,20 @@ class UsageQuotaConfig(LoggingConfigurable):
             except jsonschema.ValidationError as e:
                 raise TraitError(e)
         return policies
+
+
+class UsageViewerConfig(UsageQuotaConfig):
+    """Configuration for the Usage Viewer service.
+
+    Extends UsageQuotaConfig with service-specific settings like port and host.
+    """
+
+    service_port = Integer(
+        9000,
+        help="Port to bind the usage viewer service to",
+    ).tag(config=True)
+
+    service_host = Unicode(
+        "0.0.0.0",
+        help="Host to bind the usage viewer service to",
+    ).tag(config=True)
