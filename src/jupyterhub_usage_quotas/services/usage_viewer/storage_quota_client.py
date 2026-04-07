@@ -85,7 +85,7 @@ class StorageQuotaClient(PrometheusClient):
 
     @staticmethod
     def with_label_replace(metric: str) -> str:
-        """Wrap metric with label_replace for username extraction.
+        """Wrap metric with label_replace for escaped username extraction.
 
         Args:
             metric: PromQL metric expression
