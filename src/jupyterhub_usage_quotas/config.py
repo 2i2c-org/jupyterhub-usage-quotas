@@ -258,9 +258,7 @@ class UsageViewerConfig(LoggingConfigurable):
     def _service_prefix_default(self):
         # Try environment variable first (set by JupyterHub)
         prefix = os.environ.get("JUPYTERHUB_SERVICE_PREFIX")
-        if prefix:
-            return prefix.rstrip("/")
-        return "/services/usage-quota"
+        return prefix or "/services/usage-quota/"
 
     public_hub_url = Unicode(
         help="Public URL of the JupyterHub instance. Required. Automatically set by JupyterHub via JUPYTERHUB_PUBLIC_HUB_URL environment variable.",

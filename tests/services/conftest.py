@@ -92,7 +92,7 @@ def app(mock_env_vars, mocker):
     config = UsageViewerConfig(
         dev_mode=True,
         service_prefix=os.environ.get(
-            "JUPYTERHUB_SERVICE_PREFIX", "/services/usage-quota"
+            "JUPYTERHUB_SERVICE_PREFIX", "/services/usage-quota/"
         ).rstrip("/"),
         public_hub_url=os.environ.get(
             "JUPYTERHUB_PUBLIC_HUB_URL", "http://localhost:8000"
