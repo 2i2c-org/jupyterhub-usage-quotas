@@ -60,7 +60,10 @@ service = [
     "itsdangerous>=2.0",
     "jinja2>=3.0",
 ]
-dev = []
+dev = [
+    "ipython",
+    "pre-commit",
+]
 
 ################################################################################
 # Tool Configuration
@@ -173,11 +176,7 @@ inherits = ["default"]
 description = """
 Environment for local development.
 """
-features = ["dev"]
-dependencies = [
-    "ipython",
-    "pre-commit",
-]
+features = ["service", "dev"]
 
 [tool.hatch.envs.release]
 inherits = ["default"]
