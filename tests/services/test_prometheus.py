@@ -433,6 +433,47 @@ class TestGetMockDataErrorScenario:
         assert "last_updated" in result
 
 
+class TestConfigurableMetricNames:
+    """Test that custom quota_metric / usage_metric are used in PromQL queries."""
+
+    def test_uses_default_metric_names_when_not_configured(self):
+        client = StorageQuotaClient("http://prometheus:9090", namespace="prod")
+        assert client.quota_metric == "dirsize_hard_limit_bytes"
+        assert client.usage_metric == "dirsize_total_size_bytes"
+
+    @pytest.mark.asyncio
+    async def test_custom_metric_names_appear_in_queries(self):
+        client = StorageQuotaClient(
+            "http://prometheus:9090",
+            namespace="staging",
+            quota_metric="custom_hard_limit_bytes",
+            usage_metric="custom_total_size_bytes",
+        )
+        captured_queries = []
+        original_side_effect = [
+            PROMETHEUS_MULTI_NS_QUOTA,
+            PROMETHEUS_MULTI_NS_USAGE,
+            PROMETHEUS_MULTI_NS_TIMESTAMP,
+        ]
+        idx = 0
+
+        async def capturing_mock(query):
+            nonlocal idx
+            captured_queries.append(query)
+            result = original_side_effect[idx]
+            idx += 1
+            return result
+
+        client.query = capturing_mock
+
+        await client.get_user_storage_usage(username="testuser")
+
+        assert any("custom_hard_limit_bytes" in q for q in captured_queries)
+        assert any("custom_total_size_bytes" in q for q in captured_queries)
+        assert not any("dirsize_hard_limit_bytes" in q for q in captured_queries)
+        assert not any("dirsize_total_size_bytes" in q for q in captured_queries)
+
+
 class TestPrometheusEdgeCaseValues:
     """Test edge case values in Prometheus data"""
 

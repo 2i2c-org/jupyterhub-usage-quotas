@@ -20,15 +20,25 @@ class StorageQuotaClient(PrometheusClient):
         prometheus_url: URL of the Prometheus server
         namespace: Prometheus namespace for filtering metrics
         dev_mode: Whether to enable development mode with mock data
+        quota_metric: Prometheus metric name for storage quota/hard limit
+        usage_metric: Prometheus metric name for current storage usage
         **kwargs: Additional arguments passed to PrometheusClient
     """
 
     def __init__(
-        self, prometheus_url: str, namespace: str = "", dev_mode: bool = False, **kwargs
+        self,
+        prometheus_url: str,
+        namespace: str = "",
+        dev_mode: bool = False,
+        quota_metric: str = "dirsize_hard_limit_bytes",
+        usage_metric: str = "dirsize_total_size_bytes",
+        **kwargs,
     ):
         super().__init__(prometheus_url, **kwargs)
         self.namespace = namespace
         self.dev_mode = dev_mode
+        self.quota_metric = quota_metric
+        self.usage_metric = usage_metric
 
     @staticmethod
     def find_matching_result(data: dict[str, Any], namespace: str) -> list | None:
@@ -159,10 +169,10 @@ class StorageQuotaClient(PrometheusClient):
         logger.debug(f"Fetching usage data for user: {username}")
 
         base_quota_metric = (
-            f'dirsize_hard_limit_bytes{{namespace!="", directory="{username}"}}'
+            f'{self.quota_metric}{{namespace!="", directory="{username}"}}'
         )
         base_usage_metric = (
-            f'dirsize_total_size_bytes{{namespace!="", directory="{username}"}}'
+            f'{self.usage_metric}{{namespace!="", directory="{username}"}}'
         )
 
         quota_value_query = self.with_label_replace(base_quota_metric)

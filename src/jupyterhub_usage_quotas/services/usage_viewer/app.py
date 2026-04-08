@@ -157,6 +157,8 @@ class UsageViewer(Application, UsageViewerConfig):
         "host": "UsageViewer.service_host",
         "prometheus-url": "UsageViewer.prometheus_url",
         "prometheus-namespace": "UsageViewer.prometheus_namespace",
+        "prometheus-storage-quota-metric": "UsageViewer.prometheus_storage_quota_metric",
+        "prometheus-storage-usage-metric": "UsageViewer.prometheus_storage_usage_metric",
         "dev-mode": "UsageViewer.dev_mode",
         "service-prefix": "UsageViewer.service_prefix",
         "public-hub-url": "UsageViewer.public_hub_url",
@@ -171,6 +173,8 @@ class UsageViewer(Application, UsageViewerConfig):
             prometheus_url=self.prometheus_url,
             namespace=self.prometheus_namespace,
             dev_mode=self.dev_mode,
+            quota_metric=self.prometheus_storage_quota_metric,
+            usage_metric=self.prometheus_storage_usage_metric,
         )
 
         self.log.info("Initialized Usage Viewer service")
