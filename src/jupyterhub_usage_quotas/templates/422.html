@@ -2,9 +2,6 @@
 
 {% block main %}
 <div class="error">
-{% block h1_error %}
-  {{ super() }}
-{% endblock h1_error %}
 {% block error_detail %}
 {% if message_html %}
   <p>{{ message_html | safe }}</p>
