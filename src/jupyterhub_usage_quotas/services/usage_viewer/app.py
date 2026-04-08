@@ -46,7 +46,7 @@ def create_fastapi_app(
     )
 
     auth = HubOAuth(
-        oauth_redirect_uri=f"{config.service_prefix}/oauth_callback",
+        oauth_redirect_uri=f"{config.service_prefix.rstrip('/')}/oauth_callback",
         cache_max_age=60,
     )
 
@@ -103,7 +103,7 @@ def create_fastapi_app(
         html_content = template.render(usage_data=usage_data)
         return HTMLResponse(html_content)
 
-    @app.get(f"{config.service_prefix}/oauth_callback")
+    @app.get(f"{config.service_prefix.rstrip('/')}/oauth_callback")
     async def oauth_callback(request: Request, code: str, state: str):
         """Handle the OAuth2 callback from JupyterHub.
 
