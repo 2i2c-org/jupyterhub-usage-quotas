@@ -10,7 +10,7 @@ class TestHomeRoute:
         self, client, mock_env_vars
     ):
         """Unauthenticated user should get JS redirect to JupyterHub OAuth"""
-        response = client.get("/services/usage-quota", follow_redirects=False)
+        response = client.get("/services/usage-quota/", follow_redirects=False)
 
         assert response.status_code == 200
         assert "window.top.location.href" in response.text
