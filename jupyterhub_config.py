@@ -44,6 +44,8 @@ c.UsageQuotaManager.prometheus_usage_metrics = {
 
 c.UsageQuotaManager.prometheus_scrape_interval = 60
 
+c.UsageQuotaManager.hub_namespace = "staging"
+
 c.UsageQuotaManager.scope_backup_strategy = {
     "empty": {
         "resource": "memory",
@@ -92,7 +94,7 @@ c.JupyterHub.services = [
             "--port=9000",
             "--public-hub-url=http://localhost:8000",
             "--prometheus-url=http://localhost:9090",
-            "--hub-namespace=showcase",
+            "--hub-namespace=staging",
             "--session-secret-key=use-a-secure-random-key-in-production",
             "--dev-mode=true",
         ],
@@ -120,13 +122,15 @@ quota_manager = UsageQuotaManager(config=c)
 
 async def quota_pre_spawn_hook(spawner):
     try:
-        output = await quota_manager.enforce(spawner)
+        user_name = spawner.user.name
+        user_groups = [g.name for g in spawner.user.groups]
+        output = await quota_manager.enforce(user_name, user_groups)
         launch_flag = output["allow_server_launch"]
     except Exception as e:
         if c.UsageQuotaManager.failover_open is True:
             launch_flag = True
             quota_manager.log.error(
-                f"Usage quota system failed open for user {spawner.user.name} with exception: {e}."
+                f"Usage quota system failed open for user {user_name} with exception: {e}."
             )
         else:
             raise SpawnException(

@@ -4,7 +4,6 @@ import re
 from collections import defaultdict
 from typing import Any, List, Optional
 
-from kubespawner import KubeSpawner
 from kubespawner.slugs import safe_slug
 from tornado import web
 
@@ -49,7 +48,7 @@ class UsageQuotaManager(UsageQuotaConfig):
 
         return combined_value
 
-    def resolve_policy(self, spawner: KubeSpawner) -> list:
+    def resolve_policy(self, user_name: str, user_groups: list) -> list:
         """
         Resolve and merge group quota policies that apply to the user.
 
@@ -59,8 +58,6 @@ class UsageQuotaManager(UsageQuotaConfig):
 
         Example 3 - multiple:  Policy A limits 30 memory hours over the last 30 days to group 1, policy B limits 7 memory hours over the last 7 days to group 1. Both quota policies are returned (and eventually applied with no limit stacking).
         """
-        user_name = spawner.user.name
-        user_groups = [g.name for g in spawner.user.groups]
         self.log.info(
             f"User {user_name} is a member of quota policy scope groups: {user_groups}"
         )
@@ -110,13 +107,13 @@ class UsageQuotaManager(UsageQuotaConfig):
                 )
         return merged
 
-    async def get_usage(self, spawner: KubeSpawner, policy: dict) -> list:
+    async def get_usage(self, user_name: str, policy: dict) -> list:
         """
         Get resource usage by user over a rolling time window.
         """
         usage_metric = self.prometheus_usage_metrics[policy["resource"]]
         pattern = r"(\{.*?)(\})"
-        repl = rf"\1, namespace='{spawner.namespace}', node!='', pod='jupyter-{safe_slug(spawner.user.name)}'\2"
+        repl = rf"\1, namespace='{self.hub_namespace}', node!='', pod='jupyter-{safe_slug(user_name)}'\2"
         promql = re.sub(pattern, repl, usage_metric)
         promql = f"{promql}[{str(policy['window']) + 'd'}]"
         self.log.debug(f"{promql=}")
@@ -193,19 +190,19 @@ class UsageQuotaManager(UsageQuotaConfig):
         )
         return output
 
-    async def enforce(self, spawner: KubeSpawner) -> dict:
+    async def enforce(self, user_name: str, user_groups: list) -> dict:
         """
         Enforce quota system by resolving the policy applied to the user and comparing their usage to the quota limit.
         """
-        policy = self.resolve_policy(spawner)
+        policy = self.resolve_policy(user_name, user_groups)
         self.log.info(f"Quota policy applied: {policy}")
 
         for p in policy:
-            usage = await self.get_usage(spawner, p)
+            usage = await self.get_usage(user_name, p)
             output = self.get_output(p, usage)
             self.log.info(f"{output=}")
             if output["allow_server_launch"] is False:
-                self.log.warning(f"{output['error']['code']}: {spawner.user.name}")
+                self.log.warning(f"{output['error']['code']}: {user_name}")
                 break
         return output
 
