@@ -122,11 +122,17 @@ async def quota_pre_spawn_hook(spawner):
     try:
         output = await quota_manager.enforce(spawner)
         launch_flag = output["allow_server_launch"]
-    except Exception:
-        raise SpawnException(
-            status_code=424,
-            log_message="Spawn failure occurred due to a failed dependency in the usage quota system. Please contact your hub admin for assistance.",
-        )
+    except Exception as e:
+        if c.UsageQuotaManager.failover_open is True:
+            launch_flag = True
+            quota_manager.log.warning(
+                f"Usage quota system failed open for user {spawner.user.name} with exception: {e}."
+            )
+        else:
+            raise SpawnException(
+                status_code=424,
+                log_message="Spawn failure occurred due to a failed dependency in the usage quota system. Please contact your hub admin for assistance.",
+            )
     if launch_flag is False:
         raise SpawnException(
             status_code=422,
