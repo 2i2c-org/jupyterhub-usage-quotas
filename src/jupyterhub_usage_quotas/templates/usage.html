@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Usage</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Inter', sans-serif;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 40px 20px;
+            background: #ffffff;
+            color: #1f2937;
+        }
+        .container {
+            background: white;
+            padding: 0;
+        }
+        h1 {
+            margin: 0 0 8px 0;
+            font-size: 32px;
+            font-weight: 700;
+            color: #111827;
+        }
+        .subtitle {
+            color: #6b7280;
+            margin: 0 0 48px 0;
+            font-size: 16px;
+        }
+        .metric-item {
+            display: flex;
+            gap: 16px;
+            align-items: flex-start;
+            margin-bottom: 48px;
+        }
+        .icon {
+            flex-shrink: 0;
+            width: 40px;
+            height: 40px;
+        }
+        .metric-content {
+            flex: 1;
+        }
+        .metric-label {
+            font-size: 18px;
+            font-weight: 600;
+            color: #111827;
+            margin: 0 0 6px 0;
+        }
+        .metric-usage {
+            font-size: 15px;
+            color: #6b7280;
+            margin: 0 0 4px 0;
+        }
+        .metric-remaining {
+            font-size: 15px;
+            color: #10b981;
+            font-weight: 500;
+            margin: 0;
+        }
+        .progress-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin: 6px 0 8px 0;
+        }
+        .progress-track {
+            width: 256px;
+            height: 5px;
+            background: #f3f4f6;
+            border-radius: 3px;
+            overflow: hidden;
+        }
+        .progress-fill {
+            height: 100%;
+            background: #10b981;
+            border-radius: 3px;
+        }
+        .progress-label {
+            font-size: 12px;
+            font-weight: 500;
+            color: #10b981;
+            white-space: nowrap;
+        }
+        .metric-last-updated {
+            font-size: 13px;
+            color: #6b7280;
+            margin: 8px 0 0 0;
+        }
+        .error-message {
+            color: #ef4444;
+            font-size: 15px;
+            margin: 0;
+        }
+        .footer-note {
+            color: #374151;
+            font-size: 15px;
+            margin-top: 64px;
+            line-height: 1.6;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Usage</h1>
+        <p class="subtitle">View your current home storage usage and quota</p>
+
+        <div class="metric-item">
+            {% if usage_data.error is defined %}
+            <svg class="icon" fill="none" stroke="#ef4444" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z"></path>
+            </svg>
+            <div class="metric-content">
+                <div class="metric-label">Home storage</div>
+                <p class="error-message">{{ usage_data.error }}</p>
+            </div>
+            {% else %}
+            {% if usage_data.percentage >= 90 %}
+            <svg class="icon" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path>
+                <circle cx="9.5" cy="12" r="1" fill="currentColor" stroke="none"></circle>
+                <circle cx="14.5" cy="12" r="1" fill="currentColor" stroke="none"></circle>
+                <path d="M9.5 15.5q2.5-2 5 0" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"></path>
+            </svg>
+            {% else %}
+            <svg class="icon" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path>
+            </svg>
+            {% endif %}
+            <div class="metric-content">
+                <div class="metric-label">Home storage</div>
+                <div class="progress-row">
+                    <div class="progress-track">
+                        <div class="progress-fill" style="width: {{ usage_data.percentage }}%;{% if usage_data.percentage >= 90 %} background: #ef4444;{% endif %}"></div>
+                    </div>
+                    <span class="progress-label"{% if usage_data.percentage >= 90 %} style="color: #ef4444;"{% endif %}>{{ "%.1f"|format(usage_data.percentage) }}%</span>
+                </div>
+                <div class="metric-usage">{{ "%.1f"|format(usage_data.usage_gb) }} GiB used / {{ "%.1f"|format(usage_data.quota_gb) }} GiB quota</div>
+                <div class="metric-remaining"{% if usage_data.percentage >= 90 %} style="color: #ef4444;"{% endif %}>{{ "%.1f"|format(usage_data.quota_gb - usage_data.usage_gb) }} GiB remaining</div>
+                <div class="metric-last-updated">Last updated: <time datetime="{{ usage_data.last_updated }}">{{ usage_data.last_updated }}</time></div>
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="footer-note">
+            Contact your JupyterHub Admin if you need additional quota.
+        </div>
+    </div>
+    <script>
+        document.querySelectorAll('time[datetime]').forEach(function(el) {
+            var d = new Date(el.getAttribute('datetime'));
+            if (!isNaN(d)) {
+                el.textContent = d.toLocaleString(undefined, { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+            }
+        });
+    </script>
+</body>
+</html>

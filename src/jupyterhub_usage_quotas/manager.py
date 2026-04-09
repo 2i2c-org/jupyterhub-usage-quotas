@@ -125,7 +125,8 @@ class UsageQuotaManager(UsageQuotaConfig):
         if not response["data"]["result"]:
             # handle case when no data is returned
             unix_timestamp = (
-                datetime.datetime.utcnow() - datetime.datetime(1970, 1, 1)
+                datetime.datetime.now(datetime.UTC)
+                - datetime.datetime(1970, 1, 1, tzinfo=datetime.UTC)
             ).total_seconds()
             data: List[List[Any]] = [[unix_timestamp, "0"]]
         else:

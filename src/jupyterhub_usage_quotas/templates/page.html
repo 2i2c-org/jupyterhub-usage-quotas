@@ -1,0 +1,12 @@
+{% extends "templates/page.html" %}
+
+{% block nav_bar_left_items %}
+    {{ super() }}
+
+    {# Add Usage link to the navbar #}
+    <li class="nav-item">
+        <a class="nav-link" href="{{ base_url }}usage">
+            Usage
+        </a>
+    </li>
+{% endblock %}

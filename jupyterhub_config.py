@@ -4,7 +4,7 @@ Example configuration file for JupyterHub usage quotas.
 
 import socket
 
-from jupyterhub_usage_quotas import get_template_path
+from jupyterhub_usage_quotas import UsageHandler, get_template_path
 from jupyterhub_usage_quotas.manager import SpawnException, UsageQuotaManager
 
 c = get_config()  # noqa
@@ -74,6 +74,45 @@ c.UsageQuotaManager.policy = [
 ]
 
 c.JupyterHub.template_paths = [get_template_path()]
+
+# Usage Quota Service (optional — displays storage usage to users)
+# Install with: pip install jupyterhub-usage-quotas[service]
+
+c.JupyterHub.extra_handlers = [
+    (r"/usage", UsageHandler),
+]
+
+c.JupyterHub.services = [
+    {
+        "name": "usage-quota",
+        "url": "http://localhost:9000",
+        "display": False,  # Don't show in Services menu - we have a custom navbar link
+        "oauth_no_confirm": True,
+        "command": [
+            "python",
+            "-m",
+            "jupyterhub_usage_quotas.services.usage_viewer",
+            "--port=9000",
+            "--public-hub-url=http://localhost:8000",
+            "--prometheus-url=http://localhost:9090",
+            "--hub-namespace=staging",
+            "--session-secret-key=use-a-secure-random-key-in-production",
+            "--dev-mode=true",
+        ],
+    }
+]
+
+c.JupyterHub.load_roles = [
+    {
+        "name": "usage-quota-service",
+        "scopes": ["read:users"],
+        "services": ["usage-quota"],
+    },
+    {
+        "name": "user",
+        "scopes": ["access:services!service=usage-quota", "self"],
+    },
+]
 
 # KubeSpawner
 

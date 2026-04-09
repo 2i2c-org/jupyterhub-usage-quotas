@@ -20,11 +20,12 @@ jobs:
         uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}
+
       - name: Install hatch
         uses: pypa/hatch@install
 
-    #   - name: Check docstrings
-    #     run: hatch run style:docstrings
+      - name: Run linters
+        run: hatch run style:check
 
   test:
     runs-on: ${{ matrix.os }}

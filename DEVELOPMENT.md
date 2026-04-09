@@ -88,6 +88,49 @@ You can run JupyterHub on your local machine that can communicate with pods in a
    jupyterhub
    ```
 
+## Running the usage quota service locally
+
+The service is managed as a JupyterHub subprocess. Install the package with the `service` extra so the dependency is available:
+
+```bash
+pip install -e ".[service]"
+```
+
+Then start JupyterHub as normal:
+
+```bash
+jupyterhub
+```
+
+JupyterHub will launch the service automatically using the `command` configured in `jupyterhub_config.py` and inject the required `JUPYTERHUB_*` environment variables. Navigate to http://localhost:8000, log in, and click **Usage** in the navbar.
+
+### Using mock data for local development
+
+To enable mock data for local development without a real Prometheus instance, use the `--dev-mode` flag when starting the service via the JupyterHub configuration:
+
+```python
+c.JupyterHub.services = [
+    {
+        "name": "usage-quota",
+        "command": [
+            "python",
+            "-m",
+            "jupyterhub_usage_quotas.services.usage_viewer",
+            "--port=9000",
+            "--dev-mode",  # Enables mock data for development
+        ],
+    }
+]
+```
+
+Alternatively, you can enable dev mode by setting the configuration directly:
+
+```python
+c.UsageViewer.dev_mode = True
+```
+
+When `dev_mode` is enabled and both `hub_namespace` and `prometheus_url` are unconfigured (defaults), the service will return randomly generated mock data.
+
 ## Running hatch scripts
 
 See the `scripts` in [pyproject.toml](https://github.com/2i2c-org/jupyterhub-usage-quotas/blob/main/pyproject.toml) to see the configured commands available to `hatch run <env>:<command>`.
