@@ -221,8 +221,8 @@ class UsageViewerConfig(BaseConfig):
 
     prometheus_storage_quota_metric = Unicode(
         help="Prometheus metric name for storage quota/hard limit. Defaults to "
-             "'dirsize_hard_limit_bytes'. Can be set via "
-             "JUPYTERHUB_USAGE_QUOTAS_PROMETHEUS_STORAGE_QUOTA_METRIC environment variable.",
+        "'dirsize_hard_limit_bytes'. Can be set via "
+        "JUPYTERHUB_USAGE_QUOTAS_PROMETHEUS_STORAGE_QUOTA_METRIC environment variable.",
     ).tag(config=True)
 
     @default("prometheus_storage_quota_metric")
@@ -234,8 +234,8 @@ class UsageViewerConfig(BaseConfig):
 
     prometheus_storage_usage_metric = Unicode(
         help="Prometheus metric name for current storage usage. Defaults to "
-             "'dirsize_total_size_bytes'. Can be set via "
-             "JUPYTERHUB_USAGE_QUOTAS_PROMETHEUS_STORAGE_USAGE_METRIC environment variable.",
+        "'dirsize_total_size_bytes'. Can be set via "
+        "JUPYTERHUB_USAGE_QUOTAS_PROMETHEUS_STORAGE_USAGE_METRIC environment variable.",
     ).tag(config=True)
 
     @default("prometheus_storage_usage_metric")

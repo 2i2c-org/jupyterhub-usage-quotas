@@ -75,23 +75,23 @@ When a `command` is provided, JupyterHub launches and manages the service proces
 
 The service is configured via CLI flags (preferred) or traitlet configuration:
 
-| CLI Flag                 | Config Attribute       | Default                 | Description                               |
-| ------------------------ | ---------------------- | ----------------------- | ----------------------------------------- |
-| `--prometheus-url`       | `prometheus_url`       | `http://127.0.0.1:9090` | Prometheus server endpoint                |
-| `--hub-namespace`        | `hub_namespace`        | `""`                    | Kubernetes namespace of the JupyterHub deployment, used to filter metrics |
-| `--dev-mode`             | `dev_mode`             | `False`                 | Enable development mode with mock data    |
-| `--port`                 | `service_port`         | `9000`                  | Port to bind the service to               |
-| `--host`                 | `service_host`         | `0.0.0.0`               | Host to bind the service to               |
-| `--session-secret-key`   | `session_secret_key`   | **(required)**          | Secret key for session cookie encryption  |
-| `--public-hub-url`       | `public_hub_url`       | **(required)**          | Public URL of the JupyterHub instance     |
+| CLI Flag               | Config Attribute     | Default                 | Description                                                               |
+| ---------------------- | -------------------- | ----------------------- | ------------------------------------------------------------------------- |
+| `--prometheus-url`     | `prometheus_url`     | `http://127.0.0.1:9090` | Prometheus server endpoint                                                |
+| `--hub-namespace`      | `hub_namespace`      | `""`                    | Kubernetes namespace of the JupyterHub deployment, used to filter metrics |
+| `--dev-mode`           | `dev_mode`           | `False`                 | Enable development mode with mock data                                    |
+| `--port`               | `service_port`       | `9000`                  | Port to bind the service to                                               |
+| `--host`               | `service_host`       | `0.0.0.0`               | Host to bind the service to                                               |
+| `--session-secret-key` | `session_secret_key` | **(required)**          | Secret key for session cookie encryption                                  |
+| `--public-hub-url`     | `public_hub_url`     | **(required)**          | Public URL of the JupyterHub instance                                     |
 
 ### Environment variables
 
 All configuration options can be set via environment variables as alternatives to CLI flags:
 
-| Variable                                       | Description                                                   |
-| ---------------------------------------------- | ------------------------------------------------------------- |
-| `JUPYTERHUB_PUBLIC_HUB_URL`                    | Public URL of the JupyterHub instance **(required)**          |
-| `JUPYTERHUB_USAGE_QUOTAS_SESSION_SECRET_KEY`   | Secret key for session cookie encryption **(required)**       |
-| `JUPYTERHUB_USAGE_QUOTAS_PROMETHEUS_URL`       | Prometheus server endpoint (default: `http://127.0.0.1:9090`) |
-| `JUPYTERHUB_USAGE_QUOTAS_HUB_NAMESPACE`        | Kubernetes namespace of the JupyterHub deployment, used to filter metrics (default: empty) |
+| Variable                                     | Description                                                                                |
+| -------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| `JUPYTERHUB_PUBLIC_HUB_URL`                  | Public URL of the JupyterHub instance **(required)**                                       |
+| `JUPYTERHUB_USAGE_QUOTAS_SESSION_SECRET_KEY` | Secret key for session cookie encryption **(required)**                                    |
+| `JUPYTERHUB_USAGE_QUOTAS_PROMETHEUS_URL`     | Prometheus server endpoint (default: `http://127.0.0.1:9090`)                              |
+| `JUPYTERHUB_USAGE_QUOTAS_HUB_NAMESPACE`      | Kubernetes namespace of the JupyterHub deployment, used to filter metrics (default: empty) |
