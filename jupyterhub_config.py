@@ -53,7 +53,7 @@ c.UsageQuotaManager.scope_backup_strategy = {
     "intersection": "max",
 }
 
-c.UsageQuotaManager.failover_open = True
+c.UsageQuotaManager.failover_open = False
 
 c.UsageQuotaManager.policy = [
     {
@@ -125,7 +125,7 @@ async def quota_pre_spawn_hook(spawner):
     except Exception as e:
         if c.UsageQuotaManager.failover_open is True:
             launch_flag = True
-            quota_manager.log.warning(
+            quota_manager.log.error(
                 f"Usage quota system failed open for user {spawner.user.name} with exception: {e}."
             )
         else:
