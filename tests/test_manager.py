@@ -46,6 +46,8 @@ async def test_enforce_single(mocker):
     spawner = kubespawner.KubeSpawner(
         _mock=True, user=MockUser(name="user-0", groups=[MockGroup(name="group-0")])
     )
+    user_name = spawner.user.name
+    user_groups = [g.name for g in spawner.user.groups]
     c = Config()
     c.UsageQuotaManager.scope_backup_strategy = {
         "empty": {
@@ -75,7 +77,7 @@ async def test_enforce_single(mocker):
         "jupyterhub_usage_quotas.manager.UsageQuotaManager.get_usage", mock_usage
     )
     quota_manager = UsageQuotaManager(config=c)
-    output = await quota_manager.enforce(spawner)
+    output = await quota_manager.enforce(user_name, user_groups)
     assert output["allow_server_launch"] == True
     # Over quota limit
     mock_usage = mocker.AsyncMock(return_value=[[1773089003.938, 5001.0]])
@@ -83,7 +85,7 @@ async def test_enforce_single(mocker):
         "jupyterhub_usage_quotas.manager.UsageQuotaManager.get_usage", mock_usage
     )
     quota_manager = UsageQuotaManager(config=c)
-    output = await quota_manager.enforce(spawner)
+    output = await quota_manager.enforce(user_name, user_groups)
     assert output["allow_server_launch"] == False
 
 
@@ -94,6 +96,8 @@ async def test_enforce_multiple(mocker):
     spawner = kubespawner.KubeSpawner(
         _mock=True, user=MockUser(name="user-1", groups=[MockGroup(name="group-1")])
     )
+    user_name = spawner.user.name
+    user_groups = [g.name for g in spawner.user.groups]
     c = Config()
     c.UsageQuotaManager.policy = [
         {
@@ -125,7 +129,7 @@ async def test_enforce_multiple(mocker):
         side_effect=mock_usage,
     )
     quota_manager = UsageQuotaManager(config=c)
-    output = await quota_manager.enforce(spawner)
+    output = await quota_manager.enforce(user_name, user_groups)
     assert output["allow_server_launch"] == True
     # Over quota limit – 7 day window
     mock_usage = [[[1773089003.938, 4999.0]], [[1773089003.938, 701.0]]]
@@ -134,7 +138,7 @@ async def test_enforce_multiple(mocker):
         side_effect=mock_usage,
     )
     quota_manager = UsageQuotaManager(config=c)
-    output = await quota_manager.enforce(spawner)
+    output = await quota_manager.enforce(user_name, user_groups)
     assert output["allow_server_launch"] == False
     # Over quota limit – 30 day window
     mock_usage = [[[1773089003.938, 5001.0]], [[1773089003.938, 699.0]]]
@@ -143,7 +147,7 @@ async def test_enforce_multiple(mocker):
         side_effect=mock_usage,
     )
     quota_manager = UsageQuotaManager(config=c)
-    output = await quota_manager.enforce(spawner)
+    output = await quota_manager.enforce(user_name, user_groups)
     assert output["allow_server_launch"] == False
     # Over quota limit – both 7 and 30 day window
     mock_usage = [[[1773089003.938, 5001.0]], [[1773089003.938, 701.0]]]
@@ -152,7 +156,7 @@ async def test_enforce_multiple(mocker):
         side_effect=mock_usage,
     )
     quota_manager = UsageQuotaManager(config=c)
-    output = await quota_manager.enforce(spawner)
+    output = await quota_manager.enforce(user_name, user_groups)
     assert output["allow_server_launch"] == False
 
 
@@ -163,6 +167,8 @@ async def test_enforce_empty(mocker):
     spawner = kubespawner.KubeSpawner(
         _mock=True, user=MockUser(name="user-2", groups=[])
     )
+    user_name = spawner.user.name
+    user_groups = [g.name for g in spawner.user.groups]
     c = Config()
     c.UsageQuotaManager.scope_backup_strategy = {
         "empty": {
@@ -181,7 +187,7 @@ async def test_enforce_empty(mocker):
         "jupyterhub_usage_quotas.manager.UsageQuotaManager.get_usage", mock_usage
     )
     quota_manager = UsageQuotaManager(config=c)
-    output = await quota_manager.enforce(spawner)
+    output = await quota_manager.enforce(user_name, user_groups)
     assert output["allow_server_launch"] == True
     # Over quota limit
     mock_usage = mocker.AsyncMock(return_value=[[1773089003.938, 501.0]])
@@ -189,7 +195,7 @@ async def test_enforce_empty(mocker):
         "jupyterhub_usage_quotas.manager.UsageQuotaManager.get_usage", mock_usage
     )
     quota_manager = UsageQuotaManager(config=c)
-    output = await quota_manager.enforce(spawner)
+    output = await quota_manager.enforce(user_name, user_groups)
     assert output["allow_server_launch"] == False
 
 
@@ -211,6 +217,8 @@ async def test_enforce_intersection(mocker, operator, under, over):
             name="user-1", groups=[MockGroup(name="group-0"), MockGroup(name="group-1")]
         ),
     )
+    user_name = spawner.user.name
+    user_groups = [g.name for g in spawner.user.groups]
     c = Config()
     c.UsageQuotaManager.scope_backup_strategy = {
         "empty": {
@@ -249,7 +257,7 @@ async def test_enforce_intersection(mocker, operator, under, over):
         "jupyterhub_usage_quotas.manager.UsageQuotaManager.get_usage", mock_usage
     )
     quota_manager = UsageQuotaManager(config=c)
-    output = await quota_manager.enforce(spawner)
+    output = await quota_manager.enforce(user_name, user_groups)
     assert output["allow_server_launch"] == True
     # Over quota limit
     mock_usage = mocker.AsyncMock(return_value=[[1773089003.938, over]])
@@ -257,7 +265,7 @@ async def test_enforce_intersection(mocker, operator, under, over):
         "jupyterhub_usage_quotas.manager.UsageQuotaManager.get_usage", mock_usage
     )
     quota_manager = UsageQuotaManager(config=c)
-    output = await quota_manager.enforce(spawner)
+    output = await quota_manager.enforce(user_name, user_groups)
     assert output["allow_server_launch"] == False
 
 
@@ -269,6 +277,7 @@ async def test_get_usage_no_result(mocker):
         _mock=True,
         user=MockUser(name="user-1", groups=[MockGroup(name="group-1")]),
     )
+    user_name = spawner.user.name
     c = Config()
     c.UsageQuotaManager.scope_backup_strategy = {
         "empty": {
@@ -301,7 +310,7 @@ async def test_get_usage_no_result(mocker):
     mocker.patch("jupyterhub_usage_quotas.client.PrometheusClient.query", mock_response)
     quota_manager = UsageQuotaManager(config=c)
     single_policy = quota_manager.policy[0]
-    usage = await quota_manager.get_usage(spawner, single_policy)
+    usage = await quota_manager.get_usage(user_name, single_policy)
     print(f"{usage=}")
     assert usage[0][1] == 0.0
 
@@ -313,7 +322,7 @@ async def test_get_usage(data_response, data_usage, mocker):
     spawner = kubespawner.KubeSpawner(
         _mock=True, user=MockUser(name="user-2", groups=[])
     )
-
+    user_name = spawner.user.name
     c = Config()
     c.UsageQuotaManager.scope_backup_strategy = {
         "empty": {
@@ -330,7 +339,7 @@ async def test_get_usage(data_response, data_usage, mocker):
     mocker.patch("jupyterhub_usage_quotas.client.PrometheusClient.query", mock_response)
     quota_manager = UsageQuotaManager(config=c)
     empty_policy = quota_manager.scope_backup_strategy["empty"]
-    usage = await quota_manager.get_usage(spawner, empty_policy)
+    usage = await quota_manager.get_usage(user_name, empty_policy)
     assert usage == data_usage
 
 
