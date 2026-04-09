@@ -156,7 +156,7 @@ class UsageViewer(Application, UsageViewerConfig):
         "port": "UsageViewer.service_port",
         "host": "UsageViewer.service_host",
         "prometheus-url": "UsageViewer.prometheus_url",
-        "prometheus-namespace": "UsageViewer.prometheus_namespace",
+        "hub-namespace": "UsageViewer.hub_namespace",
         "prometheus-storage-quota-metric": "UsageViewer.prometheus_storage_quota_metric",
         "prometheus-storage-usage-metric": "UsageViewer.prometheus_storage_usage_metric",
         "dev-mode": "UsageViewer.dev_mode",
@@ -171,7 +171,7 @@ class UsageViewer(Application, UsageViewerConfig):
 
         self.storage_client = StorageQuotaClient(
             prometheus_url=self.prometheus_url,
-            namespace=self.prometheus_namespace,
+            namespace=self.hub_namespace,
             dev_mode=self.dev_mode,
             quota_metric=self.prometheus_storage_quota_metric,
             usage_metric=self.prometheus_storage_usage_metric,
@@ -179,7 +179,7 @@ class UsageViewer(Application, UsageViewerConfig):
 
         self.log.info("Initialized Usage Viewer service")
         self.log.info(f"Prometheus URL: {self.prometheus_url}")
-        self.log.info(f"Prometheus Namespace: {self.prometheus_namespace or '(empty)'}")
+        self.log.info(f"Hub Namespace: {self.hub_namespace or '(empty)'}")
         if self.dev_mode:
             self.log.warning(
                 "Development mode ENABLED - may use mock data for storage quotas"

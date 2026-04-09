@@ -129,7 +129,7 @@ def mock_env_vars(monkeypatch):
     monkeypatch.setenv(
         "JUPYTERHUB_USAGE_QUOTAS_PROMETHEUS_URL", "http://prometheus:9090"
     )
-    monkeypatch.setenv("JUPYTERHUB_USAGE_QUOTAS_PROMETHEUS_NAMESPACE", "prod")
+    monkeypatch.setenv("JUPYTERHUB_USAGE_QUOTAS_HUB_NAMESPACE", "prod")
     monkeypatch.setenv("JUPYTERHUB_USAGE_QUOTAS_SESSION_SECRET_KEY", "0" * 64)
     return monkeypatch
 

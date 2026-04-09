@@ -129,7 +129,7 @@ Alternatively, you can enable dev mode by setting the configuration directly:
 c.UsageViewer.dev_mode = True
 ```
 
-When `dev_mode` is enabled and both `prometheus_namespace` and `prometheus_url` are unconfigured (defaults), the service will return randomly generated mock data.
+When `dev_mode` is enabled and both `hub_namespace` and `prometheus_url` are unconfigured (defaults), the service will return randomly generated mock data.
 
 ## Running hatch scripts
 

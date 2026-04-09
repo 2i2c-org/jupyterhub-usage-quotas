@@ -44,17 +44,21 @@ policy_schema["properties"].update(
 policy_schema["required"].append("scope")
 
 
-class UsageQuotaConfig(LoggingConfigurable):
+class BaseConfig(LoggingConfigurable):
+    """Base configuration shared across JupyterHub usage quota components."""
+
+    prometheus_url = Unicode(
+        "http://127.0.0.1:9090",
+        help="The url of the Prometheus server, usually of the form 'http://<k8s-service-name>.<k8s-namespace>.svc.cluster.local' in a Kubernetes cluster. Defaults to 'http://127.0.0.1:9090' for local development.",
+    ).tag(config=True)
+
+
+class UsageQuotaConfig(BaseConfig):
     """
     Configure application settings for the JupyterHub usage quotas system.
     """
 
     # System config
-
-    prometheus_url = Unicode(
-        "http://127.0.0.1:9090",
-        help="The url of the Prometheus server, usually of the form 'http://<k8s-service-name>.<k8s-namespace>.svc.cluster.local' in a Kubernetes cluster. Defaults to 'http://localhost:9090' for local development if left blank.",
-    ).tag(config=True)
 
     prometheus_usage_metrics = Dict(
         help="""
@@ -195,15 +199,11 @@ class UsageQuotaConfig(LoggingConfigurable):
         return policies
 
 
-class UsageViewerConfig(LoggingConfigurable):
+class UsageViewerConfig(BaseConfig):
     """Configuration for the Usage Viewer service.
 
     Service-specific settings including Prometheus connection and service binding.
     """
-
-    prometheus_url = Unicode(
-        help="The url of the Prometheus server, usually of the form 'http://<k8s-service-name>.<k8s-namespace>.svc.cluster.local' in a Kubernetes cluster. Defaults to 'http://127.0.0.1:9090' for local development if left blank. Can be set via JUPYTERHUB_USAGE_QUOTAS_PROMETHEUS_URL environment variable.",
-    ).tag(config=True)
 
     @default("prometheus_url")
     def _prometheus_url_default(self):
@@ -211,13 +211,13 @@ class UsageViewerConfig(LoggingConfigurable):
             "JUPYTERHUB_USAGE_QUOTAS_PROMETHEUS_URL", "http://127.0.0.1:9090"
         )
 
-    prometheus_namespace = Unicode(
-        help="Prometheus namespace for filtering storage quota metrics in multi-tenant environments. Leave empty for single-tenant or development. Can be set via JUPYTERHUB_USAGE_QUOTAS_PROMETHEUS_NAMESPACE environment variable.",
+    hub_namespace = Unicode(
+        help="Kubernetes namespace of the JupyterHub deployment, used to filter Prometheus storage metrics in multi-tenant environments. Leave empty for single-tenant or development. Can be set via JUPYTERHUB_USAGE_QUOTAS_HUB_NAMESPACE environment variable.",
     ).tag(config=True)
 
-    @default("prometheus_namespace")
-    def _prometheus_namespace_default(self):
-        return os.environ.get("JUPYTERHUB_USAGE_QUOTAS_PROMETHEUS_NAMESPACE", "")
+    @default("hub_namespace")
+    def _hub_namespace_default(self):
+        return os.environ.get("JUPYTERHUB_USAGE_QUOTAS_HUB_NAMESPACE", "")
 
     prometheus_storage_quota_metric = Unicode(
         help="Prometheus metric name for storage quota/hard limit. Defaults to "
@@ -257,9 +257,9 @@ class UsageViewerConfig(LoggingConfigurable):
         Mock data is only used when ALL three conditions are met:
         - dev_mode is True, AND
         - prometheus_url is the default (http://127.0.0.1:9090), AND
-        - prometheus_namespace is empty
+        - hub_namespace is empty
 
-        If either prometheus_url or prometheus_namespace is configured, the service
+        If either prometheus_url or hub_namespace is configured, the service
         will query Prometheus even when dev_mode is True.
 
         Default: False (production mode - always query Prometheus)
