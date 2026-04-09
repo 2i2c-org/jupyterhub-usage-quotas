@@ -4,7 +4,7 @@ Example configuration file for JupyterHub usage quotas.
 
 import socket
 
-from jupyterhub_usage_quotas import UsageHandler, get_template_path
+from jupyterhub_usage_quotas import setup_usage_quotas
 from jupyterhub_usage_quotas.manager import SpawnException, UsageQuotaManager
 
 c = get_config()  # noqa
@@ -33,6 +33,9 @@ c.JupyterHub.load_groups = {
 c.Authenticator.admin_users = {"admin"}
 
 # Usage Quotas
+
+# Set up common config
+setup_usage_quotas(c)
 
 c.UsageQuotaManager.prometheus_usage_metrics = {
     "memory": "kube_pod_container_resource_requests{resource='memory'}",
@@ -73,14 +76,8 @@ c.UsageQuotaManager.policy = [
     },
 ]
 
-c.JupyterHub.template_paths = [get_template_path()]
-
 # Usage Quota Service (optional — displays storage usage to users)
 # Install with: pip install jupyterhub-usage-quotas[service]
-
-c.JupyterHub.extra_handlers = [
-    (r"/usage", UsageHandler),
-]
 
 c.JupyterHub.services = [
     {
@@ -95,7 +92,7 @@ c.JupyterHub.services = [
             "--port=9000",
             "--public-hub-url=http://localhost:8000",
             "--prometheus-url=http://localhost:9090",
-            "--hub-namespace=staging",
+            "--hub-namespace=showcase",
             "--session-secret-key=use-a-secure-random-key-in-production",
             "--dev-mode=true",
         ],
