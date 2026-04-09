@@ -61,7 +61,7 @@ service = [
     "jinja2>=3.0",
 ]
 dev = [
-    "ipython",
+    "ipython>=9.12",
     "pre-commit",
 ]
 

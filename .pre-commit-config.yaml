@@ -46,6 +46,6 @@ repos:
   rev: 0.7.21
   hooks:
   - id: mdformat
-    additional_dependencies: [mdformat-gfm, mdformat-frontmatter, mdformat-footnote]
+    additional_dependencies: [mdformat-gfm, mdformat-frontmatter, mdformat-footnote, mdformat-myst]
 ci:
   autoupdate_schedule: monthly

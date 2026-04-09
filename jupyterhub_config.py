@@ -44,8 +44,8 @@ c.UsageQuotaManager.prometheus_scrape_interval = 60
 c.UsageQuotaManager.scope_backup_strategy = {
     "empty": {
         "resource": "memory",
-        "limit": {"value": 500, "unit": "GiB-hours"},
-        "window": 7,
+        "limit": {"value": 10, "unit": "GiB-hours"},
+        "window": 30,
     },
     "intersection": "max",
 }
@@ -128,13 +128,13 @@ async def quota_pre_spawn_hook(spawner):
     except Exception:
         raise SpawnException(
             status_code=424,
-            log_message="Spawn failed occurred due to a failed dependency in the usage quota system. Please contact your hub admin for assistance.",
+            log_message="Spawn failure occurred due to a failed dependency in the usage quota system. Please contact your hub admin for assistance.",
         )
     if launch_flag is False:
         raise SpawnException(
-            status_code=403,
+            status_code=422,
             log_message=f"{output['error']['message']}",
-            html_message=f"<p>Compute {output['quota']['resource']} quota limit exceeded.</p><p style='font-size:100%'>You have used <span style='color:var(--bs-red)'>{output['quota']['used']:.2f}</span> / {output['quota']['limit']['value']:.2f} {output['quota']['limit']['unit']} in the last {output['quota']['window']} days.</p><p style='font-size:100%'>Contact your JupyterHub admin if you need additional quota.</p><i style='font-size:100%;color:var(--bs-gray)'>Last updated: {output["timestamp"]} (UTC).</i>",
+            html_message=f"<p>Compute {output['quota']['resource']} quota limit exceeded.</p><p style='font-size:100%'>You have used <span style='color:var(--bs-red)'>{output['quota']['used']:.2f}</span> / {output['quota']['limit']['value']:.2f} {output['quota']['limit']['unit']} in the last {output['quota']['window']} days.</p><p style='font-size:100%'>Your quota will reset on <b><time datetime='{output['error']['retry_time']}'>{output['error']['retry_time']}</time></b>.</p><p style='font-size:100%'>Contact your JupyterHub admin if you need additional quota.</p><i style='font-size:100%;color:var(--bs-gray)'>Last updated: <time datetime='{output['timestamp']}'>{output["timestamp"]}</time>.</i>",
         )
 
 

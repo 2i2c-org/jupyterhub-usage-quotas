@@ -1,0 +1,24 @@
+{% extends "templates/error.html" %}
+
+{% block main %}
+<div class="error">
+{% block error_detail %}
+{% if message_html %}
+  <p>{{ message_html | safe }}</p>
+{% elif message %}
+  <p>{{ message }}</p>
+{% endif %}
+{% endblock error_detail %}
+</div>
+{% endblock main %}
+{% block script %}
+  {{ super() }}
+  <script>
+    document.querySelectorAll('time[datetime]').forEach(function(el) {
+        var d = new Date(el.getAttribute('datetime'));
+        if (!isNaN(d)) {
+            el.textContent = d.toLocaleString(undefined, { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+        }
+    });
+</script>
+{% endblock script %}
