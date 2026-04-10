@@ -61,3 +61,24 @@ class PrometheusClient(Client):
         except Exception as e:
             logger.error(f"Unexpected error: {e}")
             raise
+
+
+class HubApiClient(Client):
+    def __init__(self, api_url: str, **kwargs):
+        super().__init__(**kwargs)
+        self.api_url = URL(api_url)
+
+    async def query(self, path: str):
+        query_url = self.api_url.joinpath(path)
+        session = await self._get_session()
+        try:
+            async with session.get(query_url) as response:
+                response.raise_for_status()
+                data = await response.json()
+                return data
+        except aiohttp.ClientError as e:
+            logger.error(f"Error querying Hub REST API: {e}")
+            raise
+        except Exception as e:
+            logger.error(f"Unexpected error: {e}")
+            raise
