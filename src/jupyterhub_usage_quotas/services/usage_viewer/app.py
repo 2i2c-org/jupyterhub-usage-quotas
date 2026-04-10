@@ -1,6 +1,5 @@
 """Usage Viewer Service - Combined Application and FastAPI routes."""
 
-import asyncio
 import json
 import logging
 from contextlib import asynccontextmanager
@@ -14,7 +13,6 @@ from starlette.middleware.sessions import SessionMiddleware
 
 from jupyterhub_usage_quotas import get_template_path
 from jupyterhub_usage_quotas.config import UsageViewerConfig
-from jupyterhub_usage_quotas.metrics import MetricsExporter
 from jupyterhub_usage_quotas.services.usage_viewer.storage_quota_client import (
     StorageQuotaClient,
 )
@@ -36,21 +34,8 @@ def create_fastapi_app(
         Configured FastAPI application
     """
 
-    metrics_exporter = MetricsExporter()
-
-    async def metrics_loop():
-        while True:
-            print("Start of async metrics loop.")
-            await metrics_exporter.export_metrics()
-            await asyncio.sleep(5)
-
-    async def start_metrics_exporter():
-        loop = asyncio.get_running_loop()
-        loop.create_task(metrics_loop())
-
     @asynccontextmanager
     async def lifespan(app: FastAPI):
-        await start_metrics_exporter()
         yield
         await storage_client.close()
 
