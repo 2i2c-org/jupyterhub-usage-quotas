@@ -94,6 +94,8 @@ c.UsageQuotaManager.prometheus_usage_metrics = {
 
 c.UsageQuotaManager.prometheus_scrape_interval = 60
 
+c.UsageQuotaManager.hub_namespace = "showcase"
+
 c.UsageQuotaManager.scope_backup_strategy = {
     "empty": {
         "resource": "memory",
@@ -125,6 +127,45 @@ c.UsageQuotaManager.policy = [
         "scope": {"group": ["group-1"]},
     },
 ]
+
+# Usage Quota Service (optional — displays storage usage to users)
+# Install with: pip install jupyterhub-usage-quotas[service]
+
+c.JupyterHub.services = [
+    {
+        "name": "usage-quota",
+        "url": "http://localhost:9000",
+        "display": False,  # Don't show in Services menu - we have a custom navbar link
+        "oauth_no_confirm": True,
+        "command": [
+            "python",
+            "-m",
+            "jupyterhub_usage_quotas.services.usage_viewer",
+            "--port=9000",
+            "--public-hub-url=http://localhost:8000",
+            "--prometheus-url=http://localhost:9090",
+            "--hub-namespace=showcase",
+            "--session-secret-key=use-a-secure-random-key-in-production",
+            "--dev-mode=true",
+        ],
+    }
+]
+
+c.JupyterHub.load_roles = [
+    {
+        "name": "usage-quota-service",
+        "scopes": ["read:users", "list:users"],
+        "services": ["usage-quota"],
+    },
+    {
+        "name": "user",
+        "scopes": ["access:services!service=usage-quota", "self"],
+    },
+]
+
+# KubeSpawner
+
+c.JupyterHub.spawner_class = "kubespawner.KubeSpawner"
 
 quota_manager = UsageQuotaManager(config=c)
 

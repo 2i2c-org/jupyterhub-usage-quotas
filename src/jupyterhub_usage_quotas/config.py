@@ -163,14 +163,6 @@ class UsageQuotaConfig(UsageConfig):
         60, help="Scrape interval of Prometheus sample collection (seconds)."
     ).tag(config=True)
 
-    bucket_size_seconds = Integer(
-        300, help="Granularity of usage buckets (seconds)."
-    ).tag(config=True)
-
-    sample_interval_seconds = Integer(
-        30, help="How often usage is sampled by the quota system (seconds)."
-    ).tag(config=True)
-
     scope_backup_strategy = Dict(
         per_key_traits={
             "empty": Dict(),
@@ -297,6 +289,11 @@ class UsageViewerConfig(UsageConfig):
             "JUPYTERHUB_USAGE_QUOTAS_PROMETHEUS_STORAGE_USAGE_METRIC",
             "dirsize_total_size_bytes",
         )
+
+    prometheus_export_interval = Integer(
+        60,
+        help="How often usage and quota limit metrics are exported by the usage viewer service (seconds).",
+    ).tag(config=True)
 
     escape_username_safe_scheme = Bool(
         True,
