@@ -1,7 +1,14 @@
 import os
 
+from jupyterhub.handlers.metrics import MetricsHandler
+from prometheus_client import REGISTRY, Counter, generate_latest
+
 from jupyterhub_usage_quotas.client import HubApiClient
 from jupyterhub_usage_quotas.config import UsageViewerConfig
+
+c = Counter(
+    "my_counter_total", "Example counter", namespace="jupyterhub", registry=REGISTRY
+)
 
 
 class MetricsExporter(UsageViewerConfig):
@@ -25,3 +32,6 @@ class MetricsExporter(UsageViewerConfig):
         """
         users_and_groups = await self.get_users_and_groups()
         print(users_and_groups)
+        c.inc()
+        metrics_handler = MetricsHandler()
+        metrics_handler.write(generate_latest(REGISTRY))
