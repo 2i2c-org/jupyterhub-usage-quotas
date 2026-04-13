@@ -1,9 +1,6 @@
-import os
+from prometheus_client import REGISTRY, Counter
+from tornado.ioloop import PeriodicCallback
 
-from jupyterhub.handlers.metrics import MetricsHandler
-from prometheus_client import REGISTRY, Counter, generate_latest
-
-from jupyterhub_usage_quotas.client import HubApiClient
 from jupyterhub_usage_quotas.config import UsageViewerConfig
 
 c = Counter(
@@ -14,9 +11,9 @@ c = Counter(
 class MetricsExporter(UsageViewerConfig):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        api_url = os.environ.get("JUPYTERHUB_API_URL")
-        api_token = os.environ.get("JUPYTERHUB_API_TOKEN")
-        self.client = HubApiClient(api_url=api_url, token=api_token)
+        # api_url = os.environ.get("JUPYTERHUB_API_URL")
+        # api_token = os.environ.get("JUPYTERHUB_API_TOKEN")
+        # self.client = HubApiClient(api_url=api_url, token=api_token)
 
     async def get_users_and_groups(self) -> list:
         response = await self.client.query(path="users")
@@ -26,12 +23,15 @@ class MetricsExporter(UsageViewerConfig):
         ]
         return filtered
 
-    async def export_metrics(self):
+    def update_metrics(self):
         """
-        Export usage and quota limits as Prometheus metrics.
+        Update usage and quota limits Prometheus metrics.
         """
-        users_and_groups = await self.get_users_and_groups()
-        print(users_and_groups)
+        # users_and_groups = await self.get_users_and_groups()
+        # print(users_and_groups)
+        print("incrementing counter")
         c.inc()
-        metrics_handler = MetricsHandler()
-        metrics_handler.write(generate_latest(REGISTRY))
+
+    def start(self):
+        pc = PeriodicCallback(self.update_metrics, 5e3)
+        pc.start()
