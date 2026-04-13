@@ -7,6 +7,7 @@ import socket
 
 from jupyterhub_usage_quotas import setup_usage_quotas
 from jupyterhub_usage_quotas.manager import SpawnException, UsageQuotaManager
+from jupyterhub_usage_quotas.metrics import MetricsExporter
 
 c = get_config()  # noqa
 
@@ -196,3 +197,7 @@ async def quota_pre_spawn_hook(spawner):
 
 
 c.KubeSpawner.pre_spawn_hook = quota_pre_spawn_hook
+
+metrics_exporter = MetricsExporter()
+
+metrics_exporter.start()
