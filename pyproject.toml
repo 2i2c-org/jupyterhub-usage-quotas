@@ -135,7 +135,7 @@ precision = 2
 github_url = "https://github.com/2i2c-org/jupyterhub-usage-quotas"
 
 [tool.tbump.version]
-current = "0.0.4.dev"
+current = "0.1.0b1"
 regex = '''
     (?P<major>\d+)
     \.
