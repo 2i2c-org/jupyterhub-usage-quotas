@@ -18,8 +18,6 @@ def setup_usage_quotas(c):
     the config object being passed in.
     """
 
-    c.JupyterHub.template_paths = [get_template_path()]
+    c.JupyterHub.template_paths.insert(0, get_template_path())
 
-    c.JupyterHub.extra_handlers = [
-        (r"/usage", UsageHandler),
-    ]
+    c.JupyterHub.extra_handlers.append((r"/usage", UsageHandler))
