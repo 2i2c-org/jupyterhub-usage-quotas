@@ -75,6 +75,7 @@ only-packages = true
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/jupyterhub_usage_quotas"]
+artifacts = ["src/jupyterhub_usage_quotas/templates"]
 
 # [tool.hatch.build.hooks.vcs]
 version-file = "src/jupyterhub_usage_quotas/_version.py"
