@@ -37,10 +37,11 @@ class PrometheusClient(Client):
         self, prometheus_url: str, prometheus_auth: dict | None = None, **kwargs
     ):
         super().__init__(**kwargs)
-        if prometheus_auth:
-            self.auth = aiohttp.BasicAuth(
-                prometheus_auth["username"], prometheus_auth["password"]
-            )
+        self.auth = (
+            aiohttp.BasicAuth(prometheus_auth["username"], prometheus_auth["password"])
+            if prometheus_auth
+            else None
+        )
         self.prometheus_url = URL(prometheus_url)
         self.query_url = self.prometheus_url.joinpath("api/v1/query")
 
