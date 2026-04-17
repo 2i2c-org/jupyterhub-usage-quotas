@@ -41,8 +41,6 @@ class PrometheusClient(Client):
             self.auth = aiohttp.BasicAuth(
                 prometheus_auth["username"], prometheus_auth["password"]
             )
-        else:
-            self.auth = None
         self.prometheus_url = URL(prometheus_url)
         self.query_url = self.prometheus_url.joinpath("api/v1/query")
 
