@@ -11,12 +11,14 @@ class Client:
         self.session: aiohttp.ClientSession | None = None
         self.token = token
 
-    async def _get_session(self) -> aiohttp.ClientSession:
+    async def _get_session(
+        self, auth: aiohttp.BasicAuth | None = None
+    ) -> aiohttp.ClientSession:
         if self.session is None or self.session.closed:
             headers = {}
             if self.token:
                 headers["Authorization"] = f"token {self.token}"
-            self.session = aiohttp.ClientSession(headers=headers)
+            self.session = aiohttp.ClientSession(headers=headers, auth=auth)
         return self.session
 
     async def close(self):
@@ -31,13 +33,21 @@ class Client:
 
 
 class PrometheusClient(Client):
-    def __init__(self, prometheus_url: str, **kwargs):
+    def __init__(
+        self, prometheus_url: str, prometheus_auth: dict | None = None, **kwargs
+    ):
         super().__init__(**kwargs)
+        if prometheus_auth:
+            self.auth = aiohttp.BasicAuth(
+                prometheus_auth["username"], prometheus_auth["password"]
+            )
+        else:
+            self.auth = None
         self.prometheus_url = URL(prometheus_url)
         self.query_url = self.prometheus_url.joinpath("api/v1/query")
 
     async def query(self, promql: str) -> dict:
-        session = await self._get_session()
+        session = await self._get_session(auth=self.auth)
         params = {
             "query": promql,
         }

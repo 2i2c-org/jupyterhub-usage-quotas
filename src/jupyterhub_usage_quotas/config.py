@@ -58,6 +58,17 @@ class BaseConfig(LoggingConfigurable):
             "JUPYTERHUB_USAGE_QUOTAS_PROMETHEUS_URL", "http://127.0.0.1:9090"
         )
 
+    prometheus_auth = Dict(
+        help="""
+        Username and password credentials for authenticating with Prometheus.
+        For example:
+            c.BaseConfig.prometheus_auth = {
+                "username": "username",
+                "password": "password",
+            }
+        """
+    ).tag(config=True)
+
     hub_namespace = Unicode(
         help="Kubernetes namespace of the JupyterHub deployment, used to filter Prometheus usage metrics in multi-tenant environments. Leave empty for single-tenant or development. Can be set via JUPYTERHUB_USAGE_QUOTAS_HUB_NAMESPACE environment variable.",
     ).tag(config=True)
