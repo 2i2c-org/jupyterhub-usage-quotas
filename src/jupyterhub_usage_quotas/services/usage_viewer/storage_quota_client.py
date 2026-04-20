@@ -6,6 +6,8 @@ import random
 from datetime import UTC, datetime
 from typing import Any
 
+from kubespawner.slugs import escape_slug, safe_slug
+
 from jupyterhub_usage_quotas.client import PrometheusClient
 
 logger = logging.getLogger(__name__)
@@ -18,7 +20,9 @@ class StorageQuotaClient(PrometheusClient):
 
     Args:
         prometheus_url: URL of the Prometheus server
+        prometheus_auth: Dictionary of Prometheus username and password
         namespace: Prometheus namespace for filtering metrics
+        safe_scheme: Username escaping scheme for directory names
         dev_mode: Whether to enable development mode with mock data
         quota_metric: Prometheus metric name for storage quota/hard limit
         usage_metric: Prometheus metric name for current storage usage
@@ -28,14 +32,17 @@ class StorageQuotaClient(PrometheusClient):
     def __init__(
         self,
         prometheus_url: str,
+        prometheus_auth: dict,
         namespace: str = "",
+        safe_scheme: bool = True,
         dev_mode: bool = False,
         quota_metric: str = "dirsize_hard_limit_bytes",
         usage_metric: str = "dirsize_total_size_bytes",
         **kwargs,
     ):
-        super().__init__(prometheus_url, **kwargs)
+        super().__init__(prometheus_url, prometheus_auth, **kwargs)
         self.namespace = namespace
+        self.safe_scheme = safe_scheme
         self.dev_mode = dev_mode
         self.quota_metric = quota_metric
         self.usage_metric = usage_metric
@@ -105,6 +112,23 @@ class StorageQuotaClient(PrometheusClient):
         """
         return f'label_replace({metric}, "username", "$1", "directory", "(.*)")'
 
+    @staticmethod
+    def escape_username(username: str, safe_scheme: bool = True):
+        """
+        Escape username to create a safe string for naming directories.
+
+        Args:
+            username: Username to escape
+            safe_scheme: Kubespawner slug scheme, set to True for modern safe slugs, or False for legacy escaped slugs
+
+        Returns:
+            String of escaped username
+        """
+        if safe_scheme:
+            return safe_slug(username)
+        else:
+            return escape_slug(username)
+
     def get_mock_data(self, username: str) -> dict[str, Any]:
         """Return mock data for development when namespace is not set.
 
@@ -168,12 +192,10 @@ class StorageQuotaClient(PrometheusClient):
 
         logger.debug(f"Fetching usage data for user: {username}")
 
-        base_quota_metric = (
-            f'{self.quota_metric}{{namespace!="", directory="{username}"}}'
-        )
-        base_usage_metric = (
-            f'{self.usage_metric}{{namespace!="", directory="{username}"}}'
-        )
+        directory = self.escape_username(username, safe_scheme=self.safe_scheme)
+
+        base_quota_metric = f'{self.quota_metric}{{namespace="{self.namespace}", directory="{directory}"}}'
+        base_usage_metric = f'{self.usage_metric}{{namespace="{self.namespace}", directory="{directory}"}}'
 
         quota_value_query = self.with_label_replace(base_quota_metric)
         usage_value_query = self.with_label_replace(base_usage_metric)
