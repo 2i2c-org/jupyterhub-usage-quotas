@@ -4,11 +4,12 @@ Traitlets based configuration for jupyterhub_usage_quotas
 
 import copy
 import os
+import sys
 import typing
 
 import jsonschema
 from traitlets import Bool, Dict, Integer, List, TraitError, Unicode, default, validate
-from traitlets.config import LoggingConfigurable
+from traitlets.config import Application
 
 Schema = typing.Dict[str, typing.Any]
 
@@ -44,8 +45,22 @@ policy_schema["properties"].update(
 policy_schema["required"].append("scope")
 
 
-class BaseConfig(LoggingConfigurable):
+class UsageConfig(Application):
     """Base configuration shared across JupyterHub usage quota components."""
+
+    config_file = Unicode("jupyterhub_config.py", help="The config file to load").tag(
+        config=True
+    )
+
+    @validate("config_file")
+    def _validate_config_file(self, proposal):
+        if not os.path.isfile(proposal.value):
+            print(
+                f"ERROR: Failed to find specified config file: {proposal.value}",
+                file=sys.stderr,
+            )
+            sys.exit(1)
+        return proposal.value
 
     prometheus_url = Unicode(
         "http://127.0.0.1:9090",
@@ -78,7 +93,7 @@ class BaseConfig(LoggingConfigurable):
         return os.environ.get("JUPYTERHUB_USAGE_QUOTAS_HUB_NAMESPACE", "")
 
 
-class UsageQuotaConfig(BaseConfig):
+class UsageQuotaConfig(UsageConfig):
     """
     Configure application settings for the JupyterHub usage quotas system.
     """
@@ -224,7 +239,7 @@ class UsageQuotaConfig(BaseConfig):
         return policies
 
 
-class UsageViewerConfig(BaseConfig):
+class UsageViewerConfig(UsageConfig):
     """Configuration for the Usage Viewer service.
 
     Service-specific settings including Prometheus connection and service binding.
@@ -255,6 +270,11 @@ class UsageViewerConfig(BaseConfig):
             "JUPYTERHUB_USAGE_QUOTAS_PROMETHEUS_STORAGE_USAGE_METRIC",
             "dirsize_total_size_bytes",
         )
+
+    escape_username_safe_scheme = Bool(
+        True,
+        help=" Kubespawner slug scheme for naming directories with escaped usernames: set to True for modern safe slugs, or False for legacy escaped slugs.",
+    ).tag(config=True)
 
     dev_mode = Bool(
         False,
