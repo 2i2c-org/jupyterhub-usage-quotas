@@ -17,7 +17,9 @@ class UsageQuotaManager(UsageQuotaConfig):
         super().__init__(**kwargs)
         self.convert_resource = {"GiB-hours": 2**30}
         self.convert_seconds = {"GiB-hours": 60**2}
-        self.prometheus_client = PrometheusClient(self.prometheus_url)
+        self.prometheus_client = PrometheusClient(
+            self.prometheus_url, self.prometheus_auth
+        )
 
     def resolve_empty(self) -> list:
         """
