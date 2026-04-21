@@ -32,7 +32,7 @@ class StorageQuotaClient(PrometheusClient):
     def __init__(
         self,
         prometheus_url: str,
-        prometheus_auth: dict,
+        prometheus_auth: dict | None = None,
         namespace: str = "",
         safe_scheme: bool = True,
         dev_mode: bool = False,
