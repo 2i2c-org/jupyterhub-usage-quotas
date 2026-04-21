@@ -10,6 +10,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from jinja2 import Environment, FileSystemLoader
 from jupyterhub.services.auth import HubOAuth
 from starlette.middleware.sessions import SessionMiddleware
+from traitlets.config import Config
 
 from jupyterhub_usage_quotas import get_template_path
 from jupyterhub_usage_quotas.config import UsageViewerConfig
@@ -22,7 +23,7 @@ logger = logging.getLogger(__name__)
 
 def create_fastapi_app(
     storage_client: StorageQuotaClient,
-    config: UsageViewerConfig,
+    config: Config,
 ) -> FastAPI:
     """Create and configure the FastAPI application.
 
