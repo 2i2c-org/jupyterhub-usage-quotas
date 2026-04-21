@@ -198,6 +198,6 @@ async def quota_pre_spawn_hook(spawner):
 
 c.KubeSpawner.pre_spawn_hook = quota_pre_spawn_hook
 
-metrics_exporter = MetricsExporter()
+metrics_exporter = MetricsExporter(quota_manager)
 
 metrics_exporter.start()
