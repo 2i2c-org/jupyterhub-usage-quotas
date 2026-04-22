@@ -5,38 +5,6 @@ from traitlets.config import Application
 
 from jupyterhub_usage_quotas.manager import UsageQuotaManager
 
-gauge_memory_usage = Gauge(
-    "memory_usage_gibibyte_hours",
-    "Usage of memory compute resources.",
-    ["namespace", "usergroup", "username", "window"],
-    namespace="jupyterhub",
-    registry=REGISTRY,
-)
-
-gauge_cpu_usage = Gauge(
-    "cpu_usage_core_hours",
-    "Usage of CPU compute resources.",
-    ["namespace", "usergroup", "username", "window"],
-    namespace="jupyterhub",
-    registry=REGISTRY,
-)
-
-gauge_memory_limit = Gauge(
-    "memory_limit_gibibyte_hours",
-    "Quota limit for memory compute resources.",
-    ["namespace", "usergroup", "username", "window"],
-    namespace="jupyterhub",
-    registry=REGISTRY,
-)
-
-gauge_cpu_limit = Gauge(
-    "cpu_limit_core_hours",
-    "Quota limit for CPU compute resources.",
-    ["namespace", "usergroup", "username", "window"],
-    namespace="jupyterhub",
-    registry=REGISTRY,
-)
-
 
 class MetricsExporter(Application):
     def __init__(
@@ -49,7 +17,10 @@ class MetricsExporter(Application):
         session = orm.new_session_factory(db_url)
         self.db = session()
         self.quota_manager = quota_manager
-        self.namespace = self.quota_manager.hub_namespace
+        self.hub_namespace = self.quota_manager.hub_namespace
+        self.prometheus_namespace = self.quota_manager.prometheus_emit_namespace
+        self.convert_unit = {"GiB-hours": "gibibyte_hours"}
+        self.metrics = {}
 
     def get_usernames_and_usergroups(self) -> list[tuple]:
         """
@@ -59,38 +30,59 @@ class MetricsExporter(Application):
         users_and_groups = [(u.name, [g.name for g in u.groups]) for u in users]
         return users_and_groups
 
+    def get_metrics(self, resource: str, unit: str) -> dict:
+        """
+        Define Prometheus metric depending on policy resource, e.g. memory or cpu.
+        """
+        output = {}
+        metric_unit = self.convert_unit[unit]
+        for key in ["limit", "usage"]:
+            metric_name = f"{resource}_{key}_{metric_unit}"
+            if metric_name not in self.metrics:
+                self.metrics[metric_name] = Gauge(
+                    metric_name,
+                    f"Resource {key} from usage quota system.",
+                    ["namespace", "usergroup", "username", "window"],
+                    namespace=self.prometheus_namespace,
+                    registry=REGISTRY,
+                )
+            output[key] = self.metrics[metric_name]
+        return output
+
     def emit_metrics(self, user_name: str, user_groups: str, policies: list[dict]):
         """
         Emit usage and quota limits as Prometheus Gauge metrics.
         """
         for p in policies:
-            if p["resource"] == "memory":
-                if p.get("scope", None) is None:
-                    user_group = "none"  # meta-group for backup policies that apply to users with no group memberships
+            # Determine unique scope group for the policy applied to the user
+            if p.get("scope", None) is None:
+                user_group = "none"  # meta-group for backup policies that apply to users with no group memberships
+            else:
+                user_group = set(user_groups) & set(p["scope"]["group"])
+                if len(user_group) != 1:
+                    print(
+                        f"WARNING: more than one group identified with a single policy for user {user_name}"
+                    )
                 else:
-                    user_group = set(user_groups) & set(p["scope"]["group"])
-                    if len(user_group) != 1:
-                        print(
-                            f"WARNING: more than one group identified with a single policy for user {user_name}"
-                        )
-                    else:
-                        user_group = user_group.pop()
-                # usage = await self.quota_manager.get_usage(user_name, p)
-                # print(f"{usage=}")
-                gauge_memory_usage.labels(
-                    username=user_name,
-                    usergroup=user_group,
-                    window=str(p["window"]),
-                    namespace=self.namespace,
-                ).set(
-                    1
-                )  # TODO: set to usage after prom auth is fixed
-                gauge_memory_limit.labels(
-                    username=user_name,
-                    usergroup=user_group,
-                    window=str(p["window"]),
-                    namespace=self.namespace,
-                ).set(p["limit"]["value"])
+                    user_group = user_group.pop()
+            # Dynamically define metrics based on policy values and set them
+            metric = self.get_metrics(resource=p["resource"], unit=p["limit"]["unit"])
+            # usage = await self.quota_manager.get_usage(user_name, p)
+            # print(f"{usage=}")
+            metric["usage"].labels(
+                username=user_name,
+                usergroup=user_group,
+                window=str(p["window"]),
+                namespace=self.hub_namespace,
+            ).set(
+                1
+            )  # TODO: set to usage after prom auth is fixed
+            metric["limit"].labels(
+                username=user_name,
+                usergroup=user_group,
+                window=str(p["window"]),
+                namespace=self.hub_namespace,
+            ).set(p["limit"]["value"])
 
     def update_metrics(self):
         """
