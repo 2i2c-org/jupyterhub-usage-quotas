@@ -163,6 +163,10 @@ class UsageQuotaConfig(UsageConfig):
         60, help="Scrape interval of Prometheus sample collection (seconds)."
     ).tag(config=True)
 
+    prometheus_emit_interval = Integer(
+        60, help="Emit interval of Prometheus metric export (seconds)."
+    ).tag(config=True)
+
     scope_backup_strategy = Dict(
         per_key_traits={
             "empty": Dict(),
