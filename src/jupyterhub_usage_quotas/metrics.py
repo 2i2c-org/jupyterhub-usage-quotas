@@ -1,3 +1,5 @@
+import logging
+
 from jupyterhub import orm
 from prometheus_client import REGISTRY, Gauge
 from tornado.ioloop import PeriodicCallback
@@ -14,6 +16,10 @@ class MetricsExporter(Application):
         **kwargs,
     ):
         super().__init__(**kwargs)
+        parent_log = logging.getLogger("JupyterHub")
+        self.log = logging.getLogger(__name__)
+        self.log.parent = parent_log
+        self.log.info("Starting metrics exporter for usage quotas system.")
         session = orm.new_session_factory(db_url)
         self.db = session()
         self.quota_manager = quota_manager
@@ -39,9 +45,10 @@ class MetricsExporter(Application):
         for key in ["limit", "usage"]:
             metric_name = f"{resource}_{key}_{metric_unit}"
             if metric_name not in self.metrics:
+                self.log.info(f"Registering metric {metric_name}")
                 self.metrics[metric_name] = Gauge(
                     metric_name,
-                    f"Resource {key} from usage quota system.",
+                    f"Resource {key} for {resource} from usage quota system.",
                     ["namespace", "usergroup", "username", "window"],
                     namespace=self.prometheus_namespace,
                     registry=REGISTRY,
@@ -60,15 +67,15 @@ class MetricsExporter(Application):
             else:
                 user_group = set(user_groups) & set(p["scope"]["group"])
                 if len(user_group) != 1:
-                    print(
-                        f"WARNING: more than one group identified with a single policy for user {user_name}"
+                    self.log.warning(
+                        f"More than one group identified with a single policy for user {user_name}"
                     )
                 else:
                     user_group = user_group.pop()
             # Dynamically define metrics based on policy values and set them
             metric = self.get_metrics(resource=p["resource"], unit=p["limit"]["unit"])
             # usage = await self.quota_manager.get_usage(user_name, p)
-            # print(f"{usage=}")
+            # self.log.debug(f"{user_name=}, policy={p}, {usage=}")
             metric["usage"].labels(
                 username=user_name,
                 usergroup=user_group,
@@ -93,9 +100,8 @@ class MetricsExporter(Application):
             policies = self.quota_manager.resolve_policy(
                 user_name=u[0], user_groups=u[1]
             )
-            print(f"user={u[0]}")
-            print(f"{policies=}")
             self.emit_metrics(user_name=u[0], user_groups=u[1], policies=policies)
+        self.log.info("Usage quota metrics updated.")
 
     def start(self):
         pc = PeriodicCallback(
