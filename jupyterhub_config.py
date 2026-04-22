@@ -95,7 +95,7 @@ c.UsageQuotaManager.prometheus_usage_metrics = {
 
 c.UsageQuotaManager.prometheus_scrape_interval = 60
 
-c.UsageQuotaManager.hub_namespace = "showcase"
+c.UsageQuotaManager.hub_namespace = "staging"
 
 c.UsageQuotaManager.scope_backup_strategy = {
     "empty": {
@@ -145,7 +145,7 @@ c.JupyterHub.services = [
             "--port=9000",
             "--public-hub-url=http://localhost:8000",
             "--prometheus-url=http://localhost:9090",
-            "--hub-namespace=showcase",
+            "--hub-namespace=staging",
             "--session-secret-key=use-a-secure-random-key-in-production",
             "--dev-mode=true",
         ],
@@ -155,7 +155,7 @@ c.JupyterHub.services = [
 c.JupyterHub.load_roles = [
     {
         "name": "usage-quota-service",
-        "scopes": ["read:users", "list:users"],
+        "scopes": ["read:users"],
         "services": ["usage-quota"],
     },
     {
