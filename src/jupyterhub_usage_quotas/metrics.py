@@ -15,34 +15,32 @@ class MetricsExporter(Application):
         self,
         quota_manager: UsageQuotaManager,
         db_url: str = "sqlite:///jupyterhub.sqlite",
-        **kwargs
+        **kwargs,
     ):
         super().__init__(**kwargs)
         self.quota_manager = quota_manager
         session = orm.new_session_factory(db_url)
         self.db = session()
 
-    def get_usernames(self) -> list:
+    def get_usernames_and_usergroups(self) -> list[tuple]:
+        """
+        Get list of usernames and their respective usergroup memberships from the hub database.
+        """
         users = self.db.query(orm.User).all()
-        usernames = [u.name for u in users]
-        return usernames
-
-    def get_usergroups(self) -> list:
-        groups = self.db.query(orm.Group).all()
-        usergroups = [g.name for g in groups]
-        return usergroups
+        users_and_groups = [(u.name, [g.name for g in u.groups]) for u in users]
+        return users_and_groups
 
     def update_metrics(self):
         """
-        Update usage and quota limits Prometheus metrics.
+        Update Prometheus metrics for usage and quota limits.
         """
-        usernames = self.get_usernames()
-        usergroups = self.get_usergroups()
-        for user in usernames:
+        users_and_groups = self.get_usernames_and_usergroups()
+        for u in users_and_groups:
             policies = self.quota_manager.resolve_policy(
-                user_name=user, user_groups=usergroups
+                user_name=u[0], user_groups=u[1]
             )
-            print(policies)
+            print(f"user={u[0]}")
+            print(f"{policies=}")
         c.inc()
 
     def start(self):
