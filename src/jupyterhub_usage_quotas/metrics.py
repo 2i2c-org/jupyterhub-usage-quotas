@@ -26,7 +26,7 @@ class MetricsExporter(Application):
         self.hub_namespace = self.quota_manager.hub_namespace
         self.prometheus_namespace = self.quota_manager.prometheus_emit_namespace
         self.convert_unit = {"GiB-hours": "gibibyte_hours"}
-        self.metrics = {}
+        self.metrics: dict = {}
 
     def get_usernames_and_usergroups(self) -> list[tuple]:
         """
@@ -65,13 +65,14 @@ class MetricsExporter(Application):
             if p.get("scope", None) is None:
                 user_group = "none"  # meta-group for backup policies that apply to users with no group memberships
             else:
-                user_group = set(user_groups) & set(p["scope"]["group"])
-                if len(user_group) != 1:
+                user_group_set = set(user_groups) & set(p["scope"]["group"])
+                if len(user_group_set) != 1:
                     self.log.warning(
                         f"More than one group identified with a single policy for user {user_name}"
                     )
+                    user_group = str(user_group_set)
                 else:
-                    user_group = user_group.pop()
+                    user_group = user_group_set.pop()
             # Dynamically define metrics based on policy values and set them
             metric = self.get_metrics(resource=p["resource"], unit=p["limit"]["unit"])
             # usage = await self.quota_manager.get_usage(user_name, p)
@@ -101,7 +102,7 @@ class MetricsExporter(Application):
                 user_name=u[0], user_groups=u[1]
             )
             self.emit_metrics(user_name=u[0], user_groups=u[1], policies=policies)
-        self.log.info("Usage quota metrics updated.")
+        self.log.info("Usage quota metrics updated")
 
     def start(self):
         pc = PeriodicCallback(
