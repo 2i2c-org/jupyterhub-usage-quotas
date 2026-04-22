@@ -167,6 +167,10 @@ class UsageQuotaConfig(UsageConfig):
         60, help="Emit interval of Prometheus metric export (seconds)."
     ).tag(config=True)
 
+    prometheus_emit_namespace = Unicode(
+        "jupyterhub", help="Prometheus namespace to prefix metric names."
+    ).tag(config=True)
+
     scope_backup_strategy = Dict(
         per_key_traits={
             "empty": Dict(),
