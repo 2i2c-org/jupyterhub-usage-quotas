@@ -10,7 +10,6 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from jinja2 import Environment, FileSystemLoader
 from jupyterhub.services.auth import HubOAuth
 from starlette.middleware.sessions import SessionMiddleware
-from traitlets.config import Config
 
 from jupyterhub_usage_quotas import get_template_path
 from jupyterhub_usage_quotas.config import UsageViewerConfig
@@ -23,7 +22,7 @@ logger = logging.getLogger(__name__)
 
 def create_fastapi_app(
     storage_client: StorageQuotaClient,
-    config: Config,
+    config: UsageViewerConfig,
 ) -> FastAPI:
     """Create and configure the FastAPI application.
 
@@ -46,17 +45,17 @@ def create_fastapi_app(
     )
 
     auth = HubOAuth(
-        oauth_redirect_uri=f"{config.UsageViewer.service_prefix.rstrip('/')}/oauth_callback",
+        oauth_redirect_uri=f"{config.service_prefix.rstrip('/')}/oauth_callback",
         cache_max_age=60,
     )
 
     app.add_middleware(
         SessionMiddleware,
-        secret_key=config.UsageViewer.session_secret_key,
+        secret_key=config.session_secret_key,
         session_cookie="jupyterhub_usage_session",
         max_age=3600,
         same_site="lax",
-        https_only=not config.UsageViewer.dev_mode,
+        https_only=not config.dev_mode,
     )
 
     async def get_current_user(request: Request):
@@ -82,7 +81,7 @@ def create_fastapi_app(
             f"<script>window.top.location.href={json.dumps(redirect_url)};</script>"
         )
 
-    @app.get(config.UsageViewer.service_prefix)
+    @app.get(config.service_prefix)
     async def home(request: Request):
         """Home page that shows usage quota information.
 
@@ -103,7 +102,7 @@ def create_fastapi_app(
         html_content = template.render(usage_data=usage_data)
         return HTMLResponse(html_content)
 
-    @app.get(f"{config.UsageViewer.service_prefix.rstrip('/')}/oauth_callback")
+    @app.get(f"{config.service_prefix.rstrip('/')}/oauth_callback")
     async def oauth_callback(request: Request, code: str, state: str):
         """Handle the OAuth2 callback from JupyterHub.
 
@@ -141,7 +140,7 @@ def create_fastapi_app(
         request.session["token"] = token
         request.session.pop("oauth_state", None)
 
-        return RedirectResponse(url=f"{config.UsageViewer.public_hub_url}/hub/usage")
+        return RedirectResponse(url=f"{config.public_hub_url}/hub/usage")
 
     return app
 
@@ -199,7 +198,7 @@ class UsageViewer(UsageViewerConfig):
             f"Starting Usage Viewer service on {self.service_host}:{self.service_port}"
         )
 
-        app = create_fastapi_app(self.storage_client, config=self.config)
+        app = create_fastapi_app(self.storage_client, config=self)
 
         uvicorn.run(
             app,
