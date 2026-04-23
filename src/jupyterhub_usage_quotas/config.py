@@ -77,7 +77,7 @@ class UsageConfig(Application):
                 "username": "username",
                 "password": "password",
             }
-        """
+        """,
     ).tag(config=True)
 
     @validate("prometheus_auth")

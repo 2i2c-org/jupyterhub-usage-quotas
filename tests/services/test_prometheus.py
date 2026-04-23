@@ -33,7 +33,9 @@ class TestParseValueResult:
 
     def test_returns_none_for_failed_status(self):
         assert (
-            StorageQuotaClient.parse_value_result({"status": "error", "error": "bad query"})
+            StorageQuotaClient.parse_value_result(
+                {"status": "error", "error": "bad query"}
+            )
             is None
         )
 
@@ -136,7 +138,9 @@ class TestPrometheusMalformedResponses:
 
     def test_handles_invalid_value_structure(self):
         """Should handle metrics with wrong value structure"""
-        result = StorageQuotaClient.parse_value_result(PROMETHEUS_MALFORMED_INVALID_VALUE)
+        result = StorageQuotaClient.parse_value_result(
+            PROMETHEUS_MALFORMED_INVALID_VALUE
+        )
         assert result is None
 
     def test_handles_non_numeric_values(self):
@@ -168,7 +172,6 @@ class TestPrometheusMalformedResponses:
 
         assert "error" in usage_data
         assert usage_data["username"] == "testuser"
-
 
 
 class TestPrometheusUnavailability:

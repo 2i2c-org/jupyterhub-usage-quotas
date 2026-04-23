@@ -115,4 +115,3 @@ PROMETHEUS_MALFORMED_NON_NUMERIC = {
         ],
     },
 }
-
