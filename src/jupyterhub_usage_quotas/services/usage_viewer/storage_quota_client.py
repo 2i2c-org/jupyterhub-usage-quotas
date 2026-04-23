@@ -126,8 +126,7 @@ class StorageQuotaClient(PrometheusClient):
         """
         if safe_scheme:
             return safe_slug(username)
-        else:
-            return escape_slug(username)
+        return escape_slug(username)
 
     def get_mock_data(self, username: str) -> dict[str, Any]:
         """Return mock data for development when namespace is not set.

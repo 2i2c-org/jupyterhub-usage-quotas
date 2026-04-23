@@ -54,9 +54,7 @@ class UsageConfig(Application):
     @validate("config_file")
     def _validate_config_file(self, proposal):
         if not os.path.isfile(proposal.value):
-            raise TraitError(
-                f"Failed to find specified config file: {proposal.value}"
-            )
+            raise TraitError(f"Failed to find specified config file: {proposal.value}")
         return proposal.value
 
     prometheus_url = Unicode(
@@ -75,7 +73,7 @@ class UsageConfig(Application):
         help="""
         Username and password credentials for authenticating with Prometheus.
         For example:
-            c.BaseConfig.prometheus_auth = {
+            c.UsageConfig.prometheus_auth = {
                 "username": "username",
                 "password": "password",
             }
@@ -284,7 +282,7 @@ class UsageViewerConfig(UsageConfig):
 
     escape_username_safe_scheme = Bool(
         True,
-        help=" Kubespawner slug scheme for naming directories with escaped usernames: set to True for modern safe slugs, or False for legacy escaped slugs.",
+        help="Kubespawner slug scheme for naming directories with escaped usernames: set to True for modern safe slugs, or False for legacy escaped slugs.",
     ).tag(config=True)
 
     dev_mode = Bool(
