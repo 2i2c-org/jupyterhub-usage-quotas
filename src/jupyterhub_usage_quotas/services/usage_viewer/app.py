@@ -2,6 +2,7 @@
 
 import json
 import logging
+import os
 from contextlib import asynccontextmanager
 
 import uvicorn
@@ -168,6 +169,8 @@ class UsageViewer(UsageViewerConfig):
     def initialize(self, argv=None):
         """Initialize the service."""
         super().initialize(argv)
+        if not os.path.isfile(self.config_file):
+            self.exit(f"ERROR: Config file not found: {self.config_file}")
         self.load_config_file(self.config_file)
 
         self.storage_client = StorageQuotaClient(

@@ -4,7 +4,6 @@ Traitlets based configuration for jupyterhub_usage_quotas
 
 import copy
 import os
-import sys
 import typing
 
 import jsonschema
@@ -55,11 +54,9 @@ class UsageConfig(Application):
     @validate("config_file")
     def _validate_config_file(self, proposal):
         if not os.path.isfile(proposal.value):
-            print(
-                f"ERROR: Failed to find specified config file: {proposal.value}",
-                file=sys.stderr,
+            raise TraitError(
+                f"Failed to find specified config file: {proposal.value}"
             )
-            sys.exit(1)
         return proposal.value
 
     prometheus_url = Unicode(
