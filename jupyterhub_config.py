@@ -50,7 +50,7 @@ c.UsageViewer.session_secret_key = "use-a-secure-random-key-in-production"
 c.UsageViewer.dev_mode = False
 c.UsageViewer.service_port = 9000
 c.UsageViewer.service_host = "0.0.0.0"
-c.UsageViewer.service_prefix = "/services/usage-quota"
+c.UsageViewer.service_prefix = "/services/usage-quota/"
 c.UsageViewer.public_hub_url = "http://localhost:8000"
 c.UsageViewer.escape_username_safe_scheme = False
 
