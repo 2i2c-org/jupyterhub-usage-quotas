@@ -48,36 +48,34 @@ class StorageQuotaClient(PrometheusClient):
         self.usage_metric = usage_metric
 
     @staticmethod
-    def find_matching_result(data: dict[str, Any], namespace: str) -> list | None:
-        """Find the [timestamp, value] pair for the matching namespace.
+    def find_matching_result(data: dict[str, Any]) -> list | None:
+        """Find the [timestamp, value] pair from the first result in a Prometheus response.
 
         Args:
             data: Prometheus query response data
-            namespace: Namespace to filter results by
 
         Returns:
-            The value pair list [timestamp, value] or None if no matching result found
+            The value pair list [timestamp, value] or None if no result found
         """
         if data.get("status") != "success":
             return None
-        for result in data.get("data", {}).get("result", []):
-            if result.get("metric", {}).get("namespace") == namespace:
-                value_pair = result.get("value", [])
-                return value_pair if len(value_pair) == 2 else None
-        return None
+        results = data.get("data", {}).get("result", [])
+        if not results:
+            return None
+        value_pair = results[0].get("value", [])
+        return value_pair if len(value_pair) == 2 else None
 
     @staticmethod
-    def parse_value_result(data: dict[str, Any], namespace: str) -> int | None:
+    def parse_value_result(data: dict[str, Any]) -> int | None:
         """Extract numeric value from Prometheus response.
 
         Args:
             data: Prometheus query response data
-            namespace: Namespace to filter results by
 
         Returns:
             Integer value or None if parsing fails
         """
-        pair = StorageQuotaClient.find_matching_result(data, namespace)
+        pair = StorageQuotaClient.find_matching_result(data)
         if not pair:
             return None
         try:
@@ -87,17 +85,16 @@ class StorageQuotaClient(PrometheusClient):
             return None
 
     @staticmethod
-    def parse_timestamp_result(data: dict[str, Any], namespace: str) -> datetime | None:
+    def parse_timestamp_result(data: dict[str, Any]) -> datetime | None:
         """Extract timestamp from Prometheus response.
 
         Args:
             data: Prometheus query response data
-            namespace: Namespace to filter results by
 
         Returns:
             Datetime object or None if parsing fails
         """
-        pair = StorageQuotaClient.find_matching_result(data, namespace)
+        pair = StorageQuotaClient.find_matching_result(data)
         return datetime.fromtimestamp(float(pair[0]), tz=UTC) if pair else None
 
     @staticmethod
@@ -217,11 +214,9 @@ class StorageQuotaClient(PrometheusClient):
                 "error": "Unable to reach Prometheus. Please try again later.",
             }
 
-        quota_bytes = self.parse_value_result(quota_value_data, self.namespace)
-        usage_bytes = self.parse_value_result(usage_value_data, self.namespace)
-        last_updated_dt = self.parse_timestamp_result(
-            usage_timestamp_data, self.namespace
-        )
+        quota_bytes = self.parse_value_result(quota_value_data)
+        usage_bytes = self.parse_value_result(usage_value_data)
+        last_updated_dt = self.parse_timestamp_result(usage_timestamp_data)
 
         if quota_bytes is None or usage_bytes is None or last_updated_dt is None:
             return {
