@@ -47,13 +47,14 @@ policy_schema["required"].append("scope")
 class UsageConfig(Application):
     """Base configuration shared across JupyterHub usage quota components."""
 
-    config_file = Unicode("jupyterhub_config.py", help="The config file to load").tag(
-        config=True
-    )
+    config_file = Unicode(
+        "",
+        help="Path to the config file to load. If not set, no config file is loaded.",
+    ).tag(config=True)
 
     @validate("config_file")
     def _validate_config_file(self, proposal):
-        if not os.path.isfile(proposal.value):
+        if proposal.value and not os.path.isfile(proposal.value):
             raise TraitError(f"Failed to find specified config file: {proposal.value}")
         return proposal.value
 
