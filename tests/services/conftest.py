@@ -7,7 +7,6 @@ import pytest
 from fastapi import Request
 from fastapi.responses import JSONResponse
 from fastapi.testclient import TestClient
-from traitlets.config import Config
 
 
 def set_session(client: TestClient, app, session_data: dict):
@@ -76,6 +75,7 @@ def app(mock_env_vars, mocker):
     )
 
     # NOW import and create the app
+    from jupyterhub_usage_quotas.config import UsageViewerConfig
     from jupyterhub_usage_quotas.services.usage_viewer.app import create_fastapi_app
     from jupyterhub_usage_quotas.services.usage_viewer.storage_quota_client import (
         StorageQuotaClient,
@@ -88,18 +88,9 @@ def app(mock_env_vars, mocker):
         dev_mode=False,  # Tests use mocked Prometheus responses, not dev mode mock data
     )
 
-    # config object for the tests
-    config = Config()
-    config.UsageViewer.dev_mode = True
-    config.UsageViewer.service_prefix = os.environ.get(
-        "JUPYTERHUB_SERVICE_PREFIX", "/services/usage-quota/"
-    )
-    config.UsageViewer.public_hub_url = os.environ.get(
-        "JUPYTERHUB_PUBLIC_HUB_URL", "http://localhost:8000"
-    ).rstrip("/")
-    config.UsageViewer.session_secret_key = os.environ.get(
-        "JUPYTERHUB_USAGE_QUOTAS_SESSION_SECRET_KEY", "test-secret-key"
-    )
+    # Config instance with traits resolved from env vars (set by mock_env_vars fixture)
+    config = UsageViewerConfig()
+    config.dev_mode = True
 
     # Create app with storage_client and config (HubOAuth is now mocked)
     app = create_fastapi_app(storage_client, config=config)
