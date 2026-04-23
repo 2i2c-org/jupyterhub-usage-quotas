@@ -72,6 +72,8 @@ class UsageConfig(Application):
         per_key_traits={"username": Unicode(), "password": Unicode()},
         help="""
         Username and password credentials for authenticating with Prometheus.
+        Can be set via JUPYTERHUB_USAGE_QUOTAS_PROMETHEUS_USERNAME and
+        JUPYTERHUB_USAGE_QUOTAS_PROMETHEUS_PASSWORD environment variables.
         For example:
             c.UsageConfig.prometheus_auth = {
                 "username": "username",
@@ -80,9 +82,24 @@ class UsageConfig(Application):
         """,
     ).tag(config=True)
 
+    @default("prometheus_auth")
+    def _prometheus_auth_default(self):
+        username = os.environ.get("JUPYTERHUB_USAGE_QUOTAS_PROMETHEUS_USERNAME", "")
+        password = os.environ.get("JUPYTERHUB_USAGE_QUOTAS_PROMETHEUS_PASSWORD", "")
+        if username and password:
+            return {"username": username, "password": password}
+        if username or password:
+            raise TraitError(
+                "Both JUPYTERHUB_USAGE_QUOTAS_PROMETHEUS_USERNAME and "
+                "JUPYTERHUB_USAGE_QUOTAS_PROMETHEUS_PASSWORD must be set together."
+            )
+        return {}
+
     @validate("prometheus_auth")
     def _validate_prometheus_auth(self, proposal):
         auth = proposal["value"]
+        if not auth:
+            return auth
         required = set(self.traits()["prometheus_auth"]._per_key_traits.keys())
         missing = required - auth.keys()
         if missing:
