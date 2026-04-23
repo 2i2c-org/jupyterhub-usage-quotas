@@ -18,10 +18,6 @@ from tests.services.fixtures.prometheus_responses import (
     PROMETHEUS_MALFORMED_NO_DATA,
     PROMETHEUS_MALFORMED_NO_RESULT,
     PROMETHEUS_MALFORMED_NON_NUMERIC,
-    PROMETHEUS_MULTI_NS_QUOTA,
-    PROMETHEUS_MULTI_NS_TIMESTAMP,
-    PROMETHEUS_MULTI_NS_USAGE,
-    PROMETHEUS_MULTIPLE_NAMESPACES_QUOTA,
     PROMETHEUS_QUOTA_50_PERCENT,
     PROMETHEUS_TIMESTAMP_50_PERCENT,
     PROMETHEUS_USAGE_50_PERCENT,
@@ -31,39 +27,20 @@ from tests.services.fixtures.prometheus_responses import (
 class TestParseValueResult:
     """Test the parse_value_result helper"""
 
-    def test_parses_correct_namespace(self):
-        value_bytes = StorageQuotaClient.parse_value_result(
-            PROMETHEUS_MULTI_NS_QUOTA, namespace="staging"
-        )
+    def test_parses_value_from_single_result(self):
+        value_bytes = StorageQuotaClient.parse_value_result(PROMETHEUS_QUOTA_50_PERCENT)
         assert value_bytes == 10737418240
-
-    def test_parses_prod_namespace(self):
-        value_bytes = StorageQuotaClient.parse_value_result(
-            PROMETHEUS_MULTI_NS_QUOTA, namespace="prod"
-        )
-        assert value_bytes == 214748364800
-
-    def test_returns_none_for_unknown_namespace(self):
-        assert (
-            StorageQuotaClient.parse_value_result(
-                PROMETHEUS_MULTI_NS_QUOTA, namespace="nonexistent"
-            )
-            is None
-        )
 
     def test_returns_none_for_failed_status(self):
         assert (
-            StorageQuotaClient.parse_value_result(
-                {"status": "error", "error": "bad query"}, namespace="prod"
-            )
+            StorageQuotaClient.parse_value_result({"status": "error", "error": "bad query"})
             is None
         )
 
     def test_returns_none_for_empty_results(self):
         assert (
             StorageQuotaClient.parse_value_result(
-                {"status": "success", "data": {"resultType": "vector", "result": []}},
-                namespace="prod",
+                {"status": "success", "data": {"resultType": "vector", "result": []}}
             )
             is None
         )
@@ -74,12 +51,12 @@ class TestGetUserUsageWithPrometheus:
 
     @pytest.mark.asyncio
     async def test_returns_usage_data(self):
-        client = StorageQuotaClient("http://prometheus:9090", namespace="staging")
+        client = StorageQuotaClient("http://prometheus:9090", namespace="prod")
         client.query = AsyncMock(
             side_effect=[
-                PROMETHEUS_MULTI_NS_QUOTA,
-                PROMETHEUS_MULTI_NS_USAGE,
-                PROMETHEUS_MULTI_NS_TIMESTAMP,
+                PROMETHEUS_QUOTA_50_PERCENT,
+                PROMETHEUS_USAGE_50_PERCENT,
+                PROMETHEUS_TIMESTAMP_50_PERCENT,
             ]
         )
 
@@ -87,7 +64,7 @@ class TestGetUserUsageWithPrometheus:
 
         assert usage_data["username"] == "testuser"
         assert usage_data["quota_bytes"] == 10737418240
-        assert usage_data["usage_bytes"] == 243240960
+        assert usage_data["usage_bytes"] == 5368709120
         assert usage_data["percentage"] > 0
         assert "last_updated" in usage_data
         assert "error" not in usage_data
@@ -149,30 +126,22 @@ class TestPrometheusMalformedResponses:
 
     def test_handles_missing_data_field(self):
         """Should handle response missing 'data' field"""
-        result = StorageQuotaClient.find_matching_result(
-            PROMETHEUS_MALFORMED_NO_DATA, namespace="prod"
-        )
+        result = StorageQuotaClient.find_matching_result(PROMETHEUS_MALFORMED_NO_DATA)
         assert result is None
 
     def test_handles_missing_result_field(self):
         """Should handle response missing 'result' field"""
-        result = StorageQuotaClient.find_matching_result(
-            PROMETHEUS_MALFORMED_NO_RESULT, namespace="prod"
-        )
+        result = StorageQuotaClient.find_matching_result(PROMETHEUS_MALFORMED_NO_RESULT)
         assert result is None
 
     def test_handles_invalid_value_structure(self):
         """Should handle metrics with wrong value structure"""
-        result = StorageQuotaClient.parse_value_result(
-            PROMETHEUS_MALFORMED_INVALID_VALUE, namespace="prod"
-        )
+        result = StorageQuotaClient.parse_value_result(PROMETHEUS_MALFORMED_INVALID_VALUE)
         assert result is None
 
     def test_handles_non_numeric_values(self):
         """Should handle non-numeric metric values"""
-        result = StorageQuotaClient.parse_value_result(
-            PROMETHEUS_MALFORMED_NON_NUMERIC, namespace="prod"
-        )
+        result = StorageQuotaClient.parse_value_result(PROMETHEUS_MALFORMED_NON_NUMERIC)
         assert result is None
 
     @pytest.mark.asyncio
@@ -200,32 +169,6 @@ class TestPrometheusMalformedResponses:
         assert "error" in usage_data
         assert usage_data["username"] == "testuser"
 
-
-class TestPrometheusMultipleNamespaces:
-    """Test namespace filtering"""
-
-    def test_filters_correct_namespace_with_multiple_results(self):
-        """Should select metric matching configured namespace"""
-        value_bytes = StorageQuotaClient.parse_value_result(
-            PROMETHEUS_MULTIPLE_NAMESPACES_QUOTA, namespace="prod"
-        )
-        assert value_bytes == 10737418240  # prod namespace value (10 GB)
-
-    def test_filters_staging_namespace(self):
-        """Should correctly filter staging namespace"""
-        value_bytes = StorageQuotaClient.parse_value_result(
-            PROMETHEUS_MULTIPLE_NAMESPACES_QUOTA, namespace="staging"
-        )
-        assert value_bytes == 5368709120  # staging namespace value (5 GB)
-
-    def test_returns_none_when_namespace_not_found(self):
-        """Should return None if namespace doesn't exist in results"""
-        assert (
-            StorageQuotaClient.parse_value_result(
-                PROMETHEUS_MULTIPLE_NAMESPACES_QUOTA, namespace="nonexistent"
-            )
-            is None
-        )
 
 
 class TestPrometheusUnavailability:
@@ -451,9 +394,9 @@ class TestConfigurableMetricNames:
         )
         captured_queries = []
         original_side_effect = [
-            PROMETHEUS_MULTI_NS_QUOTA,
-            PROMETHEUS_MULTI_NS_USAGE,
-            PROMETHEUS_MULTI_NS_TIMESTAMP,
+            PROMETHEUS_QUOTA_50_PERCENT,
+            PROMETHEUS_USAGE_50_PERCENT,
+            PROMETHEUS_TIMESTAMP_50_PERCENT,
         ]
         idx = 0
 
@@ -492,9 +435,7 @@ class TestPrometheusEdgeCaseValues:
             },
         }
 
-        result = StorageQuotaClient.parse_value_result(
-            large_value_response, namespace="prod"
-        )
+        result = StorageQuotaClient.parse_value_result(large_value_response)
         assert result == 1125899906842624
 
     @pytest.mark.asyncio
