@@ -71,6 +71,7 @@ class UsageConfig(Application):
         )
 
     prometheus_auth = Dict(
+        per_key_traits={"username": Unicode(), "password": Unicode()},
         help="""
         Username and password credentials for authenticating with Prometheus.
         For example:
@@ -80,6 +81,19 @@ class UsageConfig(Application):
             }
         """
     ).tag(config=True)
+
+    @validate("prometheus_auth")
+    def _validate_prometheus_auth(self, proposal):
+        auth = proposal["value"]
+        required = set(self.traits()["prometheus_auth"]._per_key_traits.keys())
+        missing = required - auth.keys()
+        if missing:
+            expected = {k: "..." for k in sorted(required)}
+            raise TraitError(
+                f"prometheus_auth is missing required keys: {sorted(missing)}. "
+                f"Expected: {expected}"
+            )
+        return auth
 
     hub_namespace = Unicode(
         help="Kubernetes namespace of the JupyterHub deployment, used to filter Prometheus usage metrics in multi-tenant environments. Leave empty for single-tenant or development. Can be set via JUPYTERHUB_USAGE_QUOTAS_HUB_NAMESPACE environment variable.",
