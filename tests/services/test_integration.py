@@ -1,36 +1,32 @@
 """Integration tests for end-to-end user flows"""
 
-import re
+from unittest.mock import MagicMock
+
+from tests.services.fixtures.tornado_app import TEST_USER, UsageViewerTestCase
+from tests.services.fixtures.usage_data import USAGE_50_PCT
 
 
-class TestEndToEndUserFlow:
+class TestEndToEndUserFlow(UsageViewerTestCase):
     """Test complete user flows from start to finish"""
 
-    def test_complete_unauthenticated_to_viewing_usage(
-        self, client, app, mock_env_vars, mock_prometheus_client
-    ):
-        """Test: unauthenticated → OAuth → view usage"""
-        with client:
-            response = client.get("/services/usage-quota/", follow_redirects=False)
-            # Unauthenticated users get JS redirect (not HTTP 307)
-            assert response.status_code == 200
-            assert "window.top.location.href" in response.text
-            assert "oauth2/authorize" in response.text
+    def test_complete_unauthenticated_to_viewing_usage(self):
+        """Verify that an unauthenticated user is redirected to log in and, after authentication, can view their usage information."""
+        self.mock_storage.return_value = USAGE_50_PCT
 
-            # Extract state from JS redirect
-            match = re.search(r'state=([^"&]+)', response.text)
-            state = match.group(1)
+        # Step 1: unauthenticated user gets JS redirect (not HTTP 307)
+        response = self.fetch("/services/usage-quota/", follow_redirects=False)
+        assert response.code == 200
+        body = response.body.decode()
+        assert "window.top.location.href" in body
+        assert "oauth2/authorize" in body
 
-            response = client.get(
-                f"/services/usage-quota/oauth_callback?code=auth123&state={state}",
-                follow_redirects=False,
-            )
-            assert response.status_code == 307
-            # Redirects to /hub/usage (embedded view with JupyterHub nav bar)
-            assert response.headers["Location"] == "http://test-hub:8000/hub/usage"
+        # Step 2: simulate completed OAuth — authenticate the mock
+        self.mock_hub_auth.get_user = MagicMock(return_value=TEST_USER)
 
-            response = client.get("/services/usage-quota/", follow_redirects=False)
-            assert response.status_code == 200
-            assert "Home storage" in response.text
-            assert "50.0%" in response.text
-            assert "5.0 GiB used" in response.text
+        # Step 3: authenticated request renders usage page
+        response = self.fetch("/services/usage-quota/", follow_redirects=False)
+        assert response.code == 200
+        body = response.body.decode()
+        assert "Home storage" in body
+        assert "50.0%" in body
+        assert "5.0 GiB used" in body

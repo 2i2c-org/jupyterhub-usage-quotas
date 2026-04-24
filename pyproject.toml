@@ -55,11 +55,6 @@ dependencies = [
 jupyterhub_usage_quotas = "jupyterhub_usage_quotas.app:main"
 
 [project.optional-dependencies]
-service = [
-    "fastapi[standard]",
-    "itsdangerous>=2.0",
-    "jinja2>=3.0",
-]
 dev = [
     "ipython>=9.12",
     "pre-commit",
@@ -177,7 +172,7 @@ inherits = ["default"]
 description = """
 Environment for local development.
 """
-features = ["service", "dev"]
+features = ["dev"]
 
 [tool.hatch.envs.release]
 inherits = ["default"]
@@ -210,7 +205,6 @@ description = """
 Run test suite
 """
 inherits = ["default"]
-features = ["service"]
 dependencies = [
     "pytest",
     "pytest-cov",

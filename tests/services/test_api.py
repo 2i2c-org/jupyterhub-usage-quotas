@@ -1,154 +1,81 @@
-"""Tests for FastAPI routes"""
+"""Tests for Tornado routes"""
 
-from tests.services.conftest import get_session, set_session
+from tests.services.fixtures.tornado_app import TEST_USER, UsageViewerTestCase
+from tests.services.fixtures.usage_data import (
+    USAGE_50_PCT,
+    USAGE_95_PCT,
+    USAGE_NO_DATA,
+    USAGE_PROMETHEUS_ERROR,
+)
 
 
-class TestHomeRoute:
+class TestHomeRoute(UsageViewerTestCase):
     """Test the home route (GET /)"""
 
-    def test_home_redirects_to_oauth_when_not_authenticated(
-        self, client, mock_env_vars
-    ):
+    def test_home_redirects_to_oauth_when_not_authenticated(self):
         """Unauthenticated user should get JS redirect to JupyterHub OAuth"""
-        response = client.get("/services/usage-quota/", follow_redirects=False)
+        response = self.fetch("/services/usage-quota/", follow_redirects=False)
 
-        assert response.status_code == 200
-        assert "window.top.location.href" in response.text
+        assert response.code == 200
+        body = response.body.decode()
+        assert "window.top.location.href" in body
+        assert "oauth2/authorize" in body
+        assert "redirect_uri=" in body
 
-        # Extract the redirect URL from the JS snippet
-        assert "oauth2/authorize" in response.text
-        assert "state=" in response.text
-        assert "redirect_uri=" in response.text
-
-    def test_home_displays_usage_when_authenticated(
-        self, client, app, mock_env_vars, mock_prometheus_client
-    ):
+    def test_home_displays_usage_when_authenticated(self):
         """Authenticated user should see usage data"""
-        set_session(client, app, {"token": "test-token"})
+        self.mock_storage.return_value = USAGE_50_PCT
+        self.mock_hub_auth.get_user.return_value = TEST_USER
 
-        response = client.get("/services/usage-quota")
+        response = self.fetch("/services/usage-quota")
+        assert response.code == 200
+        body = response.body.decode()
+        assert "Home storage" in body
+        assert "50.0%" in body
+        assert "5.0 GiB used" in body
+        assert "10.0 GiB quota" in body
 
-        assert response.status_code == 200
-        assert "Home storage" in response.text
-        assert "50.0%" in response.text
-        assert "5.0 GiB used" in response.text
-        assert "10.0 GiB quota" in response.text
-
-    def test_home_displays_error_when_prometheus_fails(
-        self, client, app, mock_env_vars, mock_prometheus_client_with_error
-    ):
+    def test_home_displays_error_when_prometheus_fails(self):
         """User should see error message when Prometheus is unavailable"""
-        set_session(client, app, {"token": "test-token"})
+        self.mock_storage.return_value = USAGE_PROMETHEUS_ERROR
+        self.mock_hub_auth.get_user.return_value = TEST_USER
 
-        response = client.get("/services/usage-quota")
+        response = self.fetch("/services/usage-quota")
+        assert response.code == 200
+        body = response.body.decode()
+        assert "Unable to reach Prometheus" in body
+        assert "error-message" in body
 
-        assert response.status_code == 200
-        assert "Unable to reach Prometheus" in response.text
-        assert "error-message" in response.text
-
-    def test_home_displays_no_data_error(
-        self, client, app, mock_env_vars, mock_prometheus_client_no_data
-    ):
+    def test_home_displays_no_data_error(self):
         """User should see error when no quota data exists"""
-        set_session(client, app, {"token": "test-token"})
+        self.mock_storage.return_value = USAGE_NO_DATA
+        self.mock_hub_auth.get_user.return_value = TEST_USER
 
-        response = client.get("/services/usage-quota")
+        response = self.fetch("/services/usage-quota")
+        assert response.code == 200
+        assert b"No storage data found" in response.body
 
-        assert response.status_code == 200
-        assert "No storage data found" in response.text
-
-    def test_home_with_high_usage_displays_warning(
-        self, client, app, mock_env_vars, mock_prometheus_client_high_usage
-    ):
+    def test_home_with_high_usage_displays_warning(self):
         """User with high usage should see warning styling"""
-        set_session(client, app, {"token": "test-token"})
+        self.mock_storage.return_value = USAGE_95_PCT
+        self.mock_hub_auth.get_user.return_value = TEST_USER
 
-        response = client.get("/services/usage-quota")
+        response = self.fetch("/services/usage-quota")
+        assert response.code == 200
+        body = response.body.decode()
+        assert "95.0%" in body
+        assert "#ef4444" in body
 
-        assert response.status_code == 200
-        assert "95.0%" in response.text
-        assert "#ef4444" in response.text
 
+class TestOAuthCallbackRoute(UsageViewerTestCase):
+    """Test that the OAuth callback route is mounted"""
 
-class TestOAuthCallbackRoute:
-    """Test the OAuth callback route"""
-
-    def test_callback_with_valid_state_and_code(
-        self, client, app, mock_env_vars, mock_oauth_state
-    ):
-        """Valid OAuth callback should authenticate user and redirect"""
-        set_session(client, app, {"oauth_state": mock_oauth_state})
-
-        response = client.get(
-            f"/services/usage-quota/oauth_callback?code=auth123&state={mock_oauth_state}",
+    def test_callback_route_is_mounted(self):
+        """OAuth callback endpoint should be mounted (not 404)"""
+        # Without proper OAuth params, HubOAuthCallbackHandler returns an error,
+        # but the route must exist — any response other than 404 confirms it.
+        response = self.fetch(
+            "/services/usage-quota/oauth_callback?code=test&state=test",
             follow_redirects=False,
         )
-
-        assert response.status_code == 307
-        assert response.headers["Location"] == "http://test-hub:8000/hub/usage"
-
-        session = get_session(client, app)
-        assert "token" in session
-        assert session["token"] == "test-token"
-        assert "oauth_state" not in session
-
-    def test_callback_with_invalid_state_returns_400(self, client, app, mock_env_vars):
-        """Invalid state should return 400 error (CSRF protection)"""
-        set_session(client, app, {"oauth_state": "expected_state"})
-
-        response = client.get(
-            "/services/usage-quota/oauth_callback?code=auth123&state=wrong_state",
-            follow_redirects=False,
-        )
-
-        assert response.status_code == 400
-        assert "OAuth state mismatch" in response.text
-
-    def test_callback_with_missing_state_returns_400(self, client, mock_env_vars):
-        """Missing state should return 400 error"""
-        response = client.get(
-            "/services/usage-quota/oauth_callback?code=auth123&state=somestate",
-            follow_redirects=False,
-        )
-
-        assert response.status_code == 400
-        assert "OAuth state mismatch" in response.text
-
-    def test_callback_with_token_exchange_failure(
-        self, client, app, mock_env_vars, mock_oauth_state, mock_hub_auth
-    ):
-        """Failed token exchange should return 500"""
-
-        # Override token_for_code to return None (failure)
-        async def mock_token_for_code_failure(code, sync=False):
-            return None
-
-        mock_hub_auth.token_for_code = mock_token_for_code_failure
-
-        set_session(client, app, {"oauth_state": mock_oauth_state})
-
-        response = client.get(
-            f"/services/usage-quota/oauth_callback?code=badcode&state={mock_oauth_state}",
-            follow_redirects=False,
-        )
-
-        assert response.status_code == 500
-        assert "Failed to retrieve access token" in response.text
-
-    def test_callback_clears_oauth_state_from_session(
-        self, client, app, mock_env_vars, mock_oauth_state
-    ):
-        """OAuth state should be removed after successful auth"""
-        set_session(client, app, {"oauth_state": mock_oauth_state})
-        session = get_session(client, app)
-        assert "oauth_state" in session
-
-        response = client.get(
-            f"/services/usage-quota/oauth_callback?code=auth123&state={mock_oauth_state}",
-            follow_redirects=False,
-        )
-
-        assert response.status_code == 307
-
-        session = get_session(client, app)
-        assert "oauth_state" not in session
+        assert response.code != 404
