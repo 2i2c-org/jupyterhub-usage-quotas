@@ -4,7 +4,6 @@ import re
 from collections import defaultdict
 from typing import Any, List, Optional
 
-from kubespawner.slugs import safe_slug
 from tornado import web
 
 from jupyterhub_usage_quotas.client import PrometheusClient
@@ -109,15 +108,45 @@ class UsageQuotaManager(UsageQuotaConfig):
                 )
         return merged
 
+    def _group_on_annotation(self, metric: str) -> str:
+        """
+        Group Prometheus query on namespace and pod to get JupyterHub username from hub.jupyter.org/username annotation, since pod names are not the same as usernames, e.g. Kubespawner template appends the server name https://jupyterhub-kubespawner.readthedocs.io/en/latest/templates.html#templated-fields
+        """
+        return (
+            metric
+            + " * on (namespace, pod) group_left(annotation_hub_jupyter_org_username) group(kube_pod_annotations{namespace=~'.*', annotation_hub_jupyter_org_username=~'.*'}) by (pod, namespace, annotation_hub_jupyter_org_username)"
+        )
+
+    def _update_promql_labels(self, metric: str, label: str, value: str) -> str:
+        """
+        Update metric to match specific label values.
+        """
+        pattern = rf"([{{,]\s*{label}[='~]*')([\w.*]*)"
+        repl = rf"\1{value}"
+        return re.sub(pattern, repl, metric)
+
+    def write_promql(self, metric: str, user_name: str, policy: dict) -> str:
+        """
+        Write promql to match usage metric on label values and return range vector over policy window.
+        """
+        pattern = r"(\{.*?)(\})"
+        repl = rf"\1, namespace='{self.hub_namespace}', node!='', pod=~'jupyter-.*'\2"
+        metric = re.sub(pattern, repl, metric)
+        metric = self._group_on_annotation(metric)
+        for label, value in [
+            ("namespace", self.hub_namespace),
+            ("annotation_hub_jupyter_org_username", user_name),
+        ]:
+            metric = self._update_promql_labels(metric, label, value)
+        promql = f"{metric}[{str(policy['window']) + 'd'}:]"
+        return promql
+
     async def get_usage(self, user_name: str, policy: dict) -> list:
         """
         Get resource usage by user over a rolling time window.
         """
         usage_metric = self.prometheus_usage_metrics[policy["resource"]]
-        pattern = r"(\{.*?)(\})"
-        repl = rf"\1, namespace='{self.hub_namespace}', node!='', pod='jupyter-{safe_slug(user_name)}'\2"
-        promql = re.sub(pattern, repl, usage_metric)
-        promql = f"{promql}[{str(policy['window']) + 'd'}]"
+        promql = self.write_promql(usage_metric, policy)
         self.log.debug(f"{promql=}")
         response = await self.prometheus_client.query(promql)
         self.log.debug(f"{response=}")
@@ -168,13 +197,19 @@ class UsageQuotaManager(UsageQuotaConfig):
         ) + datetime.timedelta(days=policy["window"])
         return retry_time.strftime("%Y-%m-%dT%H:%M:%SZ")
 
+    def aggregate_usage(self, data: list) -> float:
+        """
+        Helper function to aggregate usage over time.
+        """
+        return [sum(x) for x in zip(*data)][1]
+
     def get_output(self, policy: dict, data: list) -> dict:
         """
         Formats the output returned by the quota system.
         """
         output: dict = {}
         self.log.debug(f"{data=}")
-        value = [sum(x) for x in zip(*data)][1]
+        value = self.aggregate_usage(data)
         limit = policy["limit"]["value"]
         if value < limit:
             output["allow_server_launch"] = True
