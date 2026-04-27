@@ -110,7 +110,7 @@ class StorageQuotaClient(PrometheusClient):
         return f'label_replace({metric}, "username", "$1", "directory", "(.*)")'
 
     @staticmethod
-    def escape_username(username: str, escape_scheme: str):
+    def escape_username(username: str, escape_scheme: dict):
         """
         Escape username to create a safe string for naming directories.
 
