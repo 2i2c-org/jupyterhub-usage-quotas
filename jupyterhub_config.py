@@ -53,36 +53,6 @@ c.UsageViewer.service_port = 9000
 c.UsageViewer.service_host = "0.0.0.0"
 c.UsageViewer.service_prefix = "/services/usage-quota/"
 c.UsageViewer.public_hub_url = "http://localhost:8000"
-c.UsageViewer.escape_username_safe_scheme = False
-
-
-c.JupyterHub.services = [
-    {
-        "name": "usage-quota",
-        "url": "http://localhost:9000",
-        "display": False,  # Don't show in Services menu - we have a custom navbar link
-        "oauth_no_confirm": True,
-        "command": [
-            "python",
-            "-m",
-            "jupyterhub_usage_quotas.services.usage_viewer",
-            "--UsageConfig.config_file",
-            c.UsageConfig.config_file,
-        ],
-    }
-]
-
-c.JupyterHub.load_roles = [
-    {
-        "name": "usage-quota-service",
-        "scopes": ["read:users"],
-        "services": ["usage-quota"],
-    },
-    {
-        "name": "user",
-        "scopes": ["access:services!service=usage-quota", "self"],
-    },
-]
 
 # Usage Quota Config
 
@@ -147,7 +117,7 @@ c.JupyterHub.services = [
             "--prometheus-url=http://localhost:9090",
             "--hub-namespace=staging",
             "--session-secret-key=use-a-secure-random-key-in-production",
-            "--dev-mode=true",
+            "--dev-mode=false",
         ],
     }
 ]
