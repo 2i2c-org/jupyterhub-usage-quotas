@@ -4,6 +4,7 @@ import re
 from collections import defaultdict
 from typing import Any, List, Optional
 
+from kubespawner.slugs import escape_slug, safe_slug
 from tornado import web
 
 from jupyterhub_usage_quotas.client import PrometheusClient
@@ -129,15 +130,15 @@ class UsageQuotaManager(UsageQuotaConfig):
         """
         Write promql to match usage metric on label values and return range vector over policy window.
         """
+        if self.escape_username_scheme["pod"] == "safe":
+            user_name = safe_slug(
+                user_name, max_length=self.escape_username_scheme["max_length"]
+            )
+        else:
+            user_name = escape_slug(user_name)
         pattern = r"(\{.*?)(\})"
-        repl = rf"\1, namespace='{self.hub_namespace}', node!='', pod=~'jupyter-.*'\2"
+        repl = rf"\1, namespace='{self.hub_namespace}', node!='', pod=~'jupyter-{user_name}.*'\2"
         metric = re.sub(pattern, repl, metric)
-        metric = self._group_on_annotation(metric)
-        for label, value in [
-            ("namespace", self.hub_namespace),
-            ("annotation_hub_jupyter_org_username", user_name),
-        ]:
-            metric = self._update_promql_labels(metric, label, value)
         promql = f"{metric}[{str(policy['window']) + 'd'}:]"
         return promql
 
