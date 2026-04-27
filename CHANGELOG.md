@@ -1,6 +1,6 @@
 # Changelog
 
-## v0.1.0b 2026-04-13
+## v0.1.0 2026-04-13
 
 ([full changelog](https://github.com/2i2c-org/jupyterhub-usage-quotas/compare/v0.0.3...a5cd1a4d37e5eaa054b6c9a3a61ce14dbcb30a48))
 
