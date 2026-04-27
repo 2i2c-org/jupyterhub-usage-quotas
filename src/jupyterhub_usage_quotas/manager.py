@@ -146,7 +146,7 @@ class UsageQuotaManager(UsageQuotaConfig):
         Get resource usage by user over a rolling time window.
         """
         usage_metric = self.prometheus_usage_metrics[policy["resource"]]
-        promql = self.write_promql(usage_metric, policy)
+        promql = self.write_promql(usage_metric, user_name, policy)
         self.log.debug(f"{promql=}")
         response = await self.prometheus_client.query(promql)
         self.log.debug(f"{response=}")
