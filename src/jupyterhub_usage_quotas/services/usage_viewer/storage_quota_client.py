@@ -34,7 +34,7 @@ class StorageQuotaClient(PrometheusClient):
         prometheus_url: str,
         prometheus_auth: dict | None = None,
         namespace: str = "",
-        escape_scheme: dict = {},
+        escape_scheme: dict = {"directory": "legacy"},
         dev_mode: bool = False,
         quota_metric: str = "dirsize_hard_limit_bytes",
         usage_metric: str = "dirsize_total_size_bytes",
