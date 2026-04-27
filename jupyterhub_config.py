@@ -117,7 +117,7 @@ c.JupyterHub.services = [
             "--prometheus-url=http://localhost:9090",
             "--hub-namespace=staging",
             "--session-secret-key=use-a-secure-random-key-in-production",
-            "--dev-mode=false",
+            "--dev-mode=true",
         ],
     }
 ]
