@@ -314,11 +314,6 @@ class UsageViewerConfig(UsageConfig):
             "dirsize_total_size_bytes",
         )
 
-    prometheus_export_interval = Integer(
-        60,
-        help="How often usage and quota limit metrics are exported by the usage viewer service (seconds).",
-    ).tag(config=True)
-
     dev_mode = Bool(
         False,
         help="""
