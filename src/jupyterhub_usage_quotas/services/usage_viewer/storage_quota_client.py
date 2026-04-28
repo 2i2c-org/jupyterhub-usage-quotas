@@ -237,3 +237,38 @@ class StorageQuotaClient(PrometheusClient):
             "percentage": round(percentage, 2),
             "last_updated": last_updated_dt.isoformat(),
         }
+
+    async def get_user_compute_usage(self, username: str) -> dict:
+        """
+        Query Prometheus for user compute usage and quota.
+
+        Args:
+            username: Username to query for
+
+        Returns:
+            Dictionary with usage information or error dict if unavailable
+        """
+        result = {"username": username}
+        metrics = {
+            "usage": "jupyterhub_memory_usage_gibibyte_hours",
+            "limit": "jupyterhub_memory_limit_gibibyte_hours",
+        }
+        for key in ["usage", "limit"]:
+            metric = metrics[key]
+            promql = f"{metric}{{namespace='{self.namespace}', username='{username}'}}"
+            # print(promql)
+            response = await self.query(promql)
+            print(response)
+            value = float(response["data"]["result"][0]["value"][1])
+            result.update({key: round(value, 2)})
+        window = int(response["data"]["result"][0]["metric"]["window"])
+        result.update({"window": window})
+        percentage = (
+            (result["usage"] / result["limit"]) * 100 if result["limit"] > 0 else 0
+        )
+        result.update({"percentage": round(percentage, 2)})
+        last_updated_dt = response["data"]["result"][0]["value"][0]
+        result.update({"last_updated": last_updated_dt})
+        return result
+
+        #  TODO: deal with empty result, deal with multiple policies, add retry_time
