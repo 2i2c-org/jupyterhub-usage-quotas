@@ -211,7 +211,7 @@ class StorageQuotaClient(PrometheusClient):
             logger.error(f"Error fetching usage data for {username}: {e}")
             return {
                 "username": username,
-                "error": "Unable to reach Prometheus. Please try again later.",
+                "error": "Unable to query home storage usage. Please try again later.",
             }
 
         quota_bytes = self.parse_value_result(quota_value_data)
@@ -256,8 +256,14 @@ class StorageQuotaClient(PrometheusClient):
         for key in ["usage", "quota"]:
             metric = metrics[key]
             promql = f"{metric}{{namespace='{self.namespace}', username='{username}'}}"
-            response = await self.query(promql)
-            print(response)
+            try:
+                response = await self.query(promql)
+            except Exception as e:
+                logger.error(f"Error fetching usage data for {username}: {e}")
+                return {
+                    "username": username,
+                    "error": "Unable to query compute usage. Please try again later.",
+                }
             value = float(response["data"]["result"][0]["value"][1])
             result.update({key: round(value, 2)})
         window = int(response["data"]["result"][0]["metric"]["window"])
@@ -272,4 +278,4 @@ class StorageQuotaClient(PrometheusClient):
         result.update({"last_updated": last_updated_dt.isoformat()})
         return result
 
-        #  TODO: deal with empty result, deal with multiple policies, add retry_time
+        #  TODO: deal with empty result, deal with multiple policies, add retry_time if over quota limit, don't hardcode metrics
