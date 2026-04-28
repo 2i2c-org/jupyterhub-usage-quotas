@@ -96,11 +96,12 @@ def create_fastapi_app(
         user = result
 
         # Use storage client to get usage data
-        usage_data = await storage_client.get_user_storage_usage(user["name"])
+        storage_data = await storage_client.get_user_storage_usage(user["name"])
         compute_data = await storage_client.get_user_compute_usage(user["name"])
-        print(compute_data)
         template = jinja_env.get_template("usage.html")
-        html_content = template.render(usage_data=usage_data)
+        html_content = template.render(
+            {"storage_data": storage_data, "compute_data": compute_data}
+        )
         return HTMLResponse(html_content)
 
     @app.get(f"{config.service_prefix.rstrip('/')}/oauth_callback")
