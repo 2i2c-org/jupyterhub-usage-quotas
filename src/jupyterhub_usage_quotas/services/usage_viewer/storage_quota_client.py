@@ -251,12 +251,11 @@ class StorageQuotaClient(PrometheusClient):
         result = {"username": username}
         metrics = {
             "usage": "jupyterhub_memory_usage_gibibyte_hours",
-            "limit": "jupyterhub_memory_limit_gibibyte_hours",
+            "quota": "jupyterhub_memory_limit_gibibyte_hours",
         }
-        for key in ["usage", "limit"]:
+        for key in ["usage", "quota"]:
             metric = metrics[key]
             promql = f"{metric}{{namespace='{self.namespace}', username='{username}'}}"
-            # print(promql)
             response = await self.query(promql)
             print(response)
             value = float(response["data"]["result"][0]["value"][1])
@@ -264,11 +263,13 @@ class StorageQuotaClient(PrometheusClient):
         window = int(response["data"]["result"][0]["metric"]["window"])
         result.update({"window": window})
         percentage = (
-            (result["usage"] / result["limit"]) * 100 if result["limit"] > 0 else 0
+            (result["usage"] / result["quota"]) * 100 if result["quota"] > 0 else 0
         )
         result.update({"percentage": round(percentage, 2)})
-        last_updated_dt = response["data"]["result"][0]["value"][0]
-        result.update({"last_updated": last_updated_dt})
+        last_updated_dt = datetime.fromtimestamp(
+            response["data"]["result"][0]["value"][0], tz=UTC
+        )
+        result.update({"last_updated": last_updated_dt.isoformat()})
         return result
 
         #  TODO: deal with empty result, deal with multiple policies, add retry_time
