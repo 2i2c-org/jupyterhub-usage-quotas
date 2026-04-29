@@ -13,10 +13,18 @@ def jinja_env():
     return Environment(loader=FileSystemLoader(get_template_path()), autoescape=True)
 
 
-def render_template(jinja_env, usage_data):
+def render_template(
+    jinja_env: Environment,
+    storage_data: dict = None,
+    compute_data: dict = None,
+    compute_data_placeholder=dict,
+):
     """Helper to render template and return BeautifulSoup object"""
     template = jinja_env.get_template("usage.html")
-    html_content = template.render(usage_data=usage_data)
+    compute_data = compute_data_placeholder
+    html_content = template.render(
+        {"storage_data": storage_data, "compute_data": compute_data}
+    )
     return BeautifulSoup(html_content, "html.parser")
 
 
@@ -24,20 +32,20 @@ class TestUsageTemplateWithNormalUsage:
     """Test template rendering with normal usage (< 90%)"""
 
     def test_displays_correct_usage_percentage(self, jinja_env, usage_data_50_percent):
-        soup = render_template(jinja_env, usage_data_50_percent)
+        soup = render_template(jinja_env, storage_data=usage_data_50_percent)
         progress_label = soup.find(class_="progress-label")
         assert progress_label is not None
         assert "50.0%" in progress_label.text
 
     def test_displays_usage_and_quota_in_gib(self, jinja_env, usage_data_50_percent):
-        soup = render_template(jinja_env, usage_data_50_percent)
+        soup = render_template(jinja_env, storage_data=usage_data_50_percent)
         metric_usage = soup.find(class_="metric-usage")
         assert metric_usage is not None
         assert "5.0 GiB used" in metric_usage.text
         assert "10.0 GiB quota" in metric_usage.text
 
     def test_displays_remaining_storage(self, jinja_env, usage_data_50_percent):
-        soup = render_template(jinja_env, usage_data_50_percent)
+        soup = render_template(jinja_env, storage_data=usage_data_50_percent)
         metric_remaining = soup.find(class_="metric-remaining")
         assert metric_remaining is not None
         assert "5.0 GiB remaining" in metric_remaining.text
@@ -45,7 +53,7 @@ class TestUsageTemplateWithNormalUsage:
     def test_progress_bar_width_matches_percentage(
         self, jinja_env, usage_data_50_percent
     ):
-        soup = render_template(jinja_env, usage_data_50_percent)
+        soup = render_template(jinja_env, storage_data=usage_data_50_percent)
         progress_fill = soup.find(class_="progress-fill")
         assert progress_fill is not None
         assert "width: 50.0%" in progress_fill.get("style", "")
@@ -53,20 +61,20 @@ class TestUsageTemplateWithNormalUsage:
     def test_uses_normal_styling_below_90_percent(
         self, jinja_env, usage_data_50_percent
     ):
-        soup = render_template(jinja_env, usage_data_50_percent)
+        soup = render_template(jinja_env, storage_data=usage_data_50_percent)
         progress_fill = soup.find(class_="progress-fill")
         style = progress_fill.get("style", "")
         assert "#ef4444" not in style
 
     def test_displays_last_updated_timestamp(self, jinja_env, usage_data_50_percent):
-        soup = render_template(jinja_env, usage_data_50_percent)
+        soup = render_template(jinja_env, storage_data=usage_data_50_percent)
         time_element = soup.find("time")
         assert time_element is not None
         assert time_element.has_attr("datetime")
         assert usage_data_50_percent["last_updated"] in time_element["datetime"]
 
     def test_shows_normal_folder_icon(self, jinja_env, usage_data_50_percent):
-        soup = render_template(jinja_env, usage_data_50_percent)
+        soup = render_template(jinja_env, storage_data=usage_data_50_percent)
         svgs = soup.find_all("svg", class_="icon")
         assert len(svgs) > 0
         circles = soup.find_all("circle")
@@ -79,19 +87,19 @@ class TestUsageTemplateWithHighUsage:
     def test_displays_sad_folder_icon_at_95_percent(
         self, jinja_env, usage_data_95_percent
     ):
-        soup = render_template(jinja_env, usage_data_95_percent)
+        soup = render_template(jinja_env, storage_data=usage_data_95_percent)
         circles = soup.find_all("circle")
         assert len(circles) == 2
 
     def test_progress_bar_is_red_at_high_usage(self, jinja_env, usage_data_95_percent):
-        soup = render_template(jinja_env, usage_data_95_percent)
+        soup = render_template(jinja_env, storage_data=usage_data_95_percent)
         progress_fill = soup.find(class_="progress-fill")
         assert "background: #ef4444" in progress_fill.get("style", "")
 
     def test_remaining_storage_is_red_at_high_usage(
         self, jinja_env, usage_data_95_percent
     ):
-        soup = render_template(jinja_env, usage_data_95_percent)
+        soup = render_template(jinja_env, storage_data=usage_data_95_percent)
         metric_remaining = soup.find(class_="metric-remaining")
         style = metric_remaining.get("style", "")
         assert "color: #ef4444" in style
@@ -105,7 +113,7 @@ class TestUsageTemplateWithHighUsage:
     def test_progress_label_is_red_at_high_usage(
         self, jinja_env, usage_data_95_percent
     ):
-        soup = render_template(jinja_env, usage_data_95_percent)
+        soup = render_template(jinja_env, storage_data=usage_data_95_percent)
         progress_label = soup.find(class_="progress-label")
         style = progress_label.get("style", "")
         assert "color: #ef4444" in style
@@ -145,10 +153,13 @@ class TestUsageTemplateWithErrors:
         assert "No storage data found" in error_message.text
 
     def test_error_message_has_red_styling(
-        self, jinja_env, usage_data_prometheus_error
+        self, jinja_env, usage_data_prometheus_error, compute_data_placeholder
     ):
         template = jinja_env.get_template("usage.html")
-        html_content = template.render(usage_data=usage_data_prometheus_error)
+        html_content = template.render(
+            storage_data=usage_data_prometheus_error,
+            compute_data=compute_data_placeholder,
+        )
         assert ".error-message" in html_content
         assert "color: #ef4444" in html_content or "color:#ef4444" in html_content
 
@@ -185,21 +196,20 @@ class TestUsageTemplateFooter:
     """Test footer and informational text"""
 
     def test_displays_footer_note(self, jinja_env, usage_data_50_percent):
-        soup = render_template(jinja_env, usage_data_50_percent)
+        soup = render_template(jinja_env, storage_data=usage_data_50_percent)
         footer_note = soup.find(class_="footer-note")
         assert footer_note is not None
         assert "JupyterHub Admin" in footer_note.text
         assert "quota" in footer_note.text.lower()
 
     def test_displays_page_title(self, jinja_env, usage_data_50_percent):
-        soup = render_template(jinja_env, usage_data_50_percent)
+        soup = render_template(jinja_env, storage_data=usage_data_50_percent)
         h1 = soup.find("h1")
         assert h1 is not None
         assert "Usage" in h1.text
 
     def test_displays_subtitle(self, jinja_env, usage_data_50_percent):
-        soup = render_template(jinja_env, usage_data_50_percent)
+        soup = render_template(jinja_env, storage_data=usage_data_50_percent)
         subtitle = soup.find(class_="subtitle")
         assert subtitle is not None
-        assert "home storage" in subtitle.text.lower()
-        assert "quota" in subtitle.text.lower()
+        assert "view your current resource usage and quota" in subtitle.text.lower()

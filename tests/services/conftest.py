@@ -302,3 +302,18 @@ def usage_data_terabytes():
         "percentage": 50.0,
         "last_updated": "2026-02-24T12:00:00+00:00",
     }
+
+
+@pytest.fixture
+def compute_data_placeholder():
+    """
+    Placeholder for compute usage data.
+    """
+    return {
+        "username": "testuser",
+        "usage": 5,
+        "quota": 10,
+        "percentage": 50.0,
+        "window": 7,
+        "last_updated": "2026-02-24T12:00:00+00:00",
+    }
