@@ -238,7 +238,7 @@ class StorageQuotaClient(PrometheusClient):
             "last_updated": last_updated_dt.isoformat(),
         }
 
-    async def get_user_compute_usage(self, username: str) -> dict:
+    async def get_user_compute_usage(self, username: str) -> dict[str, Any]:
         """
         Query Prometheus for user compute usage and quota.
 
@@ -248,7 +248,7 @@ class StorageQuotaClient(PrometheusClient):
         Returns:
             Dictionary with usage information or error dict if unavailable
         """
-        result = {"username": username}
+        result: dict[str, Any] = {"username": username}
         metrics = {
             "usage": "jupyterhub_memory_usage_gibibyte_hours",
             "quota": "jupyterhub_memory_limit_gibibyte_hours",
