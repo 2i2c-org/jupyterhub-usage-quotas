@@ -109,7 +109,7 @@ class TestPrometheusTimeouts:
 
         assert "error" in usage_data
         assert usage_data["username"] == "testuser"
-        assert "Prometheus" in usage_data["error"]
+        assert "Unable to query" in usage_data["error"]
 
     @pytest.mark.asyncio
     async def test_handles_aiohttp_timeout(self, mocker):
@@ -187,7 +187,7 @@ class TestPrometheusUnavailability:
 
         assert "error" in usage_data
         assert usage_data["username"] == "testuser"
-        assert "Prometheus" in usage_data["error"]
+        assert "Unable to query" in usage_data["error"]
 
     @pytest.mark.asyncio
     async def test_handles_prometheus_500_error(self):
@@ -362,7 +362,7 @@ class TestGetMockDataErrorScenario:
 
         assert result["username"] == "testuser"
         assert "error" in result
-        assert "Prometheus" in result["error"]
+        assert "Unable to query" in result["error"]
 
     def test_returns_usage_dict_when_scenario_is_numeric(self, monkeypatch):
         """Should return usage data when random.choice yields a numeric scenario"""
