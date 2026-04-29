@@ -141,7 +141,7 @@ class StorageQuotaClient(PrometheusClient):
         if scenario == "error":
             return {
                 "username": username,
-                "error": "Unable to reach Prometheus. Please try again later.",
+                "error": "Unable to query usage data. Please try again later.",
             }
 
         # At this point, scenario must be a float (type narrowing to make mypy happy)
@@ -278,4 +278,4 @@ class StorageQuotaClient(PrometheusClient):
         result.update({"last_updated": last_updated_dt.isoformat()})
         return result
 
-        #  TODO: deal with empty result, deal with multiple policies, add retry_time if over quota limit, don't hardcode metrics
+        #  TODO: deal with empty result, deal with multiple policies, add retry_time if over quota limit, don't hardcode metrics, update mock data

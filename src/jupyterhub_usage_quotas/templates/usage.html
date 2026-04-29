@@ -184,7 +184,7 @@
                                 </div>
                                 <span class="progress-label"{% if compute_data.percentage >= 90 %} style="color: #ef4444;"{% endif %}>{{ "%.1f"|format(compute_data.percentage) }}%</span>
                             </div>
-                            <div class="metric-usage">{{ "%.1f"|format(compute_data.usage) }} GiB-hour used / {{ "%.1f"|format(compute_data.quota) }} GiB-hour quota</div>
+                            <div class="metric-usage">{{ "%.1f"|format(compute_data.usage) }} GiB-hour used / {{ "%.1f"|format(compute_data.quota) }} GiB-hour quota over the last {{ compute_data.window }} days</div>
                             <div class="metric-remaining"{% if compute_data.percentage >= 90 %} style="color: #ef4444;"{% endif %}>{{ "%.1f"|format(compute_data.quota - compute_data.usage) }} GiB-hour remaining</div>
                             <div class="metric-last-updated">Last updated: <time datetime="{{ compute_data.last_updated }}">{{ compute_data.last_updated }}</time></div>
                         </div>
