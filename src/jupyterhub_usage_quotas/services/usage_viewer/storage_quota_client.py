@@ -22,7 +22,7 @@ class StorageQuotaClient(PrometheusClient):
         prometheus_url: URL of the Prometheus server
         prometheus_auth: Dictionary of Prometheus username and password
         namespace: Prometheus namespace for filtering metrics
-        safe_scheme: Username escaping scheme for directory names
+        escape_scheme: Username escaping scheme for directory names
         dev_mode: Whether to enable development mode with mock data
         quota_metric: Prometheus metric name for storage quota/hard limit
         usage_metric: Prometheus metric name for current storage usage
@@ -34,7 +34,7 @@ class StorageQuotaClient(PrometheusClient):
         prometheus_url: str,
         prometheus_auth: dict | None = None,
         namespace: str = "",
-        safe_scheme: bool = True,
+        escape_scheme: dict = {"directory": "legacy"},
         dev_mode: bool = False,
         quota_metric: str = "dirsize_hard_limit_bytes",
         usage_metric: str = "dirsize_total_size_bytes",
@@ -42,7 +42,7 @@ class StorageQuotaClient(PrometheusClient):
     ):
         super().__init__(prometheus_url, prometheus_auth, **kwargs)
         self.namespace = namespace
-        self.safe_scheme = safe_scheme
+        self.escape_scheme = escape_scheme
         self.dev_mode = dev_mode
         self.quota_metric = quota_metric
         self.usage_metric = usage_metric
@@ -110,18 +110,18 @@ class StorageQuotaClient(PrometheusClient):
         return f'label_replace({metric}, "username", "$1", "directory", "(.*)")'
 
     @staticmethod
-    def escape_username(username: str, safe_scheme: bool = True):
+    def escape_username(username: str, escape_scheme: dict):
         """
         Escape username to create a safe string for naming directories.
 
         Args:
             username: Username to escape
-            safe_scheme: Kubespawner slug scheme, set to True for modern safe slugs, or False for legacy escaped slugs
+            escape_scheme: Kubespawner slug scheme, e.g. 'safe' or 'legacy'
 
         Returns:
             String of escaped username
         """
-        if safe_scheme:
+        if escape_scheme["directory"] == "safe":
             return safe_slug(username)
         return escape_slug(username)
 
@@ -141,7 +141,7 @@ class StorageQuotaClient(PrometheusClient):
         if scenario == "error":
             return {
                 "username": username,
-                "error": "Unable to reach Prometheus. Please try again later.",
+                "error": "Unable to query usage data. Please try again later.",
             }
 
         # At this point, scenario must be a float (type narrowing to make mypy happy)
@@ -188,7 +188,7 @@ class StorageQuotaClient(PrometheusClient):
 
         logger.debug(f"Fetching usage data for user: {username}")
 
-        directory = self.escape_username(username, safe_scheme=self.safe_scheme)
+        directory = self.escape_username(username, escape_scheme=self.escape_scheme)
 
         base_quota_metric = f'{self.quota_metric}{{namespace="{self.namespace}", directory="{directory}"}}'
         base_usage_metric = f'{self.usage_metric}{{namespace="{self.namespace}", directory="{directory}"}}'
@@ -211,7 +211,7 @@ class StorageQuotaClient(PrometheusClient):
             logger.error(f"Error fetching usage data for {username}: {e}")
             return {
                 "username": username,
-                "error": "Unable to reach Prometheus. Please try again later.",
+                "error": "Unable to query home storage usage. Please try again later.",
             }
 
         quota_bytes = self.parse_value_result(quota_value_data)
@@ -237,3 +237,45 @@ class StorageQuotaClient(PrometheusClient):
             "percentage": round(percentage, 2),
             "last_updated": last_updated_dt.isoformat(),
         }
+
+    async def get_user_compute_usage(self, username: str) -> dict[str, Any]:
+        """
+        Query Prometheus for user compute usage and quota.
+
+        Args:
+            username: Username to query for
+
+        Returns:
+            Dictionary with usage information or error dict if unavailable
+        """
+        result: dict[str, Any] = {"username": username}
+        metrics = {
+            "usage": "jupyterhub_memory_usage_gibibyte_hours",
+            "quota": "jupyterhub_memory_limit_gibibyte_hours",
+        }
+        for key in ["usage", "quota"]:
+            metric = metrics[key]
+            promql = f"{metric}{{namespace='{self.namespace}', username='{username}'}}"
+            try:
+                response = await self.query(promql)
+            except Exception as e:
+                logger.error(f"Error fetching usage data for {username}: {e}")
+                return {
+                    "username": username,
+                    "error": "Unable to query compute usage. Please try again later.",
+                }
+            value = float(response["data"]["result"][0]["value"][1])
+            result.update({key: round(value, 2)})
+        window = int(response["data"]["result"][0]["metric"]["window"])
+        result.update({"window": window})
+        percentage = (
+            (result["usage"] / result["quota"]) * 100 if result["quota"] > 0 else 0
+        )
+        result.update({"percentage": round(percentage, 2)})
+        last_updated_dt = datetime.fromtimestamp(
+            response["data"]["result"][0]["value"][0], tz=UTC
+        )
+        result.update({"last_updated": last_updated_dt.isoformat()})
+        return result
+
+        #  TODO: deal with empty result, deal with multiple policies, add retry_time if over quota limit, don't hardcode metrics, update mock data

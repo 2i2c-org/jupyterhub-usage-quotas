@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
+    <link rel="stylesheet" href="/hub/static/css/style.min.css?v=1169d53348a10b2020fa67f02516a65c955f1483603703fdb5d65653c099dc66f2a52246ae0856c6f1ebcc5e1c5f527a3fa9210d12e6d8ec77e0e095d9b2c734" type="text/css">
     <title>Usage</title>
     <style>
         body {
@@ -25,6 +26,11 @@
             color: #6b7280;
             margin: 0 0 48px 0;
             font-size: 16px;
+        }
+        .metric-container {
+            display: block;
+            gap: 16px;
+            align-items: flex-start;
         }
         .metric-item {
             display: flex;
@@ -102,45 +108,91 @@
 <body>
     <div class="container">
         <h1>Usage</h1>
-        <p class="subtitle">View your current home storage usage and quota</p>
-
-        <div class="metric-item">
-            {% if usage_data.error is defined %}
-            <svg class="icon" fill="none" stroke="#ef4444" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z"></path>
-            </svg>
-            <div class="metric-content">
-                <div class="metric-label">Home storage</div>
-                <p class="error-message">{{ usage_data.error }}</p>
-            </div>
-            {% else %}
-            {% if usage_data.percentage >= 90 %}
-            <svg class="icon" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path>
-                <circle cx="9.5" cy="12" r="1" fill="currentColor" stroke="none"></circle>
-                <circle cx="14.5" cy="12" r="1" fill="currentColor" stroke="none"></circle>
-                <path d="M9.5 15.5q2.5-2 5 0" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"></path>
-            </svg>
-            {% else %}
-            <svg class="icon" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path>
-            </svg>
-            {% endif %}
-            <div class="metric-content">
-                <div class="metric-label">Home storage</div>
-                <div class="progress-row">
-                    <div class="progress-track">
-                        <div class="progress-fill" style="width: {{ usage_data.percentage }}%;{% if usage_data.percentage >= 90 %} background: #ef4444;{% endif %}"></div>
+        <p class="subtitle">View your current resource usage and quota</p>
+        <div class="metric-container">
+            <div class="row">
+                <div class="col">
+                    <div class="metric-item">
+                        {% if storage_data.error is defined %}
+                        <svg class="icon" fill="none" stroke="#ef4444" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z"></path>
+                        </svg>
+                        <div class="metric-content">
+                            <div class="metric-label">Home storage</div>
+                            <p class="error-message">{{ storage_data.error }}</p>
+                        </div>
+                        {% else %}
+                        {% if storage_data.percentage >= 90 %}
+                        <svg class="icon" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path>
+                            <circle cx="9.5" cy="12" r="1" fill="currentColor" stroke="none"></circle>
+                            <circle cx="14.5" cy="12" r="1" fill="currentColor" stroke="none"></circle>
+                            <path d="M9.5 15.5q2.5-2 5 0" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"></path>
+                        </svg>
+                        {% else %}
+                        <svg class="icon" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path>
+                        </svg>
+                        {% endif %}
+                        <div class="metric-content">
+                            <div class="metric-label">Home storage</div>
+                            <div class="progress-row">
+                                <div class="progress-track">
+                                    <div class="progress-fill" style="width: {{ storage_data.percentage }}%;{% if storage_data.percentage >= 90 %} background: #ef4444;{% endif %}"></div>
+                                </div>
+                                <span class="progress-label"{% if storage_data.percentage >= 90 %} style="color: #ef4444;"{% endif %}>{{ "%.1f"|format(storage_data.percentage) }}%</span>
+                            </div>
+                            <div class="metric-usage">{{ "%.1f"|format(storage_data.usage_gb) }} GiB used / {{ "%.1f"|format(storage_data.quota_gb) }} GiB quota</div>
+                            <div class="metric-remaining"{% if storage_data.percentage >= 90 %} style="color: #ef4444;"{% endif %}>{{ "%.1f"|format(storage_data.quota_gb - storage_data.usage_gb) }} GiB remaining</div>
+                            <div class="metric-last-updated">Last updated: <time datetime="{{ storage_data.last_updated }}">{{ storage_data.last_updated }}</time></div>
+                        </div>
+                        {% endif %}
                     </div>
-                    <span class="progress-label"{% if usage_data.percentage >= 90 %} style="color: #ef4444;"{% endif %}>{{ "%.1f"|format(usage_data.percentage) }}%</span>
                 </div>
-                <div class="metric-usage">{{ "%.1f"|format(usage_data.usage_gb) }} GiB used / {{ "%.1f"|format(usage_data.quota_gb) }} GiB quota</div>
-                <div class="metric-remaining"{% if usage_data.percentage >= 90 %} style="color: #ef4444;"{% endif %}>{{ "%.1f"|format(usage_data.quota_gb - usage_data.usage_gb) }} GiB remaining</div>
-                <div class="metric-last-updated">Last updated: <time datetime="{{ usage_data.last_updated }}">{{ usage_data.last_updated }}</time></div>
+                <div class="col">
+                    <div class="metric-item">
+                        {% if compute_data.error is defined %}
+                        <svg class="icon" fill="none" stroke="#ef4444" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z"></path>
+                        </svg>
+                        <div class="metric-content">
+                            <div class="metric-label">Compute</div>
+                            <p class="error-message">{{ compute_data.error }}</p>
+                        </div>
+                        {% else %}
+                        <svg class="icon" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <rect x="3" y="3" width="15" height="15" rx="0.5"/>
+                            <rect stroke-width="1.5" x="7.25" y="7.25" width="6.5" height="6.5" rx="0.5"/>
+                            <line stroke-width="1" stroke-linecap="round" x1="7.5"  y1="3" x2="7.5"  y2="0.5"/>
+                            <line stroke-width="1" stroke-linecap="round" x1="10.5" y1="3" x2="10.5" y2="0.5"/>
+                            <line stroke-width="1" stroke-linecap="round" x1="13.5" y1="3" x2="13.5" y2="0.5"/>
+                            <line stroke-width="1" stroke-linecap="round" x1="7.5"  y1="18" x2="7.5"  y2="20.5"/>
+                            <line stroke-width="1" stroke-linecap="round" x1="10.5" y1="18" x2="10.5" y2="20.5"/>
+                            <line stroke-width="1" stroke-linecap="round" x1="13.5" y1="18" x2="13.5" y2="20.5"/>
+                            <line stroke-width="1" stroke-linecap="round" x1="3" y1="7.5"  x2="0.5" y2="7.5"/>
+                            <line stroke-width="1" stroke-linecap="round" x1="3" y1="10.5" x2="0.5" y2="10.5"/>
+                            <line stroke-width="1" stroke-linecap="round" x1="3" y1="13.5" x2="0.5" y2="13.5"/>
+                            <line stroke-width="1" stroke-linecap="round" x1="18" y1="7.5"  x2="20.5" y2="7.5"/>
+                            <line stroke-width="1" stroke-linecap="round" x1="18" y1="10.5" x2="20.5" y2="10.5"/>
+                            <line stroke-width="1" stroke-linecap="round" x1="18" y1="13.5" x2="20.5" y2="13.5"/>
+                        </svg>
+                        <div class="metric-content">
+                            <div class="metric-label">Compute</div>
+                            <div class="progress-row">
+                                <div class="progress-track">
+                                    <div class="progress-fill" style="width: {{ compute_data.percentage }}%;{% if compute_data.percentage >= 90 %} background: #ef4444;{% endif %}"></div>
+                                </div>
+                                <span class="progress-label"{% if compute_data.percentage >= 90 %} style="color: #ef4444;"{% endif %}>{{ "%.1f"|format(compute_data.percentage) }}%</span>
+                            </div>
+                            <div class="metric-usage">{{ "%.1f"|format(compute_data.usage) }} GiB-hour used / {{ "%.1f"|format(compute_data.quota) }} GiB-hour quota over the last {{ compute_data.window }} days</div>
+                            <div class="metric-remaining"{% if compute_data.percentage >= 90 %} style="color: #ef4444;"{% endif %}>{{ "%.1f"|format(compute_data.quota - compute_data.usage) }} GiB-hour remaining</div>
+                            <div class="metric-last-updated">Last updated: <time datetime="{{ compute_data.last_updated }}">{{ compute_data.last_updated }}</time></div>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
             </div>
-            {% endif %}
         </div>
-
         <div class="footer-note">
             Contact your JupyterHub Admin if you need additional quota.
         </div>

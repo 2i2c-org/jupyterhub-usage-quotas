@@ -119,6 +119,22 @@ class UsageConfig(Application):
     def _hub_namespace_default(self):
         return os.environ.get("JUPYTERHUB_USAGE_QUOTAS_HUB_NAMESPACE", "")
 
+    escape_username_scheme = Dict(
+        per_key_traits={
+            "directory": Unicode(),
+            "pod": Unicode(),
+            "max_length": Integer(),
+        },
+        help="""
+        Kubespawner slug scheme for naming directories and pod names with escaped usernames. E.g
+            - modern safe slugs for k8s pods and legacy slug for directory names (default): {"directory": "legacy", pod": "safe", max_length: 48},
+        """,
+    ).tag(config=True)
+
+    @default("escape_username_scheme")
+    def _escape_username_scheme_default(self):
+        return {"directory": "legacy", "pod": "safe", "max_length": 48}
+
 
 class UsageQuotaConfig(UsageConfig):
     """
@@ -163,12 +179,12 @@ class UsageQuotaConfig(UsageConfig):
         60, help="Scrape interval of Prometheus sample collection (seconds)."
     ).tag(config=True)
 
-    bucket_size_seconds = Integer(
-        300, help="Granularity of usage buckets (seconds)."
+    prometheus_emit_interval = Integer(
+        60, help="Emit interval of Prometheus metric export (seconds)."
     ).tag(config=True)
 
-    sample_interval_seconds = Integer(
-        30, help="How often usage is sampled by the quota system (seconds)."
+    prometheus_emit_namespace = Unicode(
+        "jupyterhub", help="Prometheus namespace to prefix metric names."
     ).tag(config=True)
 
     scope_backup_strategy = Dict(
@@ -297,11 +313,6 @@ class UsageViewerConfig(UsageConfig):
             "JUPYTERHUB_USAGE_QUOTAS_PROMETHEUS_STORAGE_USAGE_METRIC",
             "dirsize_total_size_bytes",
         )
-
-    escape_username_safe_scheme = Bool(
-        True,
-        help="Kubespawner slug scheme for naming directories with escaped usernames: set to True for modern safe slugs, or False for legacy escaped slugs.",
-    ).tag(config=True)
 
     dev_mode = Bool(
         False,

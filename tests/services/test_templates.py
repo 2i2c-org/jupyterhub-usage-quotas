@@ -6,6 +6,7 @@ from jinja2 import Environment, FileSystemLoader
 
 from jupyterhub_usage_quotas import get_template_path
 from tests.services.fixtures.usage_data import (
+    COMPUTE_DATA_PLACEHOLDER,
     USAGE_0_PCT,
     USAGE_50_PCT,
     USAGE_95_PCT,
@@ -22,10 +23,18 @@ def jinja_env():
     return Environment(loader=FileSystemLoader(get_template_path()), autoescape=True)
 
 
-def render_template(jinja_env, usage_data):
+def render_template(
+    jinja_env: Environment,
+    storage_data: dict = None,
+    compute_data: dict = None,
+    compute_data_placeholder=dict,
+):
     """Helper to render template and return BeautifulSoup object"""
     template = jinja_env.get_template("usage.html")
-    html_content = template.render(usage_data=usage_data)
+    compute_data = compute_data_placeholder
+    html_content = template.render(
+        {"storage_data": storage_data, "compute_data": compute_data}
+    )
     return BeautifulSoup(html_content, "html.parser")
 
 
@@ -134,7 +143,10 @@ class TestUsageTemplateWithErrors:
 
     def test_error_message_has_red_styling(self, jinja_env):
         template = jinja_env.get_template("usage.html")
-        html_content = template.render(usage_data=USAGE_PROMETHEUS_ERROR)
+        html_content = template.render(
+            storage_data=USAGE_PROMETHEUS_ERROR,
+            compute_data=COMPUTE_DATA_PLACEHOLDER,
+        )
         assert ".error-message" in html_content
         assert "color: #ef4444" in html_content or "color:#ef4444" in html_content
 
@@ -187,5 +199,4 @@ class TestUsageTemplateFooter:
         soup = render_template(jinja_env, USAGE_50_PCT)
         subtitle = soup.find(class_="subtitle")
         assert subtitle is not None
-        assert "home storage" in subtitle.text.lower()
-        assert "quota" in subtitle.text.lower()
+        assert "view your current resource usage and quota" in subtitle.text.lower()

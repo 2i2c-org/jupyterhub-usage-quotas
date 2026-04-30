@@ -7,6 +7,7 @@ import socket
 
 from jupyterhub_usage_quotas import setup_usage_quotas
 from jupyterhub_usage_quotas.manager import SpawnException, UsageQuotaManager
+from jupyterhub_usage_quotas.metrics import MetricsExporter
 
 c = get_config()  # noqa
 
@@ -51,36 +52,6 @@ c.UsageViewer.service_port = 9000
 c.UsageViewer.service_host = "0.0.0.0"
 c.UsageViewer.service_prefix = "/services/usage-quota/"
 c.UsageViewer.public_hub_url = "http://localhost:8000"
-c.UsageViewer.escape_username_safe_scheme = False
-
-
-c.JupyterHub.services = [
-    {
-        "name": "usage-quota",
-        "url": "http://localhost:9000",
-        "display": False,  # Don't show in Services menu - we have a custom navbar link
-        "oauth_no_confirm": True,
-        "command": [
-            "python",
-            "-m",
-            "jupyterhub_usage_quotas.services.usage_viewer",
-            "--UsageConfig.config_file",
-            c.UsageConfig.config_file,
-        ],
-    }
-]
-
-c.JupyterHub.load_roles = [
-    {
-        "name": "usage-quota-service",
-        "scopes": ["read:users"],
-        "services": ["usage-quota"],
-    },
-    {
-        "name": "user",
-        "scopes": ["access:services!service=usage-quota", "self"],
-    },
-]
 
 # Usage Quota Config
 
@@ -92,6 +63,8 @@ c.UsageQuotaManager.prometheus_usage_metrics = {
 }
 
 c.UsageQuotaManager.prometheus_scrape_interval = 60
+
+c.UsageQuotaManager.hub_namespace = "staging"
 
 c.UsageQuotaManager.scope_backup_strategy = {
     "empty": {
@@ -125,6 +98,45 @@ c.UsageQuotaManager.policy = [
     },
 ]
 
+# Usage Quota Service (optional — displays storage usage to users)
+# Install with: pip install jupyterhub-usage-quotas[service]
+
+c.JupyterHub.services = [
+    {
+        "name": "usage-quota",
+        "url": "http://localhost:9000",
+        "display": False,  # Don't show in Services menu - we have a custom navbar link
+        "oauth_no_confirm": True,
+        "command": [
+            "python",
+            "-m",
+            "jupyterhub_usage_quotas.services.usage_viewer",
+            "--port=9000",
+            "--public-hub-url=http://localhost:8000",
+            "--prometheus-url=http://localhost:9090",
+            "--hub-namespace=staging",
+            "--session-secret-key=use-a-secure-random-key-in-production",
+            "--dev-mode=true",
+        ],
+    }
+]
+
+c.JupyterHub.load_roles = [
+    {
+        "name": "usage-quota-service",
+        "scopes": ["read:users"],
+        "services": ["usage-quota"],
+    },
+    {
+        "name": "user",
+        "scopes": ["access:services!service=usage-quota", "self"],
+    },
+]
+
+# KubeSpawner
+
+c.JupyterHub.spawner_class = "kubespawner.KubeSpawner"
+
 quota_manager = UsageQuotaManager(config=c)
 
 
@@ -154,3 +166,7 @@ async def quota_pre_spawn_hook(spawner):
 
 
 c.KubeSpawner.pre_spawn_hook = quota_pre_spawn_hook
+
+metrics_exporter = MetricsExporter(quota_manager)
+
+metrics_exporter.start()

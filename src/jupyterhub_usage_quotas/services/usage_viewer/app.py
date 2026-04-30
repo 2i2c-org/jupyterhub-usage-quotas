@@ -4,7 +4,11 @@ import json
 import logging
 
 from jinja2 import Environment, FileSystemLoader
-from jupyterhub.services.auth import HubOAuth, HubOAuthCallbackHandler, HubOAuthenticated
+from jupyterhub.services.auth import (
+    HubOAuth,
+    HubOAuthCallbackHandler,
+    HubOAuthenticated,
+)
 from tornado import web
 from tornado.httpserver import HTTPServer
 from tornado.httputil import url_concat
@@ -42,12 +46,17 @@ class UsageHandler(HubOAuthenticated, web.RequestHandler):
     async def get(self):
         """Render the storage usage page for the authenticated user."""
         user = self.get_current_user()
-        usage_data = await self.settings["storage_client"].get_user_storage_usage(
+        storage_data = await self.settings["storage_client"].get_user_storage_usage(
+            user["name"]
+        )
+        compute_data = await self.settings["storage_client"].get_user_compute_usage(
             user["name"]
         )
         jinja_env = self.settings["jinja_env"]
         template = jinja_env.get_template("usage.html")
-        self.finish(template.render(usage_data=usage_data))
+        self.finish(
+            template.render(storage_data=storage_data, compute_data=compute_data)
+        )
 
 
 def make_app(
@@ -108,7 +117,7 @@ class UsageViewer(UsageViewerConfig):
             prometheus_url=self.prometheus_url,
             prometheus_auth=self.prometheus_auth,
             namespace=self.hub_namespace,
-            safe_scheme=self.escape_username_safe_scheme,
+            escape_scheme=self.escape_username_scheme,
             dev_mode=self.dev_mode,
             quota_metric=self.prometheus_storage_quota_metric,
             usage_metric=self.prometheus_storage_usage_metric,
