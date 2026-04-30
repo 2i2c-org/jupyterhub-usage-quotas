@@ -62,6 +62,10 @@ You can run JupyterHub on your local machine that can communicate with pods in a
    export GATEWAY_IP=$(colima ssh -- hostname -I | awk '{print $2}')
    ```
 
+   ```{note}
+   Note that for more recent macOS versions there appears to be a networking bug in `colima`. A workaround is to edit `~/.kube/config` so that the server address for the `colima` cluster from `https://192.168.64.2:<port number>` to `https://127.0.0.1:<port number>` and `export GATEWAY_IP=127.0.0.1`. See [upstream issue](https://github.com/abiosoft/colima/issues/1339).
+   ```
+
 1. Add a route for your local host to reach the the pod subnet via the gateway IP address
 
    ```bash
