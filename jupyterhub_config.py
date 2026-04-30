@@ -45,7 +45,6 @@ c.UsageConfig.prometheus_url = "http://localhost:9090"
 c.UsageConfig.hub_namespace = "staging"
 
 # Usage Viewer Service (optional — displays storage usage to users)
-# Install with: pip install jupyterhub-usage-quotas[service]
 
 c.UsageViewer.session_secret_key = "use-a-secure-random-key-in-production"
 c.UsageViewer.dev_mode = False
