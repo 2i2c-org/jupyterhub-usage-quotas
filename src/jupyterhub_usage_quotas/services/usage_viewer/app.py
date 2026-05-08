@@ -42,7 +42,6 @@ class UsageHandler(HubOAuthenticated, web.RequestHandler):
     async def get(self):
         """Render the storage usage page for the authenticated user."""
         user = self.get_current_user()
-        print(f'{user["name"]=}')
         storage_data = await self.settings["quota_client"].get_user_storage_usage(
             user["name"]
         )

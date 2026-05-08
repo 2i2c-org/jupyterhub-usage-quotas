@@ -3,6 +3,7 @@
 import asyncio
 import logging
 import random
+import sys
 from datetime import UTC, datetime
 from typing import Any
 
@@ -11,6 +12,10 @@ from kubespawner.slugs import escape_slug, safe_slug
 from jupyterhub_usage_quotas.client import PrometheusClient
 
 logger = logging.getLogger(__name__)
+handler = logging.StreamHandler(sys.stdout)
+handler.setLevel = logging.INFO
+logger.handlers = [handler]
+logger.setLevel(logging.INFO)
 
 
 class QuotaClient(PrometheusClient):
@@ -39,14 +44,12 @@ class QuotaClient(PrometheusClient):
         **kwargs,
     ):
         super().__init__(prometheus_url, prometheus_auth, **kwargs)
-        logger.setLevel(logging.INFO)
-        for handler in logger.handlers:
-            handler.setLevel(logging.INFO)
         self.namespace = namespace
         self.escape_scheme = escape_scheme
         self.dev_mode = dev_mode
         self.quota_metric = quota_metric
         self.usage_metric = usage_metric
+        print(f"{logger.handlers=}")
 
     @staticmethod
     def find_matching_result(data: dict[str, Any]) -> list | None:
@@ -269,19 +272,29 @@ class QuotaClient(PrometheusClient):
                 result: dict[str, Any] = {"username": username}
                 value = float(r["value"][1])
                 result.update({key: round(value, 2)})
-                if key == "usage":
-                    a = value
-                elif key == "limit":
-                    b = value
-                    percentage = (a / b) * 100 if b > 0 else 0
-                    result.update({"percentage": round(percentage, 2)})
-                    a, b = None, None
                 window = int(r["metric"]["window"])
                 result.update({"window": window})
                 last_updated_dt = datetime.fromtimestamp(r["value"][0], tz=UTC)
                 result.update({"last_updated": last_updated_dt.isoformat()})
+                logger.info(f"{result=}")
                 results.append(result)
-        logger.debug(f"{results=}")
-        return results
+        combined = {}
+        for result in results:
+            window = result["window"]
+            if window not in combined:
+                combined[window] = {
+                    "window": window,
+                    "username": result["username"],
+                    "last_updated": result["last_updated"],
+                }
+            combined[window].update(result)
+        output = []
+        for item in combined.values():
+            usage = item.get("usage", 0)
+            quota = item.get("quota", 0)
+            item["percentage"] = (usage / quota) * 100 if quota else None
+            output.append(item)
+        logger.debug(f"{output=}")
+        return output
 
         #  TODO: deal with empty result, don't hardcode metrics, update mock data
