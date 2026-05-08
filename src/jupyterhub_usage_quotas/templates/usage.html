@@ -178,15 +178,17 @@
                         </svg>
                         <div class="metric-content">
                             <div class="metric-label">Compute</div>
+                            {% for result in compute_data %}
                             <div class="progress-row">
                                 <div class="progress-track">
-                                    <div class="progress-fill" style="width: {{ compute_data.percentage }}%;{% if compute_data.percentage >= 90 %} background: #ef4444;{% endif %}"></div>
+                                    <div class="progress-fill" style="width: {{ result.percentage }}%;{% if result.percentage >= 90 %} background: #ef4444;{% endif %}"></div>
                                 </div>
-                                <span class="progress-label"{% if compute_data.percentage >= 90 %} style="color: #ef4444;"{% endif %}>{{ "%.1f"|format(compute_data.percentage) }}%</span>
+                                <span class="progress-label"{% if result.percentage >= 90 %} style="color: #ef4444;"{% endif %}>{{ "%.1f"|format(result.percentage) }}%</span>
                             </div>
-                            <div class="metric-usage">{{ "%.1f"|format(compute_data.usage) }} GiB-hour used / {{ "%.1f"|format(compute_data.quota) }} GiB-hour quota over the last {{ compute_data.window }} days</div>
-                            <div class="metric-remaining"{% if compute_data.percentage >= 90 %} style="color: #ef4444;"{% endif %}>{{ "%.1f"|format(compute_data.quota - compute_data.usage) }} GiB-hour remaining</div>
-                            <div class="metric-last-updated">Last updated: <time datetime="{{ compute_data.last_updated }}">{{ compute_data.last_updated }}</time></div>
+                            <div class="metric-usage">{{ "%.1f"|format(result.usage) }} GiB-hour used / {{ "%.1f"|format(result.quota) }} GiB-hour quota over the last {{ result.window }} days</div>
+                            <div class="metric-remaining"{% if result.percentage >= 90 %} style="color: #ef4444;"{% endif %}>{{ "%.1f"|format(result.quota - result.usage) }} GiB-hour remaining</div>
+                            <div class="metric-last-updated">Last updated: <time datetime="{{ result.last_updated }}">{{ result.last_updated }}</time></div>
+                            {% endfor %}
                         </div>
                         {% endif %}
                     </div>
