@@ -6,9 +6,7 @@ from tornado.testing import AsyncHTTPTestCase
 
 from jupyterhub_usage_quotas.config import UsageViewerConfig
 from jupyterhub_usage_quotas.services.usage_viewer.app import make_app
-from jupyterhub_usage_quotas.services.usage_viewer.storage_quota_client import (
-    StorageQuotaClient,
-)
+from jupyterhub_usage_quotas.services.usage_viewer.quota_client import QuotaClient
 
 MOCK_LOGIN_URL = (
     "http://localhost:8000/hub/api/oauth2/authorize"
@@ -22,7 +20,7 @@ TEST_USER = {"name": "testuser", "admin": False, "groups": ["users"]}
 
 STORAGE_MODULE = (
     "jupyterhub_usage_quotas.services.usage_viewer"
-    ".storage_quota_client.StorageQuotaClient.get_user_storage_usage"
+    ".quota_client.QuotaClient.get_user_storage_usage"
 )
 
 
@@ -52,7 +50,7 @@ class UsageViewerTestCase(AsyncHTTPTestCase):
         self._storage_patcher.stop()
 
     def get_app(self):
-        storage_client = StorageQuotaClient(
+        storage_client = QuotaClient(
             prometheus_url="http://prometheus:9090",
             namespace="prod",
             dev_mode=False,

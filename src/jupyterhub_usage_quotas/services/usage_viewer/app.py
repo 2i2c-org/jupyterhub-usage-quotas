@@ -16,15 +16,11 @@ from tornado.ioloop import IOLoop
 
 from jupyterhub_usage_quotas import get_template_path
 from jupyterhub_usage_quotas.config import UsageViewerConfig
-from jupyterhub_usage_quotas.services.usage_viewer.storage_quota_client import (
-    StorageQuotaClient,
-)
-
-logger = logging.getLogger(__name__)
+from jupyterhub_usage_quotas.services.usage_viewer.quota_client import QuotaClient
 
 
 class UsageHandler(HubOAuthenticated, web.RequestHandler):
-    """Tornado request handler that renders storage usage for authenticated users."""
+    """Tornado request handler that renders usage for authenticated users."""
 
     async def prepare(self):
         """Send a JS redirect for unauthenticated users before the handler runs.
@@ -46,10 +42,10 @@ class UsageHandler(HubOAuthenticated, web.RequestHandler):
     async def get(self):
         """Render the storage usage page for the authenticated user."""
         user = self.get_current_user()
-        storage_data = await self.settings["storage_client"].get_user_storage_usage(
+        storage_data = await self.settings["quota_client"].get_user_storage_usage(
             user["name"]
         )
-        compute_data = await self.settings["storage_client"].get_user_compute_usage(
+        compute_data = await self.settings["quota_client"].get_user_compute_usage(
             user["name"]
         )
         jinja_env = self.settings["jinja_env"]
@@ -60,13 +56,13 @@ class UsageHandler(HubOAuthenticated, web.RequestHandler):
 
 
 def make_app(
-    storage_client: StorageQuotaClient,
+    quota_client: QuotaClient,
     config: UsageViewerConfig,
 ) -> web.Application:
     """Create and configure the Tornado application.
 
     Args:
-        storage_client: StorageQuotaClient instance for querying storage data
+        quota_client: QuotaClient instance for querying usage data
         config: UsageViewerConfig instance containing all configuration
 
     Returns:
@@ -83,7 +79,7 @@ def make_app(
             (prefix + r"/oauth_callback", HubOAuthCallbackHandler),
         ],
         cookie_secret=config.session_secret_key,
-        storage_client=storage_client,
+        quota_client=quota_client,
         jinja_env=jinja_env,
     )
 
@@ -92,12 +88,14 @@ class UsageViewer(UsageViewerConfig):
     """Application for running the usage quota viewer service."""
 
     name = "jupyterhub-usage-viewer"
-    description = "Web service for viewing storage usage quotas"
+    description = "Web service for viewing usage quotas"
 
     aliases = {
         "port": "UsageViewer.service_port",
         "host": "UsageViewer.service_host",
         "prometheus-url": "UsageViewer.prometheus_url",
+        "hub_api_url": "UsageViewer.hub_api_url",
+        "hub_api_token": "UsageViewer.hub_api_token",
         "hub-namespace": "UsageViewer.hub_namespace",
         "prometheus-storage-quota-metric": "UsageViewer.prometheus_storage_quota_metric",
         "prometheus-storage-usage-metric": "UsageViewer.prometheus_storage_usage_metric",
@@ -110,10 +108,14 @@ class UsageViewer(UsageViewerConfig):
     def initialize(self, argv=None):
         """Initialize the service."""
         super().initialize(argv)
+        self.log.setLevel(logging.INFO)
+        for handler in self.log.handlers:
+            handler.setLevel(logging.INFO)
         if self.config_file:
             self.load_config_file(self.config_file)
+            self.log.info("loaded config file")
 
-        self.storage_client = StorageQuotaClient(
+        self.quota_client = QuotaClient(
             prometheus_url=self.prometheus_url,
             prometheus_auth=self.prometheus_auth,
             namespace=self.hub_namespace,
@@ -128,7 +130,7 @@ class UsageViewer(UsageViewerConfig):
         self.log.info(f"Hub Namespace: {self.hub_namespace or '(empty)'}")
         if self.dev_mode:
             self.log.warning(
-                "Development mode ENABLED - may use mock data for storage quotas"
+                "Development mode ENABLED - may use mock data for usage viewer service"
             )
         else:
             self.log.info(
@@ -140,7 +142,7 @@ class UsageViewer(UsageViewerConfig):
         self.log.info(
             f"Starting Usage Viewer service on {self.service_host}:{self.service_port}"
         )
-        app = make_app(self.storage_client, config=self)
+        app = make_app(self.quota_client, config=self)
         server = HTTPServer(app)
         server.listen(self.service_port, self.service_host)
         IOLoop.current().start()

@@ -1,9 +1,5 @@
 """Services package for jupyterhub-usage-quotas."""
 
-from jupyterhub_usage_quotas.services.usage_viewer import (
-    StorageQuotaClient,
-    UsageViewer,
-    main,
-)
+from jupyterhub_usage_quotas.services.usage_viewer import QuotaClient, UsageViewer, main
 
-__all__ = ["UsageViewer", "StorageQuotaClient", "main"]
+__all__ = ["UsageViewer", "QuotaClient", "main"]

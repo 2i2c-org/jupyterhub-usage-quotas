@@ -3,6 +3,7 @@
 import asyncio
 import logging
 import random
+import sys
 from datetime import UTC, datetime
 from typing import Any
 
@@ -11,12 +12,14 @@ from kubespawner.slugs import escape_slug, safe_slug
 from jupyterhub_usage_quotas.client import PrometheusClient
 
 logger = logging.getLogger(__name__)
+handler = logging.StreamHandler(sys.stdout)
+handler.setLevel(logging.INFO)
+logger.handlers = [handler]
+logger.setLevel(logging.INFO)
 
 
-class StorageQuotaClient(PrometheusClient):
-    """Client for storage quota operations using Prometheus.
-
-    Extends PrometheusClient with storage-specific query methods.
+class QuotaClient(PrometheusClient):
+    """Client for quota operations using Prometheus and Hub API.
 
     Args:
         prometheus_url: URL of the Prometheus server
@@ -46,6 +49,7 @@ class StorageQuotaClient(PrometheusClient):
         self.dev_mode = dev_mode
         self.quota_metric = quota_metric
         self.usage_metric = usage_metric
+        print(f"{logger.handlers=}")
 
     @staticmethod
     def find_matching_result(data: dict[str, Any]) -> list | None:
@@ -75,13 +79,13 @@ class StorageQuotaClient(PrometheusClient):
         Returns:
             Integer value or None if parsing fails
         """
-        pair = StorageQuotaClient.find_matching_result(data)
+        pair = QuotaClient.find_matching_result(data)
         if not pair:
             return None
         try:
             return int(float(pair[1]))
         except (ValueError, TypeError):
-            logger.warning(f"Non-numeric value in Prometheus response: {pair[1]}")
+            print(f"Non-numeric value in Prometheus response: {pair[1]}")
             return None
 
     @staticmethod
@@ -94,7 +98,7 @@ class StorageQuotaClient(PrometheusClient):
         Returns:
             Datetime object or None if parsing fails
         """
-        pair = StorageQuotaClient.find_matching_result(data)
+        pair = QuotaClient.find_matching_result(data)
         return datetime.fromtimestamp(float(pair[0]), tz=UTC) if pair else None
 
     @staticmethod
@@ -238,7 +242,7 @@ class StorageQuotaClient(PrometheusClient):
             "last_updated": last_updated_dt.isoformat(),
         }
 
-    async def get_user_compute_usage(self, username: str) -> dict[str, Any]:
+    async def get_user_compute_usage(self, username: str) -> list[dict[str, Any]]:
         """
         Query Prometheus for user compute usage and quota.
 
@@ -248,7 +252,7 @@ class StorageQuotaClient(PrometheusClient):
         Returns:
             Dictionary with usage information or error dict if unavailable
         """
-        result: dict[str, Any] = {"username": username}
+        results: list = []
         metrics = {
             "usage": "jupyterhub_memory_usage_gibibyte_hours",
             "quota": "jupyterhub_memory_limit_gibibyte_hours",
@@ -258,24 +262,51 @@ class StorageQuotaClient(PrometheusClient):
             promql = f"{metric}{{namespace='{self.namespace}', username='{username}'}}"
             try:
                 response = await self.query(promql)
+                if not response["data"]["result"]:
+                    # handle case when no data is returned
+                    logger.warning(f"No usage metrics detected for {username}")
+                    return [
+                        {
+                            "username": username,
+                            "error": "No usage detected for your account.",
+                        }
+                    ]
             except Exception as e:
                 logger.error(f"Error fetching usage data for {username}: {e}")
-                return {
-                    "username": username,
-                    "error": "Unable to query compute usage. Please try again later.",
+                return [
+                    {
+                        "username": username,
+                        "error": "Unable to query compute usage. Please try again later.",
+                    }
+                ]
+            for r in response["data"]["result"]:
+                result: dict[str, Any] = {"username": username}
+                value = float(r["value"][1])
+                result.update({key: round(value, 2)})
+                window = int(r["metric"]["window"])
+                result.update({"window": window})
+                last_updated_dt = datetime.fromtimestamp(r["value"][0], tz=UTC)
+                result.update({"last_updated": last_updated_dt.isoformat()})
+                results.append(result)
+        combined = {}
+        for result in results:
+            window = result["window"]
+            if window not in combined:
+                combined[window] = {
+                    "window": window,
+                    "username": result["username"],
+                    "last_updated": result["last_updated"],
                 }
-            value = float(response["data"]["result"][0]["value"][1])
-            result.update({key: round(value, 2)})
-        window = int(response["data"]["result"][0]["metric"]["window"])
-        result.update({"window": window})
-        percentage = (
-            (result["usage"] / result["quota"]) * 100 if result["quota"] > 0 else 0
-        )
-        result.update({"percentage": round(percentage, 2)})
-        last_updated_dt = datetime.fromtimestamp(
-            response["data"]["result"][0]["value"][0], tz=UTC
-        )
-        result.update({"last_updated": last_updated_dt.isoformat()})
-        return result
+            combined[window].update(result)
+        output = []
+        for item in combined.values():
+            usage = item.get("usage", 0)
+            quota = item.get("quota", 0)
+            item["percentage"] = (usage / quota) * 100 if quota else None
+            output.append(item)
+        logger.info(f"{output=}")
+        ordered = sorted(output, key=lambda d: (-d["percentage"], d["window"]))
 
-        #  TODO: deal with empty result, deal with multiple policies, add retry_time if over quota limit, don't hardcode metrics, update mock data
+        return ordered
+
+        #  TODO: don't hardcode metrics, update mock data
