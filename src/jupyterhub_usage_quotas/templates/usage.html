@@ -2,6 +2,7 @@
 <html>
 <head>
     <link rel="stylesheet" href="/hub/static/css/style.min.css?v=1169d53348a10b2020fa67f02516a65c955f1483603703fdb5d65653c099dc66f2a52246ae0856c6f1ebcc5e1c5f527a3fa9210d12e6d8ec77e0e095d9b2c734" type="text/css">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js" integrity="sha384-FKyoEForCGlyvwx9Hj09JcYn3nv7wiPVlz7YYwJrWVcXK/BmnVDxM+D2scQbITxI" crossorigin="anonymous"></script>
     <title>Usage</title>
     <style>
         body {
@@ -32,19 +33,41 @@
             gap: 16px;
             align-items: flex-start;
         }
-        .metric-item {
+        .metric-resource {
             display: flex;
             gap: 16px;
             align-items: flex-start;
             margin-bottom: 48px;
+        }
+        .metric-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 16px;
+        }
+        .metric-items {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 16px;
+            margin-bottom: 16px;
+        }
+        .metric-item {
+            width: 100%;
+            margin-bottom: 16px;
         }
         .icon {
             flex-shrink: 0;
             width: 40px;
             height: 40px;
         }
+        .icon-dropdown {
+            flex-shrink: 0;
+            width: 20px;
+            height: 15px;
+        }
         .metric-content {
-            flex: 1;
+            display: block;
         }
         .metric-label {
             font-size: 18px;
@@ -112,7 +135,7 @@
         <div class="metric-container">
             <div class="row">
                 <div class="col">
-                    <div class="metric-item">
+                    <div class="metric-resource">
                         {% if storage_data.error is defined %}
                         <svg class="icon" fill="none" stroke="#ef4444" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z"></path>
@@ -136,21 +159,23 @@
                         {% endif %}
                         <div class="metric-content">
                             <div class="metric-label">Home storage</div>
-                            <div class="progress-row">
-                                <div class="progress-track">
-                                    <div class="progress-fill" style="width: {{ storage_data.percentage }}%;{% if storage_data.percentage >= 90 %} background: #ef4444;{% endif %}"></div>
+                            <div class="metric-item">
+                                <div class="metric-usage">{{ "%.1f"|format(storage_data.usage_gb) }} GiB used / {{ "%.1f"|format(storage_data.quota_gb) }} GiB quota</div>
+                                <div class="metric-remaining"{% if storage_data.percentage >= 90 %} style="color: #ef4444;"{% endif %}>{{ "%.1f"|format(storage_data.quota_gb - storage_data.usage_gb) }} GiB remaining</div>
+                                <div class="progress-row">
+                                    <div class="progress-track">
+                                        <div class="progress-fill" style="width: {{ storage_data.percentage }}%;{% if storage_data.percentage >= 90 %} background: #ef4444;{% endif %}"></div>
+                                    </div>
+                                    <span class="progress-label"{% if storage_data.percentage >= 90 %} style="color: #ef4444;"{% endif %}>{{ "%.1f"|format(storage_data.percentage) }}%</span>
                                 </div>
-                                <span class="progress-label"{% if storage_data.percentage >= 90 %} style="color: #ef4444;"{% endif %}>{{ "%.1f"|format(storage_data.percentage) }}%</span>
-                            </div>
-                            <div class="metric-usage">{{ "%.1f"|format(storage_data.usage_gb) }} GiB used / {{ "%.1f"|format(storage_data.quota_gb) }} GiB quota</div>
-                            <div class="metric-remaining"{% if storage_data.percentage >= 90 %} style="color: #ef4444;"{% endif %}>{{ "%.1f"|format(storage_data.quota_gb - storage_data.usage_gb) }} GiB remaining</div>
-                            <div class="metric-last-updated">Last updated: <time datetime="{{ storage_data.last_updated }}">{{ storage_data.last_updated }}</time></div>
+                                <div class="metric-last-updated">Last updated: <time datetime="{{ storage_data.last_updated }}">{{ storage_data.last_updated }}</time></div>
+                                </div>
                         </div>
                         {% endif %}
                     </div>
                 </div>
                 <div class="col">
-                    <div class="metric-item">
+                    <div class="metric-resource">
                         {% if compute_data.error is defined %}
                         <svg class="icon" fill="none" stroke="#ef4444" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z"></path>
@@ -177,18 +202,30 @@
                             <line stroke-width="1" stroke-linecap="round" x1="18" y1="13.5" x2="20.5" y2="13.5"/>
                         </svg>
                         <div class="metric-content">
-                            <div class="metric-label">Compute</div>
-                            {% for result in compute_data %}
-                            <div class="progress-row">
-                                <div class="progress-track">
-                                    <div class="progress-fill" style="width: {{ result.percentage }}%;{% if result.percentage >= 90 %} background: #ef4444;{% endif %}"></div>
-                                </div>
-                                <span class="progress-label"{% if result.percentage >= 90 %} style="color: #ef4444;"{% endif %}>{{ "%.1f"|format(result.percentage) }}%</span>
+                            <div class="metric-header" data-bs-toggle="collapse" data-bs-target=".multi-collapse">
+                                <div class="metric-label">Compute</div>
+                                {% if compute_data | length > 1 %}
+                                <svg class="icon-dropdown" fill="none" stroke="gray" stroke-width="0.5" stroke-linecap="round" viewBox="0 0 5 5" xmlns="http://www.w3.org/2000/svg">
+                                    <line x1="0.5" y1="0.5" x2="2.5" y2="2.5"/>
+                                    <line x1="2.5" y1="2.5" x2="4.5" y2="0.5"/>
+                                </svg>
+                                {% endif %}
                             </div>
-                            <div class="metric-usage">{{ "%.1f"|format(result.usage) }} GiB-hour used / {{ "%.1f"|format(result.quota) }} GiB-hour quota over the last {{ result.window }} days</div>
-                            <div class="metric-remaining"{% if result.percentage >= 90 %} style="color: #ef4444;"{% endif %}>{{ "%.1f"|format(result.quota - result.usage) }} GiB-hour remaining</div>
-                            <div class="metric-last-updated">Last updated: <time datetime="{{ result.last_updated }}">{{ result.last_updated }}</time></div>
-                            {% endfor %}
+                            <div class="metric-items">
+                                {% for result in compute_data %}
+                                <div class="metric-item {% if loop.index > 1 %}collapse multi-collapse{% endif %}" id="compute-{{ loop.index }}">
+                                    <div class="metric-usage">{{ "%.1f"|format(result.usage) }} GiB-hour used / {{ "%.1f"|format(result.quota) }} GiB-hour quota over the last {{ result.window }} days</div>
+                                    <div class="metric-remaining"{% if result.percentage >= 90 %} style="color: #ef4444;"{% endif %}>{% if (result.quota - result.usage) < 0 %}{{ "%.1f"|format(0) }}{% else %}{{ "%.1f"|format(result.quota - result.usage) }}{% endif %} GiB-hour remaining</div>
+                                    <div class="progress-row">
+                                        <div class="progress-track">
+                                            <div class="progress-fill" style="width: {{ result.percentage }}%;{% if result.percentage >= 90 %} background: #ef4444;{% endif %}"></div>
+                                        </div>
+                                        <span class="progress-label"{% if result.percentage >= 90 %} style="color: #ef4444;"{% endif %}>{{ "%.1f"|format(result.percentage) }}%</span>
+                                    </div>
+                                    <div class="metric-last-updated">Last updated: <time datetime="{{ result.last_updated }}">{{ result.last_updated }}</time></div>
+                                </div>
+                                {% endfor %}
+                            </div>
                         </div>
                         {% endif %}
                     </div>
