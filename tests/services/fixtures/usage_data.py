@@ -70,3 +70,7 @@ COMPUTE_DATA_PLACEHOLDER = [
         "last_updated": "2026-02-24T12:00:00+00:00",
     }
 ]
+
+COMPUTE_DATA_ERROR = [
+    {"username": "testuser", "error": "No compute data found for your account."}
+]
