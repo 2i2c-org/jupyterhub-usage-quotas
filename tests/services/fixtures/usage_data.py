@@ -60,11 +60,13 @@ USAGE_NO_DATA = {
     "error": "No storage data found for your account.",
 }
 
-COMPUTE_DATA_PLACEHOLDER = {
-    "username": "testuser",
-    "usage": 5,
-    "quota": 10,
-    "percentage": 50.0,
-    "window": 7,
-    "last_updated": "2026-02-24T12:00:00+00:00",
-}
+COMPUTE_DATA_PLACEHOLDER = [
+    {
+        "username": "testuser",
+        "usage": 5,
+        "quota": 10,
+        "percentage": 50.0,
+        "window": 7,
+        "last_updated": "2026-02-24T12:00:00+00:00",
+    }
+]
