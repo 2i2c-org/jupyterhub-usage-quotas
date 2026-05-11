@@ -262,6 +262,13 @@ class QuotaClient(PrometheusClient):
             promql = f"{metric}{{namespace='{self.namespace}', username='{username}'}}"
             try:
                 response = await self.query(promql)
+                if not response["data"]["result"]:
+                    # handle case when no data is returned
+                    logger.warning(f"No usage metrics detected for {username}")
+                    return {
+                        "username": username,
+                        "error": "No usage detected for your account.",
+                    }
             except Exception as e:
                 logger.error(f"Error fetching usage data for {username}: {e}")
                 return {
@@ -276,7 +283,6 @@ class QuotaClient(PrometheusClient):
                 result.update({"window": window})
                 last_updated_dt = datetime.fromtimestamp(r["value"][0], tz=UTC)
                 result.update({"last_updated": last_updated_dt.isoformat()})
-                logger.info(f"{result=}")
                 results.append(result)
         combined = {}
         for result in results:
@@ -294,7 +300,9 @@ class QuotaClient(PrometheusClient):
             quota = item.get("quota", 0)
             item["percentage"] = (usage / quota) * 100 if quota else None
             output.append(item)
-        logger.debug(f"{output=}")
-        return output
+        logger.info(f"{output=}")
+        ordered = sorted(output, key=lambda d: (d["percentage"], d["window"]))
+
+        return ordered
 
         #  TODO: deal with empty result, don't hardcode metrics, update mock data
