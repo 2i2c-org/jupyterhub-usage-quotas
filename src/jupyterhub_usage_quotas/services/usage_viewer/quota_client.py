@@ -13,7 +13,7 @@ from jupyterhub_usage_quotas.client import PrometheusClient
 
 logger = logging.getLogger(__name__)
 handler = logging.StreamHandler(sys.stdout)
-handler.setLevel = logging.INFO
+handler.setLevel(logging.INFO)
 logger.handlers = [handler]
 logger.setLevel(logging.INFO)
 
@@ -242,7 +242,7 @@ class QuotaClient(PrometheusClient):
             "last_updated": last_updated_dt.isoformat(),
         }
 
-    async def get_user_compute_usage(self, username: str) -> dict[str, Any]:
+    async def get_user_compute_usage(self, username: str) -> list[dict[str, Any]]:
         """
         Query Prometheus for user compute usage and quota.
 
@@ -265,16 +265,20 @@ class QuotaClient(PrometheusClient):
                 if not response["data"]["result"]:
                     # handle case when no data is returned
                     logger.warning(f"No usage metrics detected for {username}")
-                    return {
-                        "username": username,
-                        "error": "No usage detected for your account.",
-                    }
+                    return [
+                        {
+                            "username": username,
+                            "error": "No usage detected for your account.",
+                        }
+                    ]
             except Exception as e:
                 logger.error(f"Error fetching usage data for {username}: {e}")
-                return {
-                    "username": username,
-                    "error": "Unable to query compute usage. Please try again later.",
-                }
+                return [
+                    {
+                        "username": username,
+                        "error": "Unable to query compute usage. Please try again later.",
+                    }
+                ]
             for r in response["data"]["result"]:
                 result: dict[str, Any] = {"username": username}
                 value = float(r["value"][1])
@@ -301,8 +305,8 @@ class QuotaClient(PrometheusClient):
             item["percentage"] = (usage / quota) * 100 if quota else None
             output.append(item)
         logger.info(f"{output=}")
-        ordered = sorted(output, key=lambda d: (d["percentage"], d["window"]))
+        ordered = sorted(output, key=lambda d: (-d["percentage"], d["window"]))
 
         return ordered
 
-        #  TODO: deal with empty result, don't hardcode metrics, update mock data
+        #  TODO: don't hardcode metrics, update mock data
