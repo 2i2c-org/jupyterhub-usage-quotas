@@ -41,7 +41,7 @@ You can run JupyterHub on your local machine that can communicate with pods in a
 1. Get the kubernetes pod subnet range – for minikube, run
 
    ```bash
-   POD_SUBNET=$(kubectl get node minikube -o jsonpath="{.spec.podCIDR}")
+   export POD_SUBNET=$(kubectl get node minikube -o jsonpath="{.spec.podCIDR}")
    ```
 
    or for colima run
