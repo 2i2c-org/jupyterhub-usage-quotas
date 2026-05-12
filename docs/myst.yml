@@ -16,6 +16,7 @@ project:
     - title: Tutorials
       children:
       - file: tutorial/quickstart.md
+      - file: tutorial/usage-quota-dashboard.md
       - file: tutorial/user-group-management.md
     - title: Explanation
       children:
@@ -29,6 +30,7 @@ project:
       - file: reference/UsageQuotaConfig.md
         hidden: true
       - file: reference/CHANGELOG.md
+      - file: reference/glossary.md
     - title: Contributing
       children:
       - file: contributing/CONTRIBUTING.md
