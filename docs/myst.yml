@@ -22,11 +22,11 @@ project:
       children:
       - file: explanation/overview.md
       - file: explanation/technical.md
+      - file: explanation/service.md
       - file: explanation/limitations.md
     - title: Reference
       children:
       - file: reference/configuration.md
-      - file: reference/service.md
       - file: reference/UsageQuotaConfig.md
         hidden: true
       - file: reference/CHANGELOG.md
