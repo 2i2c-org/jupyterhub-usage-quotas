@@ -2,10 +2,10 @@
 
 from tests.services.fixtures.tornado_app import TEST_USER, UsageViewerTestCase
 from tests.services.fixtures.usage_data import (
-    USAGE_50_PCT,
-    USAGE_95_PCT,
-    USAGE_NO_DATA,
-    USAGE_PROMETHEUS_ERROR,
+    STORAGE_USAGE_50_PCT,
+    STORAGE_USAGE_95_PCT,
+    STORAGE_USAGE_NO_DATA,
+    STORAGE_USAGE_PROMETHEUS_ERROR,
 )
 
 
@@ -24,7 +24,7 @@ class TestHomeRoute(UsageViewerTestCase):
 
     def test_home_displays_usage_when_authenticated(self):
         """Authenticated user should see usage data"""
-        self.mock_storage.return_value = USAGE_50_PCT
+        self.mock_storage.return_value = STORAGE_USAGE_50_PCT
         self.mock_hub_auth.get_user.return_value = TEST_USER
 
         response = self.fetch("/services/usage-quota")
@@ -37,7 +37,7 @@ class TestHomeRoute(UsageViewerTestCase):
 
     def test_home_displays_error_when_prometheus_fails(self):
         """User should see error message when Prometheus is unavailable"""
-        self.mock_storage.return_value = USAGE_PROMETHEUS_ERROR
+        self.mock_storage.return_value = STORAGE_USAGE_PROMETHEUS_ERROR
         self.mock_hub_auth.get_user.return_value = TEST_USER
 
         response = self.fetch("/services/usage-quota")
@@ -48,7 +48,7 @@ class TestHomeRoute(UsageViewerTestCase):
 
     def test_home_displays_no_data_error(self):
         """User should see error when no quota data exists"""
-        self.mock_storage.return_value = USAGE_NO_DATA
+        self.mock_storage.return_value = STORAGE_USAGE_NO_DATA
         self.mock_hub_auth.get_user.return_value = TEST_USER
 
         response = self.fetch("/services/usage-quota")
@@ -57,7 +57,7 @@ class TestHomeRoute(UsageViewerTestCase):
 
     def test_home_with_high_usage_displays_warning(self):
         """User with high usage should see warning styling"""
-        self.mock_storage.return_value = USAGE_95_PCT
+        self.mock_storage.return_value = STORAGE_USAGE_95_PCT
         self.mock_hub_auth.get_user.return_value = TEST_USER
 
         response = self.fetch("/services/usage-quota")
