@@ -161,18 +161,22 @@
                         </svg>
                         {% endif %}
                         <div class="metric-content">
-                            <div class="metric-label">Home storage</div>
-                            <div class="metric-item">
-                                <div class="metric-usage">{{ "%.1f"|format(storage_data.usage_gb) }} GiB used / {{ "%.1f"|format(storage_data.quota_gb) }} GiB quota</div>
-                                <div class="metric-remaining"{% if storage_data.percentage >= 90 %} style="color: #ef4444;"{% endif %}>{{ "%.1f"|format(storage_data.quota_gb - storage_data.usage_gb) }} GiB remaining</div>
-                                <div class="progress-row">
-                                    <div class="progress-track">
-                                        <div class="progress-fill" style="width: {{ storage_data.percentage }}%;{% if storage_data.percentage >= 90 %} background: #ef4444;{% endif %}"></div>
+                            <div class="metric-header">
+                                <div class="metric-label">Home storage</div>
+                            </div>
+                            <div class="metric-items">
+                                <div class="metric-item">
+                                    <div class="metric-usage">{{ "%.1f"|format(storage_data.usage_gb) }} GiB used / {{ "%.1f"|format(storage_data.quota_gb) }} GiB quota</div>
+                                    <div class="metric-remaining"{% if storage_data.percentage >= 90 %} style="color: #ef4444;"{% endif %}>{{ "%.1f"|format(storage_data.quota_gb - storage_data.usage_gb) }} GiB remaining</div>
+                                    <div class="progress-row">
+                                        <div class="progress-track">
+                                            <div class="progress-fill" style="width: {{ storage_data.percentage }}%;{% if storage_data.percentage >= 90 %} background: #ef4444;{% endif %}"></div>
+                                        </div>
+                                        <span class="progress-label"{% if storage_data.percentage >= 90 %} style="color: #ef4444;"{% endif %}>{{ "%.1f"|format(storage_data.percentage) }}%</span>
                                     </div>
-                                    <span class="progress-label"{% if storage_data.percentage >= 90 %} style="color: #ef4444;"{% endif %}>{{ "%.1f"|format(storage_data.percentage) }}%</span>
+                                    <div class="metric-last-updated">Last updated: <time datetime="{{ storage_data.last_updated }}">{{ storage_data.last_updated }}</time></div>
                                 </div>
-                                <div class="metric-last-updated">Last updated: <time datetime="{{ storage_data.last_updated }}">{{ storage_data.last_updated }}</time></div>
-                                </div>
+                            </div>
                         </div>
                         {% endif %}
                     </div>
