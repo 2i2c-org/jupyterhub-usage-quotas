@@ -46,7 +46,7 @@ class TestParseValueResult:
         )
 
 
-class TestGetUserUsageWithPrometheus:
+class TestGetUserStorageUsageWithPrometheus:
     """Test get_user_storage_usage with mocked Prometheus responses"""
 
     @pytest.mark.asyncio
@@ -231,8 +231,8 @@ class TestPrometheusUnavailability:
         assert usage_data["username"] == "testuser"
 
 
-class TestPrometheusUserWithNoData:
-    """Test users without quota data"""
+class TestPrometheusUserWithNoStorageData:
+    """Test users without storage quota data"""
 
     @pytest.mark.asyncio
     async def test_returns_error_for_user_with_no_quota(self):
