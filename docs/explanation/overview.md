@@ -2,7 +2,7 @@
 
 The `jupyterhub-usage-quotas` system is designed to operate within a [Zero to JupyterHub](https://z2jh.jupyter.org/) Kubernetes deployment. In the description below we generally make a distinction between two namespaces, **Hub** and **Support**, though your particular deployments may differ.
 
-![Architecture diagram of usage quota system in relation to a wider Zero to JupyterHub deployment.](img/architecture.png)
+![Architecture diagram of usage quota system in relation to a wider Zero to JupyterHub deployment.](/img/architecture.png)
 
 ## Hub
 

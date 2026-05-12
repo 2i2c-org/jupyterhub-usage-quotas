@@ -30,7 +30,10 @@ This component displays your current compute usage and quota limit in {term}`GiB
 
 You may have multiple compute quota policies applied to your account. Click the dropdown icon to expand the view to see all of your usage and quota.
 
-When you have run out of home storage, your server launch will be denied the next time you try. The compute quota system operates on a rolling window, so your usage expires at a continual rate (rather than a hard reset e.g. at the beginning of the month). A [retry time](/explanation/technical.md#retry-time) will be displayed showing you when compute quota is available to you again. If you require more compute quota, contact your JupyterHub admin for help.
+When you have run out of compute quota, your server launch will be denied the next time you try. The compute quota system operates on a rolling window, so your usage expires at a continual rate (rather than a hard reset e.g. at the beginning of the month). A [retry time](/explanation/technical.md#retry-time) will be displayed when you try to launch a server showing you when compute quota is available to you again. If you require more compute quota, contact your JupyterHub admin for help.
+
+```{figure} /img/server-launch-deny.png
+```
 
 ## Limitations
 
