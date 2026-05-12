@@ -8,8 +8,10 @@ This library implements compute usage quotas for Jupyter servers at server start
 
 - Metric based accounting for compute usage with Prometheus
 - Flexible and declarative usage policies, such as quota sizes and quota time windows
-- Server startup-time enforcement
+- Quota enforcement at server startup-time
 - User-facing usage and quota dashboard (optional)
+
+![Screenshot of usage and quota dashboard viewer](./usage-viewer.png)
 
 ## Installation
 
