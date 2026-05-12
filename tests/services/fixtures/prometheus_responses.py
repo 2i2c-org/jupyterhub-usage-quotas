@@ -56,25 +56,25 @@ PROMETHEUS_STORAGE_TIMESTAMP_50_PERCENT = {
 }
 
 # Empty results (no data for user)
-PROMETHEUS_STORAGE_EMPTY_RESULT = {
+PROMETHEUS_EMPTY_RESULT = {
     "status": "success",
     "data": {"resultType": "vector", "result": []},
 }
 
 # Prometheus error response
-PROMETHEUS_STORAGE_ERROR_RESPONSE = {
+PROMETHEUS_ERROR_RESPONSE = {
     "status": "error",
     "error": "query timeout",
     "errorType": "timeout",
 }
 
 # Malformed responses
-PROMETHEUS_STORAGE_MALFORMED_NO_DATA = {
+PROMETHEUS_MALFORMED_NO_DATA = {
     "status": "success",
     # missing 'data' field
 }
 
-PROMETHEUS_STORAGE_MALFORMED_NO_RESULT = {
+PROMETHEUS_MALFORMED_NO_RESULT = {
     "status": "success",
     "data": {
         "resultType": "vector",
