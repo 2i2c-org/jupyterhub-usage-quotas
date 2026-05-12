@@ -1,7 +1,7 @@
 """Mock Prometheus API responses for testing"""
 
 # Sample Prometheus response with 50% usage (5 GB used / 10 GB quota)
-PROMETHEUS_QUOTA_50_PERCENT = {
+PROMETHEUS_STORAGE_QUOTA_50_PERCENT = {
     "status": "success",
     "data": {
         "resultType": "vector",
@@ -19,7 +19,7 @@ PROMETHEUS_QUOTA_50_PERCENT = {
     },
 }
 
-PROMETHEUS_USAGE_50_PERCENT = {
+PROMETHEUS_STORAGE_USAGE_50_PERCENT = {
     "status": "success",
     "data": {
         "resultType": "vector",
@@ -37,7 +37,7 @@ PROMETHEUS_USAGE_50_PERCENT = {
     },
 }
 
-PROMETHEUS_TIMESTAMP_50_PERCENT = {
+PROMETHEUS_STORAGE_TIMESTAMP_50_PERCENT = {
     "status": "success",
     "data": {
         "resultType": "vector",
@@ -56,25 +56,25 @@ PROMETHEUS_TIMESTAMP_50_PERCENT = {
 }
 
 # Empty results (no data for user)
-PROMETHEUS_EMPTY_RESULT = {
+PROMETHEUS_STORAGE_EMPTY_RESULT = {
     "status": "success",
     "data": {"resultType": "vector", "result": []},
 }
 
 # Prometheus error response
-PROMETHEUS_ERROR_RESPONSE = {
+PROMETHEUS_STORAGE_ERROR_RESPONSE = {
     "status": "error",
     "error": "query timeout",
     "errorType": "timeout",
 }
 
 # Malformed responses
-PROMETHEUS_MALFORMED_NO_DATA = {
+PROMETHEUS_STORAGE_MALFORMED_NO_DATA = {
     "status": "success",
     # missing 'data' field
 }
 
-PROMETHEUS_MALFORMED_NO_RESULT = {
+PROMETHEUS_STORAGE_MALFORMED_NO_RESULT = {
     "status": "success",
     "data": {
         "resultType": "vector",
@@ -82,7 +82,7 @@ PROMETHEUS_MALFORMED_NO_RESULT = {
     },
 }
 
-PROMETHEUS_MALFORMED_INVALID_VALUE = {
+PROMETHEUS_STORAGE_MALFORMED_INVALID_VALUE = {
     "status": "success",
     "data": {
         "resultType": "vector",
@@ -99,7 +99,7 @@ PROMETHEUS_MALFORMED_INVALID_VALUE = {
     },
 }
 
-PROMETHEUS_MALFORMED_NON_NUMERIC = {
+PROMETHEUS_STORAGE_MALFORMED_NON_NUMERIC = {
     "status": "success",
     "data": {
         "resultType": "vector",
