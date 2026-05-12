@@ -115,3 +115,61 @@ PROMETHEUS_STORAGE_MALFORMED_NON_NUMERIC = {
         ],
     },
 }
+
+PROMETHEUS_COMPUTE_USAGE_MULTIPLE = {
+    "data": {
+        "result": [
+            {
+                "metric": {
+                    "__name__": "jupyterhub_memory_usage_gibibyte_hours",
+                    "namespace": "prod",
+                    "usergroup": "testgroup",
+                    "username": "testuser",
+                    "window": "1",
+                },
+                "value": [1778586321.778, "450"],
+            },
+            {
+                "metric": {
+                    "__name__": "jupyterhub_memory_usage_gibibyte_hours",
+                    "namespace": "prod",
+                    "usergroup": "testgroup",
+                    "username": "testuser",
+                    "window": "7",
+                },
+                "value": [1778586321.778, "550"],
+            },
+        ],
+        "resultType": "vector",
+    },
+    "status": "success",
+}
+
+PROMETHEUS_COMPUTE_QUOTA_MULTIPLE = {
+    "data": {
+        "result": [
+            {
+                "metric": {
+                    "__name__": "jupyterhub_memory_limit_gibibyte_hours",
+                    "namespace": "prod",
+                    "usergroup": "testgroup",
+                    "username": "testuser",
+                    "window": "1",
+                },
+                "value": [1778586321.881, "500"],
+            },
+            {
+                "metric": {
+                    "__name__": "jupyterhub_memory_limit_gibibyte_hours",
+                    "namespace": "prod",
+                    "usergroup": "testgroup",
+                    "username": "testuser",
+                    "window": "7",
+                },
+                "value": [1778586321.881, "1000"],
+            },
+        ],
+        "resultType": "vector",
+    },
+    "status": "success",
+}

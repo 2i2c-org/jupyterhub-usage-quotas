@@ -10,6 +10,8 @@ from aioresponses import aioresponses
 from jupyterhub_usage_quotas.client import PrometheusClient
 from jupyterhub_usage_quotas.services.usage_viewer.quota_client import QuotaClient
 from tests.services.fixtures.prometheus_responses import (
+    PROMETHEUS_COMPUTE_QUOTA_MULTIPLE,
+    PROMETHEUS_COMPUTE_USAGE_MULTIPLE,
     PROMETHEUS_EMPTY_RESULT,
     PROMETHEUS_ERROR_RESPONSE,
     PROMETHEUS_MALFORMED_NO_DATA,
@@ -92,6 +94,49 @@ class TestGetUserStorageUsageWithPrometheus:
 
         assert "error" in usage_data
         assert usage_data["username"] == "unknownuser"
+
+
+class TestGetUserComputeUsageWithPrometheus:
+    """Test get_user_compute_usage with mocked Prometheus responses"""
+
+    @pytest.mark.asyncio
+    async def test_returns_usage_data(self):
+        client = QuotaClient("http://prometheus:9090", namespace="prod")
+        client.query = AsyncMock(
+            side_effect=[
+                PROMETHEUS_COMPUTE_USAGE_MULTIPLE,
+                PROMETHEUS_COMPUTE_QUOTA_MULTIPLE,
+            ]
+        )
+        usage_data = await client.get_user_compute_usage(username="testuser")
+        assert len(usage_data) == 2
+        # check ordering by -percentage and then window
+        assert usage_data[0]["percentage"] > usage_data[1]["percentage"]
+        assert usage_data[0]["window"] < usage_data[1]["window"]
+
+    @pytest.mark.asyncio
+    async def test_returns_error_when_prometheus_unreachable(self):
+        client = QuotaClient("http://prometheus:9090", namespace="prod")
+        client.query = AsyncMock(side_effect=Exception("Connection refused"))
+
+        usage_data = await client.get_user_compute_usage(username="testuser")
+
+        assert any("error" in u.keys() for u in usage_data)
+        assert all(u["username"] == "testuser" for u in usage_data)
+
+    @pytest.mark.asyncio
+    async def test_returns_error_when_no_results_for_user(self):
+        empty_response = {
+            "status": "success",
+            "data": {"resultType": "vector", "result": []},
+        }
+        client = QuotaClient("http://prometheus:9090", namespace="prod")
+        client.query = AsyncMock(return_value=empty_response)
+
+        usage_data = await client.get_user_compute_usage(username="unknownuser")
+
+        assert any("error" in u.keys() for u in usage_data)
+        assert all(u["username"] == "unknownuser" for u in usage_data)
 
 
 class TestPrometheusTimeouts:
