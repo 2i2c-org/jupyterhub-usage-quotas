@@ -71,6 +71,25 @@ COMPUTE_USAGE_SINGLE = [
     }
 ]
 
+COMPUTE_USAGE_MULTIPLE = [
+    {
+        "username": "testuser",
+        "usage": 5,
+        "quota": 10,
+        "percentage": 50.0,
+        "window": 7,
+        "last_updated": "2026-02-24T12:00:00+00:00",
+    },
+    {
+        "username": "testuser",
+        "usage": 18,
+        "quota": 20,
+        "percentage": 90.0,
+        "window": 1,
+        "last_updated": "2026-02-24T12:00:00+00:00",
+    },
+]
+
 COMPUTE_USAGE_NO_DATA = [
     {"username": "testuser", "error": "No compute data found for your account."}
 ]

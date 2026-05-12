@@ -6,6 +6,7 @@ from jinja2 import Environment, FileSystemLoader
 
 from jupyterhub_usage_quotas import get_template_path
 from tests.services.fixtures.usage_data import (
+    COMPUTE_USAGE_MULTIPLE,
     COMPUTE_USAGE_NO_DATA,
     COMPUTE_USAGE_SINGLE,
     STORAGE_USAGE_0_PCT,
@@ -154,6 +155,21 @@ class TestUsageTemplateWithErrors:
         )
         assert ".error-message" in html_content
         assert "color: #ef4444" in html_content or "color:#ef4444" in html_content
+
+
+class TestUsageTemplateMultipleCompute:
+    """Test template rendering with multiple compute usage quotas."""
+
+    def test_displays_collapsed_content(self, jinja_env):
+        soup = render_template(jinja_env, STORAGE_USAGE_50_PCT, COMPUTE_USAGE_MULTIPLE)
+        collapsed_content = soup.find_all("div", attrs={"data-bs-toggle": "collapse"})
+        assert collapsed_content is not None
+
+    def test_displays_multiple_quotas(self, jinja_env):
+        soup = render_template(jinja_env, STORAGE_USAGE_50_PCT, COMPUTE_USAGE_MULTIPLE)
+        compute_div = soup.find(id="compute")
+        metric_item_div = compute_div.find_all(class_="metric-item")
+        assert len(metric_item_div) == len(COMPUTE_USAGE_MULTIPLE)
 
 
 class TestUsageTemplateEdgeCases:
