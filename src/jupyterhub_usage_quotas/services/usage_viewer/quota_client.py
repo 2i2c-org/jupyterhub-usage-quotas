@@ -304,7 +304,7 @@ class QuotaClient(PrometheusClient):
             quota = item.get("quota", 0)
             item["percentage"] = (usage / quota) * 100 if quota else None
             output.append(item)
-        logger.info(f"{output=}")
+        logger.debug(f"{output=}")
         ordered = sorted(output, key=lambda d: (-d["percentage"], d["window"]))
 
         return ordered
