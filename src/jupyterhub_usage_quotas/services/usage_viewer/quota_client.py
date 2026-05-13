@@ -49,7 +49,6 @@ class QuotaClient(PrometheusClient):
         self.dev_mode = dev_mode
         self.quota_metric = quota_metric
         self.usage_metric = usage_metric
-        print(f"{logger.handlers=}")
 
     @staticmethod
     def find_matching_result(data: dict[str, Any]) -> list | None:
