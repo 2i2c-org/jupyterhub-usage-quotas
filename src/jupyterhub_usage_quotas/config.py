@@ -354,7 +354,7 @@ class UsageViewerConfig(UsageConfig):
 
         c.UsageViewerConfig.prometheus_usage_quota_metrics = {
             "home_storage": {
-                "usage": "dirsize_total_bytes",
+                "usage": "dirsize_total_size_bytes",
                 "quota": "dirsize_hard_limit_bytes"
             },
             "compute": {
@@ -365,7 +365,7 @@ class UsageViewerConfig(UsageConfig):
         """,
         default_value={
             "home_storage": {
-                "usage": "dirsize_total_bytes",
+                "usage": "dirsize_total_size_bytes",
                 "quota": "dirsize_hard_limit_bytes",
             },
             "compute": {
