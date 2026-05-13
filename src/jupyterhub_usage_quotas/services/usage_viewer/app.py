@@ -94,11 +94,10 @@ class UsageViewer(UsageViewerConfig):
         "port": "UsageViewer.service_port",
         "host": "UsageViewer.service_host",
         "prometheus-url": "UsageViewer.prometheus_url",
+        "prometheus-usage-quota-metrics": "UsageViewer.prometheus_usage_quota_metrics",
         "hub_api_url": "UsageViewer.hub_api_url",
         "hub_api_token": "UsageViewer.hub_api_token",
         "hub-namespace": "UsageViewer.hub_namespace",
-        "prometheus-storage-quota-metric": "UsageViewer.prometheus_storage_quota_metric",
-        "prometheus-storage-usage-metric": "UsageViewer.prometheus_storage_usage_metric",
         "dev-mode": "UsageViewer.dev_mode",
         "service-prefix": "UsageViewer.service_prefix",
         "public-hub-url": "UsageViewer.public_hub_url",
@@ -116,13 +115,12 @@ class UsageViewer(UsageViewerConfig):
             self.log.info("loaded config file")
 
         self.quota_client = QuotaClient(
+            prometheus_usage_quota_metrics=self.prometheus_usage_quota_metrics,
             prometheus_url=self.prometheus_url,
             prometheus_auth=self.prometheus_auth,
             namespace=self.hub_namespace,
             escape_scheme=self.escape_username_scheme,
             dev_mode=self.dev_mode,
-            quota_metric=self.prometheus_storage_quota_metric,
-            usage_metric=self.prometheus_storage_usage_metric,
         )
 
         self.log.info("Initialized Usage Viewer service")

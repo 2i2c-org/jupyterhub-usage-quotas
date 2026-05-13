@@ -22,33 +22,30 @@ class QuotaClient(PrometheusClient):
     """Client for quota operations using Prometheus and Hub API.
 
     Args:
+        prometheus_usage_quota_metrics: Dictionary of Prometheus metrics
         prometheus_url: URL of the Prometheus server
         prometheus_auth: Dictionary of Prometheus username and password
         namespace: Prometheus namespace for filtering metrics
         escape_scheme: Username escaping scheme for directory names
         dev_mode: Whether to enable development mode with mock data
-        quota_metric: Prometheus metric name for storage quota/hard limit
-        usage_metric: Prometheus metric name for current storage usage
         **kwargs: Additional arguments passed to PrometheusClient
     """
 
     def __init__(
         self,
+        prometheus_usage_quota_metrics: dict,
         prometheus_url: str,
         prometheus_auth: dict | None = None,
         namespace: str = "",
         escape_scheme: dict = {"directory": "legacy"},
         dev_mode: bool = False,
-        quota_metric: str = "dirsize_hard_limit_bytes",
-        usage_metric: str = "dirsize_total_size_bytes",
         **kwargs,
     ):
         super().__init__(prometheus_url, prometheus_auth, **kwargs)
         self.namespace = namespace
         self.escape_scheme = escape_scheme
         self.dev_mode = dev_mode
-        self.quota_metric = quota_metric
-        self.usage_metric = usage_metric
+        self.metrics = prometheus_usage_quota_metrics
 
     @staticmethod
     def find_matching_result(data: dict[str, Any]) -> list | None:
@@ -193,8 +190,8 @@ class QuotaClient(PrometheusClient):
 
         directory = self.escape_username(username, escape_scheme=self.escape_scheme)
 
-        base_quota_metric = f'{self.quota_metric}{{namespace="{self.namespace}", directory="{directory}"}}'
-        base_usage_metric = f'{self.usage_metric}{{namespace="{self.namespace}", directory="{directory}"}}'
+        base_quota_metric = f'{self.metrics["home_storage"]["quota"]}{{namespace="{self.namespace}", directory="{directory}"}}'
+        base_usage_metric = f'{self.metrics["home_storage"]["usage"]}{{namespace="{self.namespace}", directory="{directory}"}}'
 
         quota_value_query = self.with_label_replace(base_quota_metric)
         usage_value_query = self.with_label_replace(base_usage_metric)
@@ -252,12 +249,9 @@ class QuotaClient(PrometheusClient):
             Dictionary with usage information or error dict if unavailable
         """
         results: list = []
-        metrics = {
-            "usage": "jupyterhub_memory_usage_gibibyte_hours",
-            "quota": "jupyterhub_memory_limit_gibibyte_hours",
-        }
+        compute_metrics = self.metrics["compute"]
         for key in ["usage", "quota"]:
-            metric = metrics[key]
+            metric = compute_metrics[key]
             promql = f"{metric}{{namespace='{self.namespace}', username='{username}'}}"
             try:
                 response = await self.query(promql)
