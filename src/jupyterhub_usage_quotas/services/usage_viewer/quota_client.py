@@ -22,9 +22,9 @@ class QuotaClient(PrometheusClient):
     """Client for quota operations using Prometheus and Hub API.
 
     Args:
-        prometheus_usage_quota_metrics: Dictionary of Prometheus metrics
         prometheus_url: URL of the Prometheus server
         prometheus_auth: Dictionary of Prometheus username and password
+        prometheus_usage_quota_metrics: Dictionary of Prometheus metrics
         namespace: Prometheus namespace for filtering metrics
         escape_scheme: Username escaping scheme for directory names
         dev_mode: Whether to enable development mode with mock data
@@ -33,9 +33,18 @@ class QuotaClient(PrometheusClient):
 
     def __init__(
         self,
-        prometheus_usage_quota_metrics: dict,
         prometheus_url: str,
         prometheus_auth: dict | None = None,
+        prometheus_usage_quota_metrics: dict = {
+            "home_storage": {
+                "usage": "dirsize_total_size_bytes",
+                "quota": "dirsize_hard_limit_bytes",
+            },
+            "compute": {
+                "usage": "jupyterhub_memory_usage_gibibyte_hours",
+                "quota": "jupyterhub_memory_limit_gibibyte_hours",
+            },
+        },
         namespace: str = "",
         escape_scheme: dict = {"directory": "legacy"},
         dev_mode: bool = False,

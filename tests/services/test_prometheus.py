@@ -425,16 +425,20 @@ class TestConfigurableMetricNames:
 
     def test_uses_default_metric_names_when_not_configured(self):
         client = QuotaClient("http://prometheus:9090", namespace="prod")
-        assert client.quota_metric == "dirsize_hard_limit_bytes"
-        assert client.usage_metric == "dirsize_total_size_bytes"
+        assert client.metrics["home_storage"]["quota"] == "dirsize_hard_limit_bytes"
+        assert client.metrics["home_storage"]["usage"] == "dirsize_total_size_bytes"
 
     @pytest.mark.asyncio
     async def test_custom_metric_names_appear_in_queries(self):
         client = QuotaClient(
             "http://prometheus:9090",
             namespace="staging",
-            quota_metric="custom_hard_limit_bytes",
-            usage_metric="custom_total_size_bytes",
+            prometheus_usage_quota_metrics={
+                "home_storage": {
+                    "usage": "custom_total_size_bytes",
+                    "quota": "custom_hard_limit_bytes",
+                }
+            },
         )
         captured_queries = []
         original_side_effect = [
