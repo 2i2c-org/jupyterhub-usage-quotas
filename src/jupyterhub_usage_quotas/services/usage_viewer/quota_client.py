@@ -301,5 +301,3 @@ class QuotaClient(PrometheusClient):
         ordered = sorted(output, key=lambda d: (-d["percentage"], d["window"]))
 
         return ordered
-
-        #  TODO: don't hardcode metrics, update mock data
