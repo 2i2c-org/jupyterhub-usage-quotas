@@ -23,6 +23,17 @@ STORAGE_MODULE = (
     ".quota_client.QuotaClient.get_user_storage_usage"
 )
 
+PROMETHEUS_METRICS = {
+    "home_storage": {
+        "usage": "dirsize_total_size_bytes",
+        "quota": "dirsize_hard_limit_bytes",
+    },
+    "compute": {
+        "usage": "jupyterhub_memory_usage_gibibyte_hours",
+        "quota": "jupyterhub_memory_limit_gibibyte_hours",
+    },
+}
+
 
 class UsageViewerTestCase(AsyncHTTPTestCase):
     """Base test case providing the Tornado application with a mocked HubAuth."""
@@ -50,8 +61,9 @@ class UsageViewerTestCase(AsyncHTTPTestCase):
         self._storage_patcher.stop()
 
     def get_app(self):
-        storage_client = QuotaClient(
+        client = QuotaClient(
             prometheus_url="http://prometheus:9090",
+            prometheus_usage_quota_metrics=PROMETHEUS_METRICS,
             namespace="prod",
             dev_mode=False,
         )
@@ -59,4 +71,4 @@ class UsageViewerTestCase(AsyncHTTPTestCase):
         config.service_prefix = "/services/usage-quota/"
         config.public_hub_url = "http://test-hub:8000"
         config.session_secret_key = "0" * 64
-        return make_app(storage_client, config)
+        return make_app(client, config)

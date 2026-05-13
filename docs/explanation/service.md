@@ -1,6 +1,6 @@
-# Usage Quota Service
+# Usage Quota Dashboard Service
 
-The usage quota service is an optional FastAPI web application that lets users view their current home storage usage and quota directly within JupyterHub.
+The usage quota dashboard service is an optional Tornado web application that lets users view their current home storage usage and quota directly within JupyterHub.
 
 ## Installation
 
@@ -16,9 +16,10 @@ The service:
 
 - Registers as a JupyterHub service and authenticates users via JupyterHub's OAuth2 flow
 - Queries Prometheus for storage metrics using the `dirsize_hard_limit_bytes` and `dirsize_total_size_bytes` metrics (provided by [jupyterhub-home-nfs](https://github.com/2i2c-org/jupyterhub-home-nfs) or equivalent)
-- Displays a usage dashboard embedded in JupyterHub via an iframe to show users their current storage usage and quota
+- Queries Prometheus for compute metrics using the `jupyterhub_memory_usage_gibibyte_hours` and `jupyterhub_memory_limit_gibibyte_hours` (provided by [jupyterhub-usage-quotas](https://github.com/2i2c-org/jupyterhub-usage-quotas))
+- Displays a usage dashboard embedded in JupyterHub via an iframe to show users their current usage and quota
 
-When `dev_mode` is enabled (via `--dev-mode` flag), the service can return randomly generated mock data, which is useful for development without a Prometheus instance. Mock data is only used when ALL three conditions are met: (1) dev_mode is True, AND (2) prometheus_url is the default (`http://127.0.0.1:9090`), AND (3) hub_namespace is empty. If either prometheus_url or hub_namespace is configured, the service will query Prometheus even when dev_mode is True.
+When `dev_mode` is enabled (via `--dev-mode` flag), the service can return randomly generated mock data, which is useful for development without a Prometheus instance. Mock data is only used when ALL three conditions are met: (1) `dev_mode` is True, AND (2) `prometheus_url` is the default (`http://127.0.0.1:9090`), AND (3) hub_namespace is empty. If either `prometheus_url` or hub_namespace is configured, the service will query Prometheus even when `dev_mode` is `True`.
 
 ## JupyterHub configuration
 
@@ -89,9 +90,11 @@ The service is configured via CLI flags (preferred) or traitlet configuration:
 
 All configuration options can be set via environment variables as alternatives to CLI flags:
 
-| Variable                                     | Description                                                                                |
-| -------------------------------------------- | ------------------------------------------------------------------------------------------ |
-| `JUPYTERHUB_PUBLIC_HUB_URL`                  | Public URL of the JupyterHub instance **(required)**                                       |
-| `JUPYTERHUB_USAGE_QUOTAS_SESSION_SECRET_KEY` | Secret key for session cookie encryption **(required)**                                    |
-| `JUPYTERHUB_USAGE_QUOTAS_PROMETHEUS_URL`     | Prometheus server endpoint (default: `http://127.0.0.1:9090`)                              |
-| `JUPYTERHUB_USAGE_QUOTAS_HUB_NAMESPACE`      | Kubernetes namespace of the JupyterHub deployment, used to filter metrics (default: empty) |
+| Variable                                      | Description                                                                                |
+| --------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| `JUPYTERHUB_PUBLIC_HUB_URL`                   | Public URL of the JupyterHub instance **(required)**                                       |
+| `JUPYTERHUB_USAGE_QUOTAS_SESSION_SECRET_KEY`  | Secret key for session cookie encryption **(required)**                                    |
+| `JUPYTERHUB_USAGE_QUOTAS_PROMETHEUS_URL`      | Prometheus server endpoint (default: `http://127.0.0.1:9090`)                              |
+| `JUPYTERHUB_USAGE_QUOTAS_PROMETHEUS_USERNAME` | (Optional) Prometheus server username                                                      |
+| `JUPYTERHUB_USAGE_QUOTAS_PROMETHEUS_PASSWORD` | (Optional) Prometheus server password                                                      |
+| `JUPYTERHUB_USAGE_QUOTAS_HUB_NAMESPACE`       | Kubernetes namespace of the JupyterHub deployment, used to filter metrics (default: empty) |

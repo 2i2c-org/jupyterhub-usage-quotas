@@ -148,7 +148,7 @@ See {ref}`fig:retry-time` for a graphical example.
 ``````{tip} Example
 `````{figure}
 :label: fig:retry-time
-````{image} ./img/retry_time.png
+````{image} /img/retry_time.png
 ````
 In this example, a usage quota policy of $6$ units is applied using a $t_w = 7$ day rolling window. A user exceeds their limit by $\Delta r = 1$ unit at the current time $t_c$ and subsequent server launches are denied. We determine the retry time, $t_r$, by finding that the user historically used $1$ unit by day $t_e = 1$, therefore the retry time $t_r = t_e + t_w = 1 + 7 = 8$.
 `````

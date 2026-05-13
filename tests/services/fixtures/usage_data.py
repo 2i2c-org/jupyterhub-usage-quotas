@@ -1,6 +1,6 @@
-"""Processed storage usage data for testing"""
+"""Processed usage data for testing"""
 
-USAGE_50_PCT = {
+STORAGE_USAGE_50_PCT = {
     "username": "testuser",
     "usage_bytes": 5368709120,
     "quota_bytes": 10737418240,
@@ -10,7 +10,7 @@ USAGE_50_PCT = {
     "last_updated": "2026-02-24T12:00:00+00:00",
 }
 
-USAGE_95_PCT = {
+STORAGE_USAGE_95_PCT = {
     "username": "testuser",
     "usage_bytes": 10200547328,
     "quota_bytes": 10737418240,
@@ -20,7 +20,7 @@ USAGE_95_PCT = {
     "last_updated": "2026-02-24T12:00:00+00:00",
 }
 
-USAGE_0_PCT = {
+STORAGE_USAGE_0_PCT = {
     "username": "testuser",
     "usage_bytes": 0,
     "quota_bytes": 10737418240,
@@ -30,7 +30,7 @@ USAGE_0_PCT = {
     "last_updated": "2026-02-24T12:00:00+00:00",
 }
 
-USAGE_100_PCT = {
+STORAGE_USAGE_100_PCT = {
     "username": "testuser",
     "usage_bytes": 10737418240,
     "quota_bytes": 10737418240,
@@ -40,7 +40,7 @@ USAGE_100_PCT = {
     "last_updated": "2026-02-24T12:00:00+00:00",
 }
 
-USAGE_TERABYTES = {
+STORAGE_USAGE_TERABYTES = {
     "username": "testuser",
     "usage_bytes": 549755813888,
     "quota_bytes": 1099511627776,
@@ -50,17 +50,17 @@ USAGE_TERABYTES = {
     "last_updated": "2026-02-24T12:00:00+00:00",
 }
 
-USAGE_PROMETHEUS_ERROR = {
+STORAGE_USAGE_PROMETHEUS_ERROR = {
     "username": "testuser",
     "error": "Unable to reach Prometheus. Please try again later.",
 }
 
-USAGE_NO_DATA = {
+STORAGE_USAGE_NO_DATA = {
     "username": "testuser",
     "error": "No storage data found for your account.",
 }
 
-COMPUTE_DATA_PLACEHOLDER = [
+COMPUTE_USAGE_SINGLE = [
     {
         "username": "testuser",
         "usage": 5,
@@ -71,6 +71,25 @@ COMPUTE_DATA_PLACEHOLDER = [
     }
 ]
 
-COMPUTE_DATA_ERROR = [
+COMPUTE_USAGE_MULTIPLE = [
+    {
+        "username": "testuser",
+        "usage": 5,
+        "quota": 10,
+        "percentage": 50.0,
+        "window": 7,
+        "last_updated": "2026-02-24T12:00:00+00:00",
+    },
+    {
+        "username": "testuser",
+        "usage": 18,
+        "quota": 20,
+        "percentage": 90.0,
+        "window": 1,
+        "last_updated": "2026-02-24T12:00:00+00:00",
+    },
+]
+
+COMPUTE_USAGE_NO_DATA = [
     {"username": "testuser", "error": "No compute data found for your account."}
 ]

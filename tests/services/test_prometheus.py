@@ -10,15 +10,17 @@ from aioresponses import aioresponses
 from jupyterhub_usage_quotas.client import PrometheusClient
 from jupyterhub_usage_quotas.services.usage_viewer.quota_client import QuotaClient
 from tests.services.fixtures.prometheus_responses import (
+    PROMETHEUS_COMPUTE_QUOTA_MULTIPLE,
+    PROMETHEUS_COMPUTE_USAGE_MULTIPLE,
     PROMETHEUS_EMPTY_RESULT,
     PROMETHEUS_ERROR_RESPONSE,
-    PROMETHEUS_MALFORMED_INVALID_VALUE,
     PROMETHEUS_MALFORMED_NO_DATA,
     PROMETHEUS_MALFORMED_NO_RESULT,
-    PROMETHEUS_MALFORMED_NON_NUMERIC,
-    PROMETHEUS_QUOTA_50_PERCENT,
-    PROMETHEUS_TIMESTAMP_50_PERCENT,
-    PROMETHEUS_USAGE_50_PERCENT,
+    PROMETHEUS_STORAGE_MALFORMED_INVALID_VALUE,
+    PROMETHEUS_STORAGE_MALFORMED_NON_NUMERIC,
+    PROMETHEUS_STORAGE_QUOTA_50_PERCENT,
+    PROMETHEUS_STORAGE_TIMESTAMP_50_PERCENT,
+    PROMETHEUS_STORAGE_USAGE_50_PERCENT,
 )
 
 
@@ -26,7 +28,9 @@ class TestParseValueResult:
     """Test the parse_value_result helper"""
 
     def test_parses_value_from_single_result(self):
-        value_bytes = QuotaClient.parse_value_result(PROMETHEUS_QUOTA_50_PERCENT)
+        value_bytes = QuotaClient.parse_value_result(
+            PROMETHEUS_STORAGE_QUOTA_50_PERCENT
+        )
         assert value_bytes == 10737418240
 
     def test_returns_none_for_failed_status(self):
@@ -44,7 +48,7 @@ class TestParseValueResult:
         )
 
 
-class TestGetUserUsageWithPrometheus:
+class TestGetUserStorageUsageWithPrometheus:
     """Test get_user_storage_usage with mocked Prometheus responses"""
 
     @pytest.mark.asyncio
@@ -52,9 +56,9 @@ class TestGetUserUsageWithPrometheus:
         client = QuotaClient("http://prometheus:9090", namespace="prod")
         client.query = AsyncMock(
             side_effect=[
-                PROMETHEUS_QUOTA_50_PERCENT,
-                PROMETHEUS_USAGE_50_PERCENT,
-                PROMETHEUS_TIMESTAMP_50_PERCENT,
+                PROMETHEUS_STORAGE_QUOTA_50_PERCENT,
+                PROMETHEUS_STORAGE_USAGE_50_PERCENT,
+                PROMETHEUS_STORAGE_TIMESTAMP_50_PERCENT,
             ]
         )
 
@@ -90,6 +94,49 @@ class TestGetUserUsageWithPrometheus:
 
         assert "error" in usage_data
         assert usage_data["username"] == "unknownuser"
+
+
+class TestGetUserComputeUsageWithPrometheus:
+    """Test get_user_compute_usage with mocked Prometheus responses"""
+
+    @pytest.mark.asyncio
+    async def test_returns_usage_data(self):
+        client = QuotaClient("http://prometheus:9090", namespace="prod")
+        client.query = AsyncMock(
+            side_effect=[
+                PROMETHEUS_COMPUTE_USAGE_MULTIPLE,
+                PROMETHEUS_COMPUTE_QUOTA_MULTIPLE,
+            ]
+        )
+        usage_data = await client.get_user_compute_usage(username="testuser")
+        assert len(usage_data) == 2
+        # check ordering by -percentage and then window
+        assert usage_data[0]["percentage"] > usage_data[1]["percentage"]
+        assert usage_data[0]["window"] < usage_data[1]["window"]
+
+    @pytest.mark.asyncio
+    async def test_returns_error_when_prometheus_unreachable(self):
+        client = QuotaClient("http://prometheus:9090", namespace="prod")
+        client.query = AsyncMock(side_effect=Exception("Connection refused"))
+
+        usage_data = await client.get_user_compute_usage(username="testuser")
+
+        assert any("error" in u.keys() for u in usage_data)
+        assert all(u["username"] == "testuser" for u in usage_data)
+
+    @pytest.mark.asyncio
+    async def test_returns_error_when_no_results_for_user(self):
+        empty_response = {
+            "status": "success",
+            "data": {"resultType": "vector", "result": []},
+        }
+        client = QuotaClient("http://prometheus:9090", namespace="prod")
+        client.query = AsyncMock(return_value=empty_response)
+
+        usage_data = await client.get_user_compute_usage(username="unknownuser")
+
+        assert any("error" in u.keys() for u in usage_data)
+        assert all(u["username"] == "unknownuser" for u in usage_data)
 
 
 class TestPrometheusTimeouts:
@@ -134,12 +181,16 @@ class TestPrometheusMalformedResponses:
 
     def test_handles_invalid_value_structure(self):
         """Should handle metrics with wrong value structure"""
-        result = QuotaClient.parse_value_result(PROMETHEUS_MALFORMED_INVALID_VALUE)
+        result = QuotaClient.parse_value_result(
+            PROMETHEUS_STORAGE_MALFORMED_INVALID_VALUE
+        )
         assert result is None
 
     def test_handles_non_numeric_values(self):
         """Should handle non-numeric metric values"""
-        result = QuotaClient.parse_value_result(PROMETHEUS_MALFORMED_NON_NUMERIC)
+        result = QuotaClient.parse_value_result(
+            PROMETHEUS_STORAGE_MALFORMED_NON_NUMERIC
+        )
         assert result is None
 
     @pytest.mark.asyncio
@@ -211,9 +262,9 @@ class TestPrometheusUnavailability:
         client = QuotaClient("http://prometheus:9090", namespace="prod")
         client.query = AsyncMock(
             side_effect=[
-                PROMETHEUS_QUOTA_50_PERCENT,
+                PROMETHEUS_STORAGE_QUOTA_50_PERCENT,
                 Exception("Query failed"),
-                PROMETHEUS_TIMESTAMP_50_PERCENT,
+                PROMETHEUS_STORAGE_TIMESTAMP_50_PERCENT,
             ]
         )
 
@@ -223,8 +274,8 @@ class TestPrometheusUnavailability:
         assert usage_data["username"] == "testuser"
 
 
-class TestPrometheusUserWithNoData:
-    """Test users without quota data"""
+class TestPrometheusUserWithNoStorageData:
+    """Test users without storage quota data"""
 
     @pytest.mark.asyncio
     async def test_returns_error_for_user_with_no_quota(self):
@@ -244,7 +295,7 @@ class TestPrometheusUserWithNoData:
         client = QuotaClient("http://prometheus:9090", namespace="prod")
         client.query = AsyncMock(
             side_effect=[
-                PROMETHEUS_QUOTA_50_PERCENT,
+                PROMETHEUS_STORAGE_QUOTA_50_PERCENT,
                 PROMETHEUS_EMPTY_RESULT,
                 PROMETHEUS_EMPTY_RESULT,
             ]
@@ -262,8 +313,8 @@ class TestPrometheusUserWithNoData:
         client.query = AsyncMock(
             side_effect=[
                 PROMETHEUS_EMPTY_RESULT,
-                PROMETHEUS_USAGE_50_PERCENT,
-                PROMETHEUS_TIMESTAMP_50_PERCENT,
+                PROMETHEUS_STORAGE_USAGE_50_PERCENT,
+                PROMETHEUS_STORAGE_TIMESTAMP_50_PERCENT,
             ]
         )
 
@@ -278,8 +329,8 @@ class TestPrometheusUserWithNoData:
         client = QuotaClient("http://prometheus:9090", namespace="prod")
         client.query = AsyncMock(
             side_effect=[
-                PROMETHEUS_QUOTA_50_PERCENT,
-                PROMETHEUS_USAGE_50_PERCENT,
+                PROMETHEUS_STORAGE_QUOTA_50_PERCENT,
+                PROMETHEUS_STORAGE_USAGE_50_PERCENT,
                 PROMETHEUS_EMPTY_RESULT,
             ]
         )
@@ -374,22 +425,26 @@ class TestConfigurableMetricNames:
 
     def test_uses_default_metric_names_when_not_configured(self):
         client = QuotaClient("http://prometheus:9090", namespace="prod")
-        assert client.quota_metric == "dirsize_hard_limit_bytes"
-        assert client.usage_metric == "dirsize_total_size_bytes"
+        assert client.metrics["home_storage"]["quota"] == "dirsize_hard_limit_bytes"
+        assert client.metrics["home_storage"]["usage"] == "dirsize_total_size_bytes"
 
     @pytest.mark.asyncio
     async def test_custom_metric_names_appear_in_queries(self):
         client = QuotaClient(
             "http://prometheus:9090",
             namespace="staging",
-            quota_metric="custom_hard_limit_bytes",
-            usage_metric="custom_total_size_bytes",
+            prometheus_usage_quota_metrics={
+                "home_storage": {
+                    "usage": "custom_total_size_bytes",
+                    "quota": "custom_hard_limit_bytes",
+                }
+            },
         )
         captured_queries = []
         original_side_effect = [
-            PROMETHEUS_QUOTA_50_PERCENT,
-            PROMETHEUS_USAGE_50_PERCENT,
-            PROMETHEUS_TIMESTAMP_50_PERCENT,
+            PROMETHEUS_STORAGE_QUOTA_50_PERCENT,
+            PROMETHEUS_STORAGE_USAGE_50_PERCENT,
+            PROMETHEUS_STORAGE_TIMESTAMP_50_PERCENT,
         ]
         idx = 0
 
@@ -449,8 +504,8 @@ class TestPrometheusEdgeCaseValues:
                         ],
                     },
                 },
-                PROMETHEUS_USAGE_50_PERCENT,
-                PROMETHEUS_TIMESTAMP_50_PERCENT,
+                PROMETHEUS_STORAGE_USAGE_50_PERCENT,
+                PROMETHEUS_STORAGE_TIMESTAMP_50_PERCENT,
             ]
         )
 

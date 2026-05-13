@@ -16,19 +16,21 @@ project:
     - title: Tutorials
       children:
       - file: tutorial/quickstart.md
+      - file: tutorial/usage-quota-dashboard.md
       - file: tutorial/user-group-management.md
     - title: Explanation
       children:
       - file: explanation/overview.md
       - file: explanation/technical.md
+      - file: explanation/service.md
       - file: explanation/limitations.md
     - title: Reference
       children:
       - file: reference/configuration.md
-      - file: reference/service.md
       - file: reference/UsageQuotaConfig.md
         hidden: true
       - file: reference/CHANGELOG.md
+      - file: reference/glossary.md
     - title: Contributing
       children:
       - file: contributing/CONTRIBUTING.md

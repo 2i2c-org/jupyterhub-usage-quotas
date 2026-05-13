@@ -30,7 +30,7 @@ policy_schema_backup: Schema = {
     "additionalProperties": False,
 }
 
-# Add scope to usage quota policy
+# Policy schema: Add scope to usage quota policy
 policy_schema = copy.deepcopy(policy_schema_backup)
 policy_schema["properties"].update(
     {
@@ -42,6 +42,32 @@ policy_schema["properties"].update(
     }
 )
 policy_schema["required"].append("scope")
+
+# Prometheus Usage Quota Metrics schema
+prometheus_usage_quota_metrics_schema: Schema = {
+    "type": "object",
+    "properties": {
+        "home_storage": {
+            "type": "object",
+            "properties": {
+                "usage": {"type": "string"},
+                "quota": {"type": "string"},
+            },
+            "required": ["usage", "quota"],
+            "additionalProperties": False,
+        },
+        "compute": {
+            "type": "object",
+            "properties": {
+                "usage": {"type": "string"},
+                "quota": {"type": "string"},
+            },
+            "required": ["usage", "quota"],
+            "additionalProperties": False,
+        },
+    },
+    "additionalProperties": False,
+}
 
 
 class UsageConfig(Application):
@@ -288,31 +314,53 @@ class UsageViewerConfig(UsageConfig):
     Service-specific settings including Prometheus connection and service binding.
     """
 
-    prometheus_storage_quota_metric = Unicode(
-        help="Prometheus metric name for storage quota/hard limit. Defaults to "
-        "'dirsize_hard_limit_bytes'. Can be set via "
-        "JUPYTERHUB_USAGE_QUOTAS_PROMETHEUS_STORAGE_QUOTA_METRIC environment variable.",
+    enable_home_storage = Bool(
+        help="Enable home storage component.", default=False
     ).tag(config=True)
 
-    @default("prometheus_storage_quota_metric")
-    def _prometheus_storage_quota_metric_default(self):
-        return os.environ.get(
-            "JUPYTERHUB_USAGE_QUOTAS_PROMETHEUS_STORAGE_QUOTA_METRIC",
-            "dirsize_hard_limit_bytes",
-        )
+    enable_compute = Bool(help="Enable compute component.", default=False).tag(
+        config=True
+    )
 
-    prometheus_storage_usage_metric = Unicode(
-        help="Prometheus metric name for current storage usage. Defaults to "
-        "'dirsize_total_size_bytes'. Can be set via "
-        "JUPYTERHUB_USAGE_QUOTAS_PROMETHEUS_STORAGE_USAGE_METRIC environment variable.",
+    prometheus_usage_quota_metrics = Dict(
+        help="""
+        Prometheus metrics for querying storage and/or compute usage and quotas. Defaults to:
+
+        c.UsageViewerConfig.prometheus_usage_quota_metrics = {
+            "home_storage": {
+                "usage": "dirsize_total_size_bytes",
+                "quota": "dirsize_hard_limit_bytes"
+            },
+            "compute": {
+                "usage": "jupyterhub_memory_usage_gibibyte_hours",
+                "quota": "jupyterhub_memory_limit_gibibyte_hours"
+            }
+        }
+        """,
+        default_value={
+            "home_storage": {
+                "usage": "dirsize_total_size_bytes",
+                "quota": "dirsize_hard_limit_bytes",
+            },
+            "compute": {
+                "usage": "jupyterhub_memory_usage_gibibyte_hours",
+                "quota": "jupyterhub_memory_limit_gibibyte_hours",
+            },
+        },
     ).tag(config=True)
 
-    @default("prometheus_storage_usage_metric")
-    def _prometheus_storage_usage_metric_default(self):
-        return os.environ.get(
-            "JUPYTERHUB_USAGE_QUOTAS_PROMETHEUS_STORAGE_USAGE_METRIC",
-            "dirsize_total_size_bytes",
-        )
+    @validate("prometheus_usage_quota_metrics")
+    def _validate_prometheus_usage_quota_metrics(self, proposal):
+        resources = proposal["value"]
+        allowed = set(["home_storage", "compute"])
+        extra = set(resources.keys()) - allowed
+        if extra:
+            raise TraitError(f"Unexpected keys: {extra}")
+        try:
+            jsonschema.validate(resources, prometheus_usage_quota_metrics_schema)
+        except jsonschema.ValidationError as e:
+            raise TraitError(e)
+        return resources
 
     dev_mode = Bool(
         False,

@@ -3,7 +3,7 @@
 from unittest.mock import MagicMock
 
 from tests.services.fixtures.tornado_app import TEST_USER, UsageViewerTestCase
-from tests.services.fixtures.usage_data import USAGE_50_PCT
+from tests.services.fixtures.usage_data import STORAGE_USAGE_50_PCT
 
 
 class TestEndToEndUserFlow(UsageViewerTestCase):
@@ -11,7 +11,7 @@ class TestEndToEndUserFlow(UsageViewerTestCase):
 
     def test_complete_unauthenticated_to_viewing_usage(self):
         """Verify that an unauthenticated user is redirected to log in and, after authentication, can view their usage information."""
-        self.mock_storage.return_value = USAGE_50_PCT
+        self.mock_storage.return_value = STORAGE_USAGE_50_PCT
 
         # Step 1: unauthenticated user gets JS redirect (not HTTP 307)
         response = self.fetch("/services/usage-quota/", follow_redirects=False)
