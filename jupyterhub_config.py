@@ -2,7 +2,6 @@
 Example configuration file for JupyterHub usage quotas.
 """
 
-import os
 import socket
 
 from jupyterhub_usage_quotas import setup_usage_quotas
@@ -39,19 +38,8 @@ c.Authenticator.admin_users = {"admin"}
 # Set up common Usage config
 setup_usage_quotas(c)
 
-c.UsageConfig.config_file = os.path.abspath(__file__)
 c.UsageConfig.prometheus_auth = {"username": "", "password": ""}
-c.UsageConfig.prometheus_url = "http://localhost:9090"
 c.UsageConfig.hub_namespace = "staging"
-
-# Usage Viewer Service (optional — displays storage usage to users)
-
-c.UsageViewer.session_secret_key = "use-a-secure-random-key-in-production"
-c.UsageViewer.dev_mode = False
-c.UsageViewer.service_port = 9000
-c.UsageViewer.service_host = "0.0.0.0"
-c.UsageViewer.service_prefix = "/services/usage-quota/"
-c.UsageViewer.public_hub_url = "http://localhost:8000"
 
 # Usage Quota Config
 
@@ -101,6 +89,8 @@ c.UsageQuotaManager.policy = [
 # Usage Quota Service (optional — displays storage usage to users)
 # Install with: pip install jupyterhub-usage-quotas[service]
 
+c.UsageViewer.session_secret_key = "use-a-secure-random-key-in-production"
+
 c.JupyterHub.services = [
     {
         "name": "usage-quota",
@@ -111,12 +101,7 @@ c.JupyterHub.services = [
             "python",
             "-m",
             "jupyterhub_usage_quotas.services.usage_viewer",
-            "--port=9000",
-            "--public-hub-url=http://localhost:8000",
-            "--prometheus-url=http://localhost:9090",
-            "--hub-namespace=staging",
-            "--session-secret-key=use-a-secure-random-key-in-production",
-            "--dev-mode=true",
+            "--config-file=jupyterhub_config.py",
         ],
     }
 ]
