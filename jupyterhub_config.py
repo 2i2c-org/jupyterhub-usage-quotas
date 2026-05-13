@@ -74,6 +74,7 @@ c.UsageQuotaManager.policy = [
 # Install with: pip install jupyterhub-usage-quotas[service]
 
 c.UsageViewer.session_secret_key = "use-a-secure-random-key-in-production"
+c.UsageViewer.enable_component = {"home_storage": True, "compute": True}
 
 c.JupyterHub.services = [
     {

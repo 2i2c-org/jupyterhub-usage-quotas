@@ -314,13 +314,22 @@ class UsageViewerConfig(UsageConfig):
     Service-specific settings including Prometheus connection and service binding.
     """
 
-    enable_home_storage = Bool(
-        help="Enable home storage component.", default=False
+    enable_component = Dict(
+        help="Enable home storage and/or compute components on the usage quotas dashboard",
+        default_value={
+            "home_storage": False,
+            "compute": False,
+        },
     ).tag(config=True)
 
-    enable_compute = Bool(help="Enable compute component.", default=False).tag(
-        config=True
-    )
+    @validate("enable_component")
+    def _validate_enable_component(self, proposal):
+        components = proposal["value"]
+        allowed = set(["home_storage", "compute"])
+        extra = set(components.keys()) - allowed
+        if extra:
+            raise TraitError(f"Unexpected keys: {extra}")
+        return components
 
     prometheus_usage_quota_metrics = Dict(
         help="""
