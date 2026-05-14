@@ -118,7 +118,7 @@ class UsageViewer(UsageViewerConfig):
         "service-prefix": "UsageViewer.service_prefix",
         "public-hub-url": "UsageViewer.public_hub_url",
         "session-secret-key": "UsageViewer.session_secret_key",
-        "config-file": "UsageViewer.config_file",
+        "config-files": "UsageViewer.config_files",
     }
 
     def initialize(self, argv=None):
@@ -127,9 +127,10 @@ class UsageViewer(UsageViewerConfig):
         self.log.setLevel(logging.INFO)
         for handler in self.log.handlers:
             handler.setLevel(logging.INFO)
-        if self.config_file:
-            self.load_config_file(self.config_file)
-            self.log.info(f"Loaded config file {self.config_file}")
+        if self.config_files:
+            for config_file in self.config_files:
+                self.load_config_file(config_file)
+                self.log.info(f"Loaded config file {config_file}")
 
         self.quota_client = QuotaClient(
             prometheus_usage_quota_metrics=self.prometheus_usage_quota_metrics,

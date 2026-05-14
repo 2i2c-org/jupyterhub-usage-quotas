@@ -33,7 +33,6 @@ c.Authenticator.admin_users = {"admin"}
 
 # Usage Quotas
 
-c.UsageConfig.prometheus_auth = {"username": "", "password": ""}
 c.UsageConfig.hub_namespace = "staging"
 
 # Usage Quota Config
@@ -70,12 +69,8 @@ c.UsageQuotaManager.policy = [
     },
 ]
 
-# Usage Quota Service (optional — displays storage usage to users)
+# Usage Quota Service (optional — displays usage dashboard to users)
 # Install with: pip install jupyterhub-usage-quotas[service]
-
-c.UsageViewer.session_secret_key = "use-a-secure-random-key-in-production"
-c.UsageViewer.enable_home_storage = True
-c.UsageViewer.enable_compute = False
 
 c.JupyterHub.services = [
     {
@@ -87,7 +82,8 @@ c.JupyterHub.services = [
             "python",
             "-m",
             "jupyterhub_usage_quotas.services.usage_viewer",
-            "--config-file=jupyterhub_config.py",
+            "--config-files=jupyterhub_config.py",
+            "--config-files=jupyterhub_usage_quotas_config.py",
         ],
     }
 ]
