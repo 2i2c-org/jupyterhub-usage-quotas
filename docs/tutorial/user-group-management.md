@@ -23,12 +23,15 @@ Further settings are required depending on the specific OAuthenticator used.
 
 The `GenericOAuthenticator` is a general purpose class that can support any identity provider. See [Generic OAuthenticator setups for various identity providers — OAuthenticator](https://oauthenticator.readthedocs.io/en/latest/tutorials/provider-specific-setup/providers/generic.html) for general guidance on configuration.
 
-Ensure that groups are populated with an appropriate key from the `auth_state`, e.g. for OpenID Connect (OIDC) using `scope` as the JupyterHub group names, and that `auth_state` is refreshed before a server is spawned:
+Ensure that groups are populated with an appropriate key from the `auth_state`, e.g. for OpenID Connect (OIDC) using `scope` as the JupyterHub group names.
 
 ```python
 c.GenericOAuthenticator.scope = ["openid", "offline_access", "cpu-1", "cpu-2", "cpu-3", "group-1", "group-2"]
 c.GenericOAuthenticator.auth_state_groups_key = scope
-c.GenericOAuthenticator.refresh_pre_spawn  = True
 ```
+
+## Refreshing Authentication State
+
+In the case where a user's group membership has changed, then the user may need to log out and log back into the JupyterHub to refresh their `auth_state`. See [Refreshing user authentication — OAuthenticator](https://oauthenticator.readthedocs.io/en/latest/how-to/refresh.html#refreshing-user-authentication) for more details.
 
 [^1]: See [JupyterHub and OAuth — JupyterHub documentation](https://jupyterhub.readthedocs.io/en/stable/explanation/oauth.html#) for how OAuth flows work in JupyterHub.
