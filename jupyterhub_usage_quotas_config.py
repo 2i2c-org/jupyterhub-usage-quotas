@@ -1,4 +1,4 @@
-# Config file for secret data, e.g. credentials and keys
+# Example config file for secret data, e.g. credentials and keys. Make sure you ignore/encrypt this file if using with a version control system.
 
 c.UsageConfig.prometheus_auth = {"username": "", "password": ""}
 

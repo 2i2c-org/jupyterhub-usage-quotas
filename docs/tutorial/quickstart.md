@@ -129,7 +129,8 @@ hub:
         - python3
         - -m
         - jupyterhub_usage_quotas.services.usage_viewer
-        - --config-fille=/usr/local/etc/jupyterhub/usage_quota_config.py
+          - --config-files=/usr/local/etc/jupyterhub/jupyterhub_config.py
+          - --config-files=/usr/local/etc/jupyterhub/jupyterhub_usage_quotas_config.py
   loadRoles:
     usage-quota-service:
       scopes:
@@ -162,13 +163,11 @@ hub:
             matchLabels:
               app.kubernetes.io/component: hub
               app.kubernetes.io/name: jupyterhub
-
   service:
     extraPorts:
       - port: 9000
         targetPort: 9000
         name: usage-quota
-
   # The proxy.chp.networkPolicy.egress configuration below is required for the usage-quota dashboard service to be accessible for users.
   proxy:
     chp:
