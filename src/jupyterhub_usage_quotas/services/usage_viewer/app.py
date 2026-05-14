@@ -43,8 +43,8 @@ class UsageHandler(HubOAuthenticated, web.RequestHandler):
         """Render the storage usage page for the authenticated user."""
         jinja_env = self.settings["jinja_env"]
         user = self.get_current_user()
-        enable_storage = self.settings["enable_component"]["home_storage"]
-        enable_compute = self.settings["enable_component"]["compute"]
+        enable_storage = self.settings["enable_home_storage"]
+        enable_compute = self.settings["enable_compute"]
         if not enable_storage and not enable_compute:
             self.set_status(404)
             template = jinja_env.get_template("usage-viewer-404.html")
@@ -93,7 +93,8 @@ def make_app(
             (prefix + r"/oauth_callback", HubOAuthCallbackHandler),
         ],
         cookie_secret=config.session_secret_key,
-        enable_component=config.enable_component,
+        enable_home_storage=config.enable_home_storage,
+        enable_compute=config.enable_compute,
         quota_client=quota_client,
         jinja_env=jinja_env,
     )
@@ -117,7 +118,7 @@ class UsageViewer(UsageViewerConfig):
         "service-prefix": "UsageViewer.service_prefix",
         "public-hub-url": "UsageViewer.public_hub_url",
         "session-secret-key": "UsageViewer.session_secret_key",
-        "config-file": "UsageViewer.config_file",
+        "config-files": "UsageViewer.config_files",
     }
 
     def initialize(self, argv=None):
@@ -126,9 +127,10 @@ class UsageViewer(UsageViewerConfig):
         self.log.setLevel(logging.INFO)
         for handler in self.log.handlers:
             handler.setLevel(logging.INFO)
-        if self.config_file:
-            self.load_config_file(self.config_file)
-            self.log.info(f"Loaded config file {self.config_file}")
+        if self.config_files:
+            for config_file in self.config_files:
+                self.load_config_file(config_file)
+                self.log.info(f"Loaded config file {config_file}")
 
         self.quota_client = QuotaClient(
             prometheus_usage_quota_metrics=self.prometheus_usage_quota_metrics,

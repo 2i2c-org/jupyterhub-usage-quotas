@@ -73,15 +73,17 @@ prometheus_usage_quota_metrics_schema: Schema = {
 class UsageConfig(Application):
     """Base configuration shared across JupyterHub usage quota components."""
 
-    config_file = Unicode(
-        "",
-        help="Path to the config file to load. If not set, no config file is loaded.",
+    config_files = List(
+        Unicode(),
+        default_value=[],
+        help="List of config files to load. If not set, then no config file is loaded.",
     ).tag(config=True)
 
-    @validate("config_file")
+    @validate("config_files")
     def _validate_config_file(self, proposal):
-        if proposal.value and not os.path.isfile(proposal.value):
-            raise TraitError(f"Failed to find specified config file: {proposal.value}")
+        for item in proposal.value:
+            if item and not os.path.isfile(item):
+                raise TraitError(f"Failed to find specified config file: {item}")
         return proposal.value
 
     prometheus_url = Unicode(
@@ -314,22 +316,15 @@ class UsageViewerConfig(UsageConfig):
     Service-specific settings including Prometheus connection and service binding.
     """
 
-    enable_component = Dict(
-        help="Enable home storage and/or compute components on the usage quotas dashboard",
-        default_value={
-            "home_storage": False,
-            "compute": False,
-        },
+    enable_home_storage = Bool(
+        help="Enable home storage component on the usage quotas dashboard",
+        default_value=True,
     ).tag(config=True)
 
-    @validate("enable_component")
-    def _validate_enable_component(self, proposal):
-        components = proposal["value"]
-        allowed = set(["home_storage", "compute"])
-        extra = set(components.keys()) - allowed
-        if extra:
-            raise TraitError(f"Unexpected keys: {extra}")
-        return components
+    enable_compute = Bool(
+        help="Enable compute component on the usage quotas dashboard",
+        default_value=True,
+    ).tag(config=True)
 
     prometheus_usage_quota_metrics = Dict(
         help="""

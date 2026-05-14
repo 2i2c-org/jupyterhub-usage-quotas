@@ -70,6 +70,7 @@ class UsageViewerTestCase(AsyncHTTPTestCase):
         config = UsageViewerConfig()
         config.service_prefix = "/services/usage-quota/"
         config.public_hub_url = "http://test-hub:8000"
-        config.enable_component = {"home_storage": True, "compute": True}
+        config.enable_home_storage = True
+        config.enable_compute = True
         config.session_secret_key = "0" * 64
         return make_app(client, config)

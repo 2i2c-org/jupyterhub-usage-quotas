@@ -1,22 +1,18 @@
 # Configuration
 
+The contents of this file were generated using the helper script `update_configuration_reference.py`.
+
 ## UsageConfig
 
-The following contains the output of the command `UsageConfig.class_print_help()`.
-
-```{embed} #config-usage
+```{embed} #usage-config
 ```
 
 ## UsageQuotaConfig
 
-The following contains the output of the command `UsageQuotaConfig.class_print_help()`.
-
-```{embed} #config-usage-quota
+```{embed} #usagequota-config
 ```
 
 ## UsageViewerConfig
 
-The following contains the output of the command `UsageViewerConfig.class_print_help()`.
-
-```{embed} #config-usage-viewer
+```{embed} #usageviewer-config
 ```
