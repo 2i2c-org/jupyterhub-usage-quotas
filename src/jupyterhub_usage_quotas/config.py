@@ -316,12 +316,12 @@ class UsageViewerConfig(UsageConfig):
 
     enable_home_storage = Bool(
         help="Enable home storage component on the usage quotas dashboard",
-        default_value=False,
+        default_value=True,
     ).tag(config=True)
 
     enable_compute = Bool(
         help="Enable compute component on the usage quotas dashboard",
-        default_value=False,
+        default_value=True,
     ).tag(config=True)
 
     prometheus_usage_quota_metrics = Dict(
