@@ -17,4 +17,4 @@ def test_initialize_raises_when_config_file_explicitly_set_but_missing(mock_env_
     """Explicitly setting config_file to a missing path should raise TraitError."""
     app = UsageViewer()
     with pytest.raises(TraitError):
-        app.config_file = "/nonexistent/jupyterhub_config.py"
+        app.config_files = "[/nonexistent/jupyterhub_config.py]"
