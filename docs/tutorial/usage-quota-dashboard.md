@@ -9,6 +9,9 @@ From the JupyterHub homepage (e.g. `https://<your-jupyterhub-domain>/hub/home`),
 ## Dashboard layout
 
 ```{figure} ../usage-viewer.png
+---
+label: dashboard
+---
 ```
 
 The dashboard is divided into two main sections:
@@ -22,6 +25,8 @@ Either of these components may or may not be enabled for your hub – contact yo
 
 This component displays your current home storage usage and quota limit in [gibibytes](https://simple.wikipedia.org/wiki/Gibibyte). The amount remaining and percentage used progress bar are highlighted in green when usage is below 90% and red when usage is above 90%.
 
+(home-storage-expire)=
+
 When you have run out of home storage, you may be unable to launch your server session the next time. If this happens, contact your JupyterHub admin for help with deleting stale data.
 
 ### Compute
@@ -30,9 +35,14 @@ This component displays your current compute usage and quota limit in {term}`GiB
 
 You may have multiple compute quota policies applied to your account. Click the dropdown icon to expand the view to see all of your usage and quota.
 
+(compute-expire)=
+
 When you have run out of compute quota, your server launch will be denied the next time you try. The compute quota system operates on a rolling window, so your usage expires at a continual rate (rather than a hard reset e.g. at the beginning of the month). A [retry time](/explanation/technical.md#retry-time) will be displayed when you try to launch a server showing you when compute quota is available to you again. If you require more compute quota, contact your JupyterHub admin for help.
 
 ```{figure} /img/server-launch-deny.png
+---
+label: server-launch-deny
+---
 ```
 
 ## Limitations

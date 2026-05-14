@@ -1,39 +1,34 @@
-# UsageQuotaConfig
+# UsageConfig
 
-(config-usage-quota)=
+(config-usage)=
 
 ```
-UsageQuotaConfig(UsageConfig) options
--------------------------------------
---UsageQuotaConfig.config_file=<Unicode>
+UsageConfig(Application) options
+--------------------------------
+--UsageConfig.config_file=<Unicode>
     Path to the config file to load. If not set, no config file is loaded.
     Default: ''
---UsageQuotaConfig.escape_username_scheme=<key-1>=<value-1>...
+--UsageConfig.escape_username_scheme=<key-1>=<value-1>...
     Kubespawner slug scheme for naming directories and pod names with escaped usernames. E.g
         - modern safe slugs for k8s pods and legacy slug for directory names (default): {"directory": "legacy", pod": "safe", max_length: 48},
     Default: {}
---UsageQuotaConfig.failover_open=<Bool>
-    In the case where the quota system fails, set to True to default to a fail-
-    open (allow all server launches) system or set to False to a fail-closed
-    (deny all server launches) system.
-    Default: True
---UsageQuotaConfig.hub_namespace=<Unicode>
+--UsageConfig.hub_namespace=<Unicode>
     Kubernetes namespace of the JupyterHub deployment, used to filter Prometheus
     usage metrics in multi-tenant environments. Leave empty for single-tenant or
     development. Can be set via JUPYTERHUB_USAGE_QUOTAS_HUB_NAMESPACE
     environment variable.
     Default: ''
---UsageQuotaConfig.log_datefmt=<Unicode>
+--UsageConfig.log_datefmt=<Unicode>
     The date format used by logging formatters for %(asctime)s
     Default: '%Y-%m-%d %H:%M:%S'
---UsageQuotaConfig.log_format=<Unicode>
+--UsageConfig.log_format=<Unicode>
     The Logging format template
     Default: '[%(name)s]%(highlevel)s %(message)s'
---UsageQuotaConfig.log_level=<Enum>
+--UsageConfig.log_level=<Enum>
     Set the log level by value or name.
     Choices: any of [0, 10, 20, 30, 40, 50, 'DEBUG', 'INFO', 'WARN', 'ERROR', 'CRITICAL']
     Default: 30
---UsageQuotaConfig.logging_config=<key-1>=<value-1>...
+--UsageConfig.logging_config=<key-1>=<value-1>...
     Configure additional log handlers.
     The default stderr logs handler is configured by the log_level, log_datefmt
     and log_format settings.
@@ -71,23 +66,7 @@ UsageQuotaConfig(UsageConfig) options
            },
        }
     Default: {}
---UsageQuotaConfig.policy=<list-item-1>...
-    List usage quota policies, including resource, limits, rolling window period
-    and policy scope.
-    For example: '5,000 GiB-hours over 30 days for group A', is expressed as
-    c.UsageQuotaConfig.policy = [{
-        "resource": "memory",
-        "limit": {
-            "value": 5000,
-            "unit": "GiB-hours",
-        }
-        "window": 30, # days
-        "scope": {
-            "group": ["A"]
-        }
-    }]
-    Default: []
---UsageQuotaConfig.prometheus_auth=<key-1>=<value-1>...
+--UsageConfig.prometheus_auth=<key-1>=<value-1>...
     Username and password credentials for authenticating with Prometheus.
     Can be set via JUPYTERHUB_USAGE_QUOTAS_PROMETHEUS_USERNAME and
     JUPYTERHUB_USAGE_QUOTAS_PROMETHEUS_PASSWORD environment variables.
@@ -97,56 +76,15 @@ UsageQuotaConfig(UsageConfig) options
             "password": "password",
         }
     Default: {}
---UsageQuotaConfig.prometheus_emit_interval=<Int>
-    Emit interval of Prometheus metric export (seconds).
-    Default: 60
---UsageQuotaConfig.prometheus_emit_namespace=<Unicode>
-    Prometheus namespace to prefix metric names.
-    Default: 'jupyterhub'
---UsageQuotaConfig.prometheus_scrape_interval=<Int>
-    Scrape interval of Prometheus sample collection (seconds).
-    Default: 60
---UsageQuotaConfig.prometheus_url=<Unicode>
+--UsageConfig.prometheus_url=<Unicode>
     The url of the Prometheus server, usually of the form 'http://<k8s-service-
     name>.<k8s-namespace>.svc.cluster.local' in a Kubernetes cluster. Defaults
     to 'http://127.0.0.1:9090' for local development.
     Default: 'http://127.0.0.1:9090'
---UsageQuotaConfig.prometheus_usage_metrics=<key-1>=<value-1>...
-    Dict of Prometheus metrics to track usage. Must define at least one of:
-        - 'memory': PromQL expression
-        - 'cpu': PromQL expression
-    For example:
-        prometheus_usage_metrics = {
-                "memory": "kube_pod_container_resource_requests{resource='memory'}",
-                "cpu" : "kube_pod_container_resource_requests{resource='cpu'}"
-            }
-    Default: {}
---UsageQuotaConfig.scope_backup_strategy=<key-1>=<value-1>...
-    Set a backup strategy to resolve quotas in the case where the scope of the
-    quota policies are applied to an empty set, or an intersection, i.e. define
-    a default when a user has no or multiple quotas applied.
-    In the case where no quota is applied ('empty'), we can supply a default
-    quota policy or leave this as None for unlimited quotas; and where multiple
-    quotas are applied, we can apply either the `min`, `max` or `sum`.
-    For example, 'Apply a default memory quota of 500 GiB-hours over a rolling 7
-    day window for users with no groups, and apply the maximum quota available
-    for users with multiple groups.' is expressed as:
-    {
-        "empty": {
-            "resource": "memory",
-            "limit": {
-            "value": 500,
-            "unit": "GiB-hours"
-            },
-            "window": 7,
-        },
-        "intersection": "max"
-    }
-    Default: {'intersection': 'min'}
---UsageQuotaConfig.show_config=<Bool>
+--UsageConfig.show_config=<Bool>
     Instead of starting the Application, dump configuration to stdout
     Default: False
---UsageQuotaConfig.show_config_json=<Bool>
+--UsageConfig.show_config_json=<Bool>
     Instead of starting the Application, dump configuration to stdout (as JSON)
     Default: False
 ```

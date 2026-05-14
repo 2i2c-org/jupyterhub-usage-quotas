@@ -27,7 +27,11 @@ project:
     - title: Reference
       children:
       - file: reference/configuration.md
+      - file: reference/UsageConfig.md
+        hidden: true
       - file: reference/UsageQuotaConfig.md
+        hidden: true
+      - file: reference/UsageViewerConfig.md
         hidden: true
       - file: reference/CHANGELOG.md
       - file: reference/glossary.md

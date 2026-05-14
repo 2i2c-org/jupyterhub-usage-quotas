@@ -29,11 +29,18 @@ def render_template(
     jinja_env: Environment,
     storage_data: dict = None,
     compute_data: list = None,
+    enable_storage: bool = True,
+    enable_compute: bool = True,
 ):
     """Helper to render template and return BeautifulSoup object"""
     template = jinja_env.get_template("usage.html")
     html_content = template.render(
-        {"storage_data": storage_data, "compute_data": compute_data}
+        {
+            "storage_data": storage_data,
+            "compute_data": compute_data,
+            "enable_storage": enable_storage,
+            "enable_compute": enable_compute,
+        }
     )
     return BeautifulSoup(html_content, "html.parser")
 

@@ -1,39 +1,49 @@
-# UsageQuotaConfig
+# UsageViewerConfig
 
-(config-usage-quota)=
+(config-usage-viewer)=
 
 ```
-UsageQuotaConfig(UsageConfig) options
--------------------------------------
---UsageQuotaConfig.config_file=<Unicode>
+UsageViewerConfig(UsageConfig) options
+--------------------------------------
+--UsageViewerConfig.config_file=<Unicode>
     Path to the config file to load. If not set, no config file is loaded.
     Default: ''
---UsageQuotaConfig.escape_username_scheme=<key-1>=<value-1>...
+--UsageViewerConfig.dev_mode=<Bool>
+    Enable development mode with mock data.
+    When True, the service returns mock storage usage data instead of querying
+    Prometheus. This is useful for local development without a real Prometheus
+    instance.
+    Mock data is only used when ALL three conditions are met: - dev_mode is
+    True, AND - prometheus_url is the default (http://127.0.0.1:9090), AND -
+    hub_namespace is empty
+    If either prometheus_url or hub_namespace is configured, the service will
+    query Prometheus even when dev_mode is True.
+    Default: False (production mode - always query Prometheus)
+    Default: False
+--UsageViewerConfig.enable_component=<key-1>=<value-1>...
+    Enable home storage and/or compute components on the usage quotas dashboard
+    Default: {'home_storage': False, 'compute': False}
+--UsageViewerConfig.escape_username_scheme=<key-1>=<value-1>...
     Kubespawner slug scheme for naming directories and pod names with escaped usernames. E.g
         - modern safe slugs for k8s pods and legacy slug for directory names (default): {"directory": "legacy", pod": "safe", max_length: 48},
     Default: {}
---UsageQuotaConfig.failover_open=<Bool>
-    In the case where the quota system fails, set to True to default to a fail-
-    open (allow all server launches) system or set to False to a fail-closed
-    (deny all server launches) system.
-    Default: True
---UsageQuotaConfig.hub_namespace=<Unicode>
+--UsageViewerConfig.hub_namespace=<Unicode>
     Kubernetes namespace of the JupyterHub deployment, used to filter Prometheus
     usage metrics in multi-tenant environments. Leave empty for single-tenant or
     development. Can be set via JUPYTERHUB_USAGE_QUOTAS_HUB_NAMESPACE
     environment variable.
     Default: ''
---UsageQuotaConfig.log_datefmt=<Unicode>
+--UsageViewerConfig.log_datefmt=<Unicode>
     The date format used by logging formatters for %(asctime)s
     Default: '%Y-%m-%d %H:%M:%S'
---UsageQuotaConfig.log_format=<Unicode>
+--UsageViewerConfig.log_format=<Unicode>
     The Logging format template
     Default: '[%(name)s]%(highlevel)s %(message)s'
---UsageQuotaConfig.log_level=<Enum>
+--UsageViewerConfig.log_level=<Enum>
     Set the log level by value or name.
     Choices: any of [0, 10, 20, 30, 40, 50, 'DEBUG', 'INFO', 'WARN', 'ERROR', 'CRITICAL']
     Default: 30
---UsageQuotaConfig.logging_config=<key-1>=<value-1>...
+--UsageViewerConfig.logging_config=<key-1>=<value-1>...
     Configure additional log handlers.
     The default stderr logs handler is configured by the log_level, log_datefmt
     and log_format settings.
@@ -71,23 +81,7 @@ UsageQuotaConfig(UsageConfig) options
            },
        }
     Default: {}
---UsageQuotaConfig.policy=<list-item-1>...
-    List usage quota policies, including resource, limits, rolling window period
-    and policy scope.
-    For example: '5,000 GiB-hours over 30 days for group A', is expressed as
-    c.UsageQuotaConfig.policy = [{
-        "resource": "memory",
-        "limit": {
-            "value": 5000,
-            "unit": "GiB-hours",
-        }
-        "window": 30, # days
-        "scope": {
-            "group": ["A"]
-        }
-    }]
-    Default: []
---UsageQuotaConfig.prometheus_auth=<key-1>=<value-1>...
+--UsageViewerConfig.prometheus_auth=<key-1>=<value-1>...
     Username and password credentials for authenticating with Prometheus.
     Can be set via JUPYTERHUB_USAGE_QUOTAS_PROMETHEUS_USERNAME and
     JUPYTERHUB_USAGE_QUOTAS_PROMETHEUS_PASSWORD environment variables.
@@ -97,56 +91,48 @@ UsageQuotaConfig(UsageConfig) options
             "password": "password",
         }
     Default: {}
---UsageQuotaConfig.prometheus_emit_interval=<Int>
-    Emit interval of Prometheus metric export (seconds).
-    Default: 60
---UsageQuotaConfig.prometheus_emit_namespace=<Unicode>
-    Prometheus namespace to prefix metric names.
-    Default: 'jupyterhub'
---UsageQuotaConfig.prometheus_scrape_interval=<Int>
-    Scrape interval of Prometheus sample collection (seconds).
-    Default: 60
---UsageQuotaConfig.prometheus_url=<Unicode>
+--UsageViewerConfig.prometheus_url=<Unicode>
     The url of the Prometheus server, usually of the form 'http://<k8s-service-
     name>.<k8s-namespace>.svc.cluster.local' in a Kubernetes cluster. Defaults
     to 'http://127.0.0.1:9090' for local development.
     Default: 'http://127.0.0.1:9090'
---UsageQuotaConfig.prometheus_usage_metrics=<key-1>=<value-1>...
-    Dict of Prometheus metrics to track usage. Must define at least one of:
-        - 'memory': PromQL expression
-        - 'cpu': PromQL expression
-    For example:
-        prometheus_usage_metrics = {
-                "memory": "kube_pod_container_resource_requests{resource='memory'}",
-                "cpu" : "kube_pod_container_resource_requests{resource='cpu'}"
-            }
-    Default: {}
---UsageQuotaConfig.scope_backup_strategy=<key-1>=<value-1>...
-    Set a backup strategy to resolve quotas in the case where the scope of the
-    quota policies are applied to an empty set, or an intersection, i.e. define
-    a default when a user has no or multiple quotas applied.
-    In the case where no quota is applied ('empty'), we can supply a default
-    quota policy or leave this as None for unlimited quotas; and where multiple
-    quotas are applied, we can apply either the `min`, `max` or `sum`.
-    For example, 'Apply a default memory quota of 500 GiB-hours over a rolling 7
-    day window for users with no groups, and apply the maximum quota available
-    for users with multiple groups.' is expressed as:
-    {
-        "empty": {
-            "resource": "memory",
-            "limit": {
-            "value": 500,
-            "unit": "GiB-hours"
-            },
-            "window": 7,
+--UsageViewerConfig.prometheus_usage_quota_metrics=<key-1>=<value-1>...
+    Prometheus metrics for querying storage and/or compute usage and quotas.
+    Defaults to:
+    c.UsageViewerConfig.prometheus_usage_quota_metrics = {
+        "home_storage": {
+            "usage": "dirsize_total_size_bytes",
+            "quota": "dirsize_hard_limit_bytes"
         },
-        "intersection": "max"
+        "compute": {
+            "usage": "jupyterhub_memory_usage_gibibyte_hours",
+            "quota": "jupyterhub_memory_limit_gibibyte_hours"
+        }
     }
-    Default: {'intersection': 'min'}
---UsageQuotaConfig.show_config=<Bool>
+    Default: {'home_storage': {'usage': 'dirsize_total_size_bytes', 'quota...
+--UsageViewerConfig.public_hub_url=<Unicode>
+    Public URL of the JupyterHub instance. Required. Automatically set by
+    JupyterHub via JUPYTERHUB_PUBLIC_HUB_URL environment variable.
+    Default: ''
+--UsageViewerConfig.service_host=<Unicode>
+    Host to bind the usage viewer service to
+    Default: '0.0.0.0'
+--UsageViewerConfig.service_port=<Int>
+    Port to bind the usage viewer service to
+    Default: 9000
+--UsageViewerConfig.service_prefix=<Unicode>
+    URL prefix for the service. Automatically set by JupyterHub when running as
+    a managed service. Defaults to /services/usage-quota.
+    Default: ''
+--UsageViewerConfig.session_secret_key=<Unicode>
+    Secret key for session cookie encryption. Required for secure sessions. Set
+    via config or JUPYTERHUB_USAGE_QUOTAS_SESSION_SECRET_KEY environment
+    variable.
+    Default: ''
+--UsageViewerConfig.show_config=<Bool>
     Instead of starting the Application, dump configuration to stdout
     Default: False
---UsageQuotaConfig.show_config_json=<Bool>
+--UsageViewerConfig.show_config_json=<Bool>
     Instead of starting the Application, dump configuration to stdout (as JSON)
     Default: False
 ```
