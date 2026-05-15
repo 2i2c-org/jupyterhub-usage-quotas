@@ -78,13 +78,47 @@ This quickstart guide assumes that the reader is running a [Zero to JupyterHub](
 
 ### Minimal z2jh configuration example
 
+#### Authentication
+
 Usage quota policies are applied to user groups, therefore this information needs to be available in a user's [`auth_state`](https://jupyterhub.readthedocs.io/en/stable/reference/authenticators.html#authentication-state). This minimal working example assumes a z2jh deployment that uses [OAuthenticator](https://oauthenticator.readthedocs.io/en/latest/) to handle authentication, specifically the [Generic OAuthenticator](https://oauthenticator.readthedocs.io/en/latest/tutorials/provider-specific-setup/providers/generic.html). Make sure that you set the appropriate configuration for your authenticator in addition to the minimal example below. See [User Group Management](../tutorial/user-group-management.md) for more details.
+
+#### Home Storage Quotas
 
 If you are using home storage quotas, then make sure that you set the appropriate configuration for [jupyterhub-home-nfs](https://github.com/2i2c-org/jupyterhub-home-nfs) in addition to the minimal example below.
 
-````{tip} Example
+#### Common Configuration
+
+The `jupyterhub-usage-quotas` library is composed of two main modules:
+
+1. The *manager* that enforces compute quotas at server launch time
+1. The *service* that runs the user-facing [usage quota dashboard](./usage-quota-dashboard.md).
+
+Configuration common to both modules include:
+
+- `c.UsageConfig.prometheus_url`: the server url of the Prometheus instance that is used as a source of truth for usage data
+- `c.UsageConfig.hub_namespace`: the Kubernetes namespace where the Hub pod is running
+
+You can mount this common configuration under [`extraFiles`](https://z2jh.jupyter.org/en/stable/resources/reference.html#hub-extrafiles) so that they can be referenced by both modules.
+
+#### Secrets Management
+
+The usage quota system relies on configuring sensitive secrets, such as session keys and credentials, including:
+
+- `c.UsageConfig.prometheus_auth`: credentials for the Prometheus server
+- `c.UsageViewer.secret_session_key`: maintain a secure session with the usage quotas dashboard without needing to log in again.
+
+You can also mount this secret configuration under [`extraFiles`](https://z2jh.jupyter.org/en/stable/resources/reference.html#hub-extrafiles) so that they can be referenced by both modules.
+
+```{tip}
+Make sure you encrypt any secrets files if using a version control system, using a tool such as [SOPS](https://getsops.io/).
+```
+
+#### Minimal Example
+
 ```{code} yaml
-:label: minimal-z2jh-config
+---
+label: minimal-z2jh-config
+---
 # config.yaml
 
 hub:
@@ -100,9 +134,6 @@ hub:
       scope:
         - group-0
       auth_state_groups_key: scope
-    UsageConfig:
-      hub_namespace: <k8s-hub-namespace>
-      prometheus_url: http://<prometheus-service-name>.<k8s-prometheus-namespace>.svc.cluster.local
     UsageQuotaManager:
       scope_backup_strategy:
         intersection: min
@@ -117,9 +148,15 @@ hub:
               - group-0
       failover_open: false
     extraConfig:
-      00-usage-quotas: |
+      00-usage-quota: |
         from jupyterhub_usage_quotas import setup_usage_quotas
         setup_usage_quotas(c)
+    extraFiles:
+      usage_quota_config:
+        mountPath: /usr/local/etc/jupyterhub/jupyterhub_config.d/jupyterhub_usage_quota_config.py
+        stringData: |
+          c.UsageConfig.prometheus_url: "http://<prometheus-service-name>.<k8s-prometheus-namespace>.svc.cluster.local"
+          c.UsageConfig.hub_namespace: "<k8s-hub-namespace>"
   services:
     usage-quota:
       url: http://hub:9000
@@ -129,8 +166,8 @@ hub:
         - python3
         - -m
         - jupyterhub_usage_quotas.services.usage_viewer
-          - --config-files=/usr/local/etc/jupyterhub/jupyterhub_config.py
-          - --config-files=/usr/local/etc/jupyterhub/jupyterhub_usage_quotas_config.py
+          - --config-files=/usr/local/etc/jupyterhub/jupyterhub_config.d/jupyterhub_usage_quota_config.py
+          - --config-files=/usr/local/etc/jupyterhub/jupyterhub_config.d/jupyterhub_usage_quota_config_secret.py
   loadRoles:
     usage-quota-service:
       scopes:
@@ -180,7 +217,25 @@ hub:
                     app.kubernetes.io/component: hub
             ports:
               - port: 9000
-  ```
-````
+```
+
+```{code} yaml
+---
+label: enc-minimal-z2jh-config
+---
+# enc-config.yaml
+# Note: this contains secrets so make sure you encrypt this file if using a version control system
+
+hub:
+  extraFiles:
+    usage_quota_config_secret:
+      mountPath: /usr/local/etc/jupyterhub/jupyterhub_config.d/jupyterhub_usage_quota_config_secret.py
+      stringData: |
+        c.UsageConfig.prometheus_auth = {
+          "username": "<prometheus_username>",
+          "password": "<prometheus_password>",
+        },
+        c.UsageViewer.session_secret_key: "<use-a-secure-key-in-production>"
+```
 
 See [Configuration](../reference/configuration.md) for a full list of configuration options.
