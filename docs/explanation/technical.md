@@ -123,13 +123,15 @@ The policy resolver deduces the policy applied to a user under the following thr
 
 ### Metric aggregation
 
-Prometheus collects metric samples on a regular basis that can be passed to `c.UsageQuotaManager.scrape_interval`. If the scrape interval is 60 seconds, then over 30 days there will be 43,200 samples. We divide the scrape interval by `60 * 60` to convert to **hours**.
+Prometheus collects metric samples on a regular basis that can be passed to `c.UsageQuotaManager.scrape_interval`. If the scrape interval is 60 seconds, then over 30 days there will be 43,200 samples.
 
 To calculate usage over the last 30 day window, we need to integrate over time for a result independent of the sample granularity:
 
 ```sql
 sum(sum_over_time(kube_pod_container_resource_requests{resource="memory|cpu"}[30d])) * scrape_interval
 ```
+
+We divide the result by `60 * 60` to convert to **hours**. If the metric is reporting memory consumption in bytes, we would also divide the result by `2^30` to convert to **GiB**.
 
 The result[^3] of the above PromQL pseudo-query is then compared against the each policy quota limit returned by the [policy resolver](#policy-resolver).
 
@@ -188,4 +190,4 @@ This can be consumed by [kubespawner](https://github.com/jupyterhub/kubespawner)
 
 [^2]: From a dollar-cost point of view, requested cloud resources are what providers charge for even if they are under-utilised. This metric is the same one that is used in the memory/cpu requests panel in the User Diagnostics Dashboard of [jupyterhub/grafana-dashboards](https://github.com/jupyterhub/grafana-dashboards).
 
-[^3]: Dimensional analysis: \[sum_over_time(kube_pod_container_resource_requests{resource="memory|cpu"}[30d]) * scrape_interval\] = ( sample * bytes ) * ( time / sample ) = bytes * time = [GiB-hour] ✅
+[^3]: Dimensional analysis: \[sum_over_time(kube_pod_container_resource_requests{resource="memory"}[30d]) * scrape_interval\] = ( sample * bytes ) * ( time / sample ) = bytes * time = [GiB-hour] ✅

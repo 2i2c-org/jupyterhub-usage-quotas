@@ -19,20 +19,16 @@ The service:
 - Queries Prometheus for compute metrics using the `jupyterhub_memory_usage_gibibyte_hours` and `jupyterhub_memory_limit_gibibyte_hours` (provided by [jupyterhub-usage-quotas](https://github.com/2i2c-org/jupyterhub-usage-quotas))
 - Displays a usage dashboard embedded in JupyterHub via an iframe to show users their current usage and quota
 
-When `dev_mode` is enabled (via `--dev-mode` flag), the service can return randomly generated mock data, which is useful for development without a Prometheus instance. Mock data is only used when ALL three conditions are met: (1) `dev_mode` is True, AND (2) `prometheus_url` is the default (`http://127.0.0.1:9090`), AND (3) hub_namespace is empty. If either `prometheus_url` or hub_namespace is configured, the service will query Prometheus even when `dev_mode` is `True`.
+When `dev_mode` is enabled (via `--dev-mode` flag), the service can return randomly generated mock data, which is useful for development without a Prometheus instance. Mock data is only used when ALL three conditions are met: (1) `dev_mode` is True, AND (2) `prometheus_url` is the default (`http://127.0.0.1:9090`), AND (3) `hub_namespace` is empty. If either `prometheus_url` or `hub_namespace` is configured, the service will query Prometheus even when `dev_mode` is `True`.
 
-## JupyterHub configuration
-
-Add the following to your `jupyterhub_config.py`:
+## JupyterHub configuration for local development
 
 ```python
-from jupyterhub_usage_quotas import UsageHandler, get_template_path
+# jupyterhub_config.py
 
-# Register the custom navbar link and iframe wrapper
-c.JupyterHub.extra_handlers = [
-    (r"/usage", UsageHandler),
-]
-c.JupyterHub.template_paths.insert(0, get_template_path())
+from jupyterhub_usage_quotas import setup_usage_quotas
+
+c = get_config()  # noqa
 
 # Register the service as a JupyterHub-managed subprocess
 c.JupyterHub.services = [
@@ -46,13 +42,8 @@ c.JupyterHub.services = [
             "python",
             "-m",
             "jupyterhub_usage_quotas.services.usage_viewer",
-            "--port=9000",
-            "--public-hub-url=<your-public-hub-url>",
-            "--prometheus-url=http://<prometheus-host>:9090",
-            "--hub-namespace=<namespace-of-the-hub>",
-            "--session-secret-key=<your-secret-key>",
-            # Optional: Enable development mode for mock data
-            # "--dev-mode",
+            "--config-files=jupyterhub_config.py",
+            "--config-files=jupyterhub_config_secret.py",
         ],
     }
 ]
@@ -68,11 +59,24 @@ c.JupyterHub.load_roles = [
         "scopes": ["access:services!service=usage-quota", "self"],
     },
 ]
+
+# Set up common usage quotas config
+setup_usage_quotas(c)
+```
+
+```python
+# jupyterhub_config_secret.py
+# Example config file for secret data, e.g. credentials and keys.
+# Make sure you ignore/encrypt this file if using with a version control system.
+
+c.UsageConfig.prometheus_auth = {"username": "", "password": ""}
+
+c.UsageViewer.session_secret_key = "use-a-secure-random-key-in-production"
 ```
 
 When a `command` is provided, JupyterHub launches and manages the service process automatically, injecting the necessary `JUPYTERHUB_*` environment variables.
 
-## Configuration
+## CLI Flags
 
 The service is configured via CLI flags (preferred) or traitlet configuration:
 
@@ -86,7 +90,7 @@ The service is configured via CLI flags (preferred) or traitlet configuration:
 | `--session-secret-key` | `session_secret_key` | **(required)**          | Secret key for session cookie encryption                                  |
 | `--public-hub-url`     | `public_hub_url`     | **(required)**          | Public URL of the JupyterHub instance                                     |
 
-### Environment variables
+## Environment Variables
 
 All configuration options can be set via environment variables as alternatives to CLI flags:
 
