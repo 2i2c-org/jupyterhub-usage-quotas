@@ -1,5 +1,7 @@
 import os
 
+from prometheus_client import REGISTRY, Counter
+
 from jupyterhub_usage_quotas.handler import UsageHandler
 from jupyterhub_usage_quotas.manager import SpawnException, UsageQuotaManager
 from jupyterhub_usage_quotas.metrics import MetricsExporter
@@ -33,6 +35,13 @@ def setup_usage_quotas(c):
 
     quota_manager = UsageQuotaManager(config=c)
 
+    FAIL_OPEN_TOTAL = Counter(
+        f"{quota_manager.prometheus_emit_namespace}_usage_quotas_fail_open_total",
+        "Number of fail open instances from the usage quota system",
+        ["namespace", "username"],
+        registry=REGISTRY,
+    )
+
     async def quota_pre_spawn_hook(spawner):
         try:
             user_name = spawner.user.name
@@ -40,8 +49,11 @@ def setup_usage_quotas(c):
             output = await quota_manager.enforce(user_name, user_groups)
             launch_flag = output["allow_server_launch"]
         except Exception as e:
-            if c.UsageQuotaManager.failover_open is True:
+            if quota_manager.failover_open is True:
                 launch_flag = True
+                FAIL_OPEN_TOTAL.labels(
+                    namespace=quota_manager.hub_namespace, username=user_name
+                ).inc()
                 quota_manager.log.error(
                     f"Usage quota system failed open for user {user_name} with exception: {e}."
                 )
