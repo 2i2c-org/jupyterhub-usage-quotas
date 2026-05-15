@@ -83,7 +83,7 @@ c.JupyterHub.services = [
             "-m",
             "jupyterhub_usage_quotas.services.usage_viewer",
             "--config-files=jupyterhub_config.py",
-            "--config-files=jupyterhub_usage_quotas_config.py",
+            "--config-files=jupyterhub_config_secret.py",
         ],
     }
 ]
