@@ -43,7 +43,7 @@ You can view any usage quotas applied to your account with the [Usage Quota Dash
 
 ### Prerequisites
 
-This quickstart guide assumes that the reader is running a [Zero to JupyterHub](https://z2jh.jupyter.org/en/stable/) deployment and has some knowledge of
+This quickstart guide assumes that the reader is running a [Zero to JupyterHub](https://z2jh.jupyter.org/en/stable/) deployment with a [Prometheus](https://prometheus.io/) instance scraping metrics from[`kube-state-metrics`](https://kubernetes.io/docs/concepts/cluster-administration/kube-state-metrics/) and optionally [`jupyterhub-home-nfs`](https://github.com/2i2c-org/jupyterhub-home-nfs) for home storage quotas (see [Explanation - Overview](../explanation/overview.md)), and has some knowledge of
 
 - [Kubernetes](https://kubernetes.io/)
 - [Helm](https://helm.sh/)
