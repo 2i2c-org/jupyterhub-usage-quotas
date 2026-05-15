@@ -28,7 +28,7 @@ class MetricsExporter(Application):
         self.convert_unit = {"GiB-hours": "gibibyte_hours"}
         self.metrics: dict = {}
 
-    def get_usernames_and_usergroups(self) -> list[tuple]:
+    def _get_usernames_and_usergroups(self) -> list[tuple]:
         """
         Get list of usernames and their respective usergroup memberships from the hub database.
         """
@@ -36,7 +36,7 @@ class MetricsExporter(Application):
         users_and_groups = [(u.name, [g.name for g in u.groups]) for u in users]
         return users_and_groups
 
-    def get_metrics(self, resource: str, unit: str) -> dict:
+    def get_usage_quota_metrics(self, resource: str, unit: str) -> dict:
         """
         Define Prometheus metric depending on policy resource, e.g. memory or cpu.
         """
@@ -56,7 +56,7 @@ class MetricsExporter(Application):
             output[key] = self.metrics[metric_name]
         return output
 
-    async def emit_metrics(
+    async def emit_usage_quota_metrics(
         self, user_name: str, user_groups: str, policies: list[dict]
     ):
         """
@@ -76,7 +76,9 @@ class MetricsExporter(Application):
                 else:
                     user_group = user_group_set.pop()
             # Dynamically define metrics based on policy values and set them
-            metric = self.get_metrics(resource=p["resource"], unit=p["limit"]["unit"])
+            metric = self.get_usage_quota_metrics(
+                resource=p["resource"], unit=p["limit"]["unit"]
+            )
             usage = await self.quota_manager.get_usage(user_name, p)
             value = self.quota_manager.aggregate_usage(usage)
             self.log.debug(f"{user_name=}, policy={p}, {value=}")
@@ -93,20 +95,23 @@ class MetricsExporter(Application):
                 namespace=self.hub_namespace,
             ).set(p["limit"]["value"])
 
-    async def update_metrics(self):
+    async def update_usage_quota_metrics(self):
         """
         Update Prometheus metrics for usage and quota limits.
         """
-        users_and_groups = self.get_usernames_and_usergroups()
+        users_and_groups = self._get_usernames_and_usergroups()
         for u in users_and_groups:
             policies = self.quota_manager.resolve_policy(
                 user_name=u[0], user_groups=u[1]
             )
-            await self.emit_metrics(user_name=u[0], user_groups=u[1], policies=policies)
+            await self.emit_usage_quota_metrics(
+                user_name=u[0], user_groups=u[1], policies=policies
+            )
         self.log.info("Usage quota metrics updated")
 
     def start(self):
         pc = PeriodicCallback(
-            self.update_metrics, 1e3 * self.quota_manager.prometheus_emit_interval
+            self.update_usage_quota_metrics,
+            1e3 * self.quota_manager.prometheus_emit_interval,
         )
         pc.start()

@@ -9,6 +9,12 @@ from jupyterhub.services.auth import (
     HubOAuthCallbackHandler,
     HubOAuthenticated,
 )
+from prometheus_client import (
+    CONTENT_TYPE_LATEST,
+    CollectorRegistry,
+    Counter,
+    generate_latest,
+)
 from tornado import web
 from tornado.httpserver import HTTPServer
 from tornado.httputil import url_concat
@@ -17,6 +23,15 @@ from tornado.ioloop import IOLoop
 from jupyterhub_usage_quotas import get_template_path
 from jupyterhub_usage_quotas.config import UsageViewerConfig
 from jupyterhub_usage_quotas.services.usage_viewer.quota_client import QuotaClient
+
+service_registry = CollectorRegistry()
+
+SERVICE_ERROR_TOTAL = Counter(
+    "jupyterhub_usage_quotas_service_error_total",
+    "Number of dashboard service errors from the usage quota system",
+    ["namespace", "username"],
+    registry=service_registry,
+)
 
 
 class UsageHandler(HubOAuthenticated, web.RequestHandler):
@@ -46,6 +61,9 @@ class UsageHandler(HubOAuthenticated, web.RequestHandler):
         enable_storage = self.settings["enable_home_storage"]
         enable_compute = self.settings["enable_compute"]
         if not enable_storage and not enable_compute:
+            SERVICE_ERROR_TOTAL.labels(
+                username=user["name"], namespace=self.settings["namespace"]
+            ).inc()
             self.set_status(404)
             template = jinja_env.get_template("usage-viewer-404.html")
             return self.finish(template.render())
@@ -58,6 +76,11 @@ class UsageHandler(HubOAuthenticated, web.RequestHandler):
             compute_data = await self.settings["quota_client"].get_user_compute_usage(
                 user["name"]
             )
+        if "error" in set(storage_data.keys()) or set(compute_data.keys()):
+            SERVICE_ERROR_TOTAL.labels(
+                username=user["name"], namespace=self.settings["namespace"]
+            ).inc()
+            self.set_status(424)
         template = jinja_env.get_template("usage.html")
         self.finish(
             template.render(
@@ -67,6 +90,12 @@ class UsageHandler(HubOAuthenticated, web.RequestHandler):
                 enable_compute=enable_compute,
             )
         )
+
+
+class MetricsHandler(web.RequestHandler):
+    def get(self):
+        self.set_header("Content-Type", CONTENT_TYPE_LATEST)
+        self.write(generate_latest(service_registry))
 
 
 def make_app(
@@ -91,10 +120,12 @@ def make_app(
         [
             (prefix + r"/?", UsageHandler),
             (prefix + r"/oauth_callback", HubOAuthCallbackHandler),
+            (prefix + r"/metrics", MetricsHandler),
         ],
         cookie_secret=config.session_secret_key,
         enable_home_storage=config.enable_home_storage,
         enable_compute=config.enable_compute,
+        namespace=config.hub_namespace,
         quota_client=quota_client,
         jinja_env=jinja_env,
     )
