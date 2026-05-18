@@ -76,7 +76,9 @@ class UsageHandler(HubOAuthenticated, web.RequestHandler):
             compute_data = await self.settings["quota_client"].get_user_compute_usage(
                 user["name"]
             )
-        if "error" in set(storage_data.keys()) or set(compute_data.keys()):
+        if "error" in set(storage_data.keys()) or "error" in set().union(
+            *(c.keys() for c in compute_data)
+        ):
             SERVICE_ERROR_TOTAL.labels(
                 username=user["name"], namespace=self.settings["namespace"]
             ).inc()
