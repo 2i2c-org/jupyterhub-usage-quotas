@@ -147,6 +147,14 @@ class UsageConfig(Application):
     def _hub_namespace_default(self):
         return os.environ.get("JUPYTERHUB_USAGE_QUOTAS_HUB_NAMESPACE", "")
 
+    enable_compute_metrics_exporter = Bool(
+        help="Enable the Prometheus metrics exporter for compute usage and quotas."
+    ).tag(config=True)
+
+    @default("enable_compute_metrics_exporter")
+    def _enable_compute_metrics_exporter(self):
+        return True
+
     escape_username_scheme = Dict(
         per_key_traits={
             "directory": Unicode(),

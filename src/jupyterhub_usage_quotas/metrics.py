@@ -115,3 +115,4 @@ class MetricsExporter(Application):
             1e3 * self.quota_manager.prometheus_emit_interval,
         )
         pc.start()
+        self.log.info("Starting compute metrics exporter")

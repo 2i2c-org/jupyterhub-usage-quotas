@@ -72,5 +72,8 @@ def setup_usage_quotas(c):
     c.KubeSpawner.pre_spawn_hook = quota_pre_spawn_hook
 
     # Start Prometheus metrics exporter
-    metrics_exporter = MetricsExporter(quota_manager)
-    metrics_exporter.start()
+    if c.UsageConfig.enable_compute_metrics_exporter == False:
+        print("Compute metrics exporter disabled")
+    else:
+        metrics_exporter = MetricsExporter(quota_manager)
+        metrics_exporter.start()
