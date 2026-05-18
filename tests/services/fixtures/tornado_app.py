@@ -67,6 +67,7 @@ class UsageViewerTestCase(AsyncHTTPTestCase):
         super().tearDown()
         self._hub_auth_patcher.stop()
         self._storage_patcher.stop()
+        self._compute_patcher.stop()
 
     def get_app(self):
         client = QuotaClient(
