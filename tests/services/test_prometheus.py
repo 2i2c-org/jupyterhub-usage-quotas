@@ -111,8 +111,8 @@ class TestGetUserComputeUsageWithPrometheus:
         usage_data = await client.get_user_compute_usage(username="testuser")
         assert len(usage_data) == 2
         # check ordering by -percentage and then window
-        assert usage_data[0]["percentage"] > usage_data[1]["percentage"]
-        assert usage_data[0]["window"] < usage_data[1]["window"]
+        assert [round(u["percentage"], 1) for u in usage_data] == [90.0, 55.0]
+        assert [u["window"] for u in usage_data] == [1, 7]
 
     @pytest.mark.asyncio
     async def test_returns_error_when_prometheus_unreachable(self):
