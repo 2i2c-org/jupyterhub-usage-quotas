@@ -23,6 +23,11 @@ STORAGE_MODULE = (
     ".quota_client.QuotaClient.get_user_storage_usage"
 )
 
+COMPUTE_MODULE = (
+    "jupyterhub_usage_quotas.services.usage_viewer"
+    ".quota_client.QuotaClient.get_user_compute_usage"
+)
+
 PROMETHEUS_METRICS = {
     "home_storage": {
         "usage": "dirsize_total_size_bytes",
@@ -53,6 +58,9 @@ class UsageViewerTestCase(AsyncHTTPTestCase):
         self._storage_patcher = patch(STORAGE_MODULE, new_callable=AsyncMock)
         self.mock_storage = self._storage_patcher.start()
 
+        self._compute_patcher = patch(COMPUTE_MODULE, new_callable=AsyncMock)
+        self.mock_compute = self._compute_patcher.start()
+
         super().setUp()
 
     def tearDown(self):
@@ -70,7 +78,5 @@ class UsageViewerTestCase(AsyncHTTPTestCase):
         config = UsageViewerConfig()
         config.service_prefix = "/services/usage-quota/"
         config.public_hub_url = "http://test-hub:8000"
-        config.enable_home_storage = True
-        config.enable_compute = True
         config.session_secret_key = "0" * 64
         return make_app(client, config)
