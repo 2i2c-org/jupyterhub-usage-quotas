@@ -89,6 +89,10 @@ c = get_config()  #noqa
 #  Default: []
 # c.UsageConfig.config_files = []
 
+## Enable the Prometheus metrics exporter for compute usage and quotas.
+#  Default: False
+# c.UsageConfig.enable_compute_metrics_exporter = False
+
 ## Kubespawner slug scheme for naming directories and pod names with escaped usernames. E.g
 #      - modern safe slugs for k8s pods and legacy slug for directory names (default): {"directory": "legacy", pod": "safe", max_length: 48},
 #  Default: {}

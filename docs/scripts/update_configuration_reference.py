@@ -2,6 +2,8 @@
 
 # Make sure you are using the `hatch shell dev` environment when running this script
 
+from pathlib import Path
+
 from jupyterhub_usage_quotas.config import (
     UsageConfig,
     UsageQuotaConfig,
@@ -14,8 +16,10 @@ file_config_map = {
     "UsageViewerConfig": UsageViewerConfig,
 }
 
+filepath = Path(__file__).parent.parent.resolve()
+
 for item in file_config_map:
-    with open(f"../reference/{item}.md", "w") as f:
+    with open(f"{filepath}/reference/{item}.md", "w") as f:
         instance = file_config_map[item]()
         content = instance.generate_config_file()
         label = item.lower().replace("config", "-config")
