@@ -5,6 +5,14 @@ from yarl import URL
 
 logger = logging.getLogger(__name__)
 
+from prometheus_client import REGISTRY, Counter
+
+PROMETHEUS_ERROR_TOTAL = Counter(
+    "jupyterhub_usage_quotas_prometheus_error_total",
+    "Number of Prometheus errors from the usage quota system",
+    registry=REGISTRY,
+)
+
 
 class Client:
     def __init__(self, token: str | None = None):
@@ -56,8 +64,10 @@ class PrometheusClient(Client):
                 data = await response.json()
                 return data
         except aiohttp.ClientError as e:
+            PROMETHEUS_ERROR_TOTAL.inc()
             logger.error(f"Error querying Prometheus: {e}")
             raise
         except Exception as e:
-            logger.error(f"Unexpected error: {e}")
+            PROMETHEUS_ERROR_TOTAL.inc()
+            logger.error(f"Unexpected error querying Prometheus: {e}")
             raise
