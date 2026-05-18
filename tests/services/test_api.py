@@ -41,7 +41,7 @@ class TestHomeRoute(UsageViewerTestCase):
         self.mock_hub_auth.get_user.return_value = TEST_USER
 
         response = self.fetch("/services/usage-quota")
-        assert response.code == 200
+        assert response.code == 424
         body = response.body.decode()
         assert "Unable to reach Prometheus" in body
         assert "error-message" in body
@@ -52,7 +52,7 @@ class TestHomeRoute(UsageViewerTestCase):
         self.mock_hub_auth.get_user.return_value = TEST_USER
 
         response = self.fetch("/services/usage-quota")
-        assert response.code == 200
+        assert response.code == 424
         assert b"No storage data found" in response.body
 
     def test_home_with_high_usage_displays_warning(self):
