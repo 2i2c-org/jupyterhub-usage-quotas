@@ -34,8 +34,8 @@ SERVICE_ERROR_TOTAL = Counter(
 )
 
 
-class UsageHandler(HubOAuthenticated, web.RequestHandler):
-    """Tornado request handler that renders usage for authenticated users."""
+class BaseHandler(HubOAuthenticated, web.RequestHandler):
+    """Base class handler to authenticate users with service"""
 
     async def prepare(self):
         """Send a JS redirect for unauthenticated users before the handler runs.
@@ -53,6 +53,10 @@ class UsageHandler(HubOAuthenticated, web.RequestHandler):
             self.finish(
                 f"<script>window.top.location.href={json.dumps(login_url)};</script>"
             )
+
+
+class UsageHandler(BaseHandler):
+    """Tornado request handler that renders usage for authenticated users."""
 
     async def get(self):
         """Render the storage usage page for the authenticated user."""
@@ -94,10 +98,16 @@ class UsageHandler(HubOAuthenticated, web.RequestHandler):
         )
 
 
-class MetricsHandler(web.RequestHandler):
+class MetricsHandler(BaseHandler):
+    """Handler for service metrics endpoint."""
+
     def get(self):
-        self.set_header("Content-Type", CONTENT_TYPE_LATEST)
-        self.write(generate_latest(service_registry))
+        user = self.get_current_user()
+        if not user["admin"]:
+            self.set_status(403)
+        else:
+            self.set_header("Content-Type", CONTENT_TYPE_LATEST)
+            self.write(generate_latest(service_registry))
 
 
 def make_app(
