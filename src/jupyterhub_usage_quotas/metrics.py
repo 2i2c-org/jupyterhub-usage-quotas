@@ -1,10 +1,10 @@
 import logging
 
-from jupyterhub import orm
 from prometheus_client import REGISTRY, Gauge
 from tornado.ioloop import PeriodicCallback
 from traitlets.config import Application
 
+from jupyterhub_usage_quotas.client import HubApiClient
 from jupyterhub_usage_quotas.manager import UsageQuotaManager
 
 
@@ -12,7 +12,6 @@ class MetricsExporter(Application):
     def __init__(
         self,
         quota_manager: UsageQuotaManager,
-        db_url: str = "sqlite:///jupyterhub.sqlite",
         **kwargs,
     ):
         super().__init__(**kwargs)
@@ -20,20 +19,23 @@ class MetricsExporter(Application):
         self.log = logging.getLogger(__name__)
         self.log.parent = parent_log
         self.log.info("Starting metrics exporter for usage quotas system.")
-        session = orm.new_session_factory(db_url)
-        self.db = session()
         self.quota_manager = quota_manager
+        self.hub_url = self.quota_manager.hub_url
         self.hub_namespace = self.quota_manager.hub_namespace
         self.prometheus_namespace = self.quota_manager.prometheus_emit_namespace
+        self.metrics_exporter_token = self.quota_manager.metrics_exporter_token
         self.convert_unit = {"GiB-hours": "gibibyte_hours"}
         self.metrics: dict = {}
 
-    def _get_usernames_and_usergroups(self) -> list[tuple]:
+    async def _get_usernames_and_usergroups(self) -> list[tuple]:
         """
         Get list of usernames and their respective usergroup memberships from the hub database.
         """
-        users = self.db.query(orm.User).all()
-        users_and_groups = [(u.name, [g.name for g in u.groups]) for u in users]
+        client = HubApiClient(
+            hub_url=self.hub_url, api_token=self.metrics_exporter_token
+        )
+        users = await client.query(path="hub/api/users")
+        users_and_groups = [(u["name"], u["groups"]) for u in users]
         return users_and_groups
 
     def get_usage_quota_metrics(self, resource: str, unit: str) -> dict:
@@ -99,7 +101,7 @@ class MetricsExporter(Application):
         """
         Update Prometheus metrics for usage and quota limits.
         """
-        users_and_groups = self._get_usernames_and_usergroups()
+        users_and_groups = await self._get_usernames_and_usergroups()
         for u in users_and_groups:
             policies = self.quota_manager.resolve_policy(
                 user_name=u[0], user_groups=u[1]
