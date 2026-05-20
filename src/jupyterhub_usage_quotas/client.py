@@ -13,6 +13,12 @@ PROMETHEUS_ERROR_TOTAL = Counter(
     registry=REGISTRY,
 )
 
+HUB_API_ERROR_TOTAL = Counter(
+    "jupyterhub_usage_quotas_hub_api_error_total",
+    "Number of Hub REST API errors from the usage quota system",
+    registry=REGISTRY,
+)
+
 
 class Client:
     def __init__(self, token: str | None = None):
@@ -70,4 +76,27 @@ class PrometheusClient(Client):
         except Exception as e:
             PROMETHEUS_ERROR_TOTAL.inc()
             logger.error(f"Unexpected error querying Prometheus: {e}")
+            raise
+
+
+class HubApiClient(Client):
+    def __init__(self, hub_url: str, api_token: str | None = None, **kwargs):
+        super().__init__(token=api_token, **kwargs)
+        self.hub_url = URL(hub_url)
+
+    async def query(self, path: str):
+        query_url = self.hub_url.joinpath(path)
+        session = await self._get_session()
+        try:
+            async with session.get(query_url) as response:
+                response.raise_for_status()
+                data = await response.json()
+                return data
+        except aiohttp.ClientError as e:
+            HUB_API_ERROR_TOTAL.inc()
+            logger.error(f"Error querying Hub REST API: {e}")
+            raise
+        except Exception as e:
+            HUB_API_ERROR_TOTAL.inc()
+            logger.error(f"Unexpected error querying Hub REST API: {e}")
             raise
