@@ -139,6 +139,11 @@ class UsageConfig(Application):
             )
         return auth
 
+    hub_url = Unicode(
+        help="JupyterHub URL, e.g. http://localhost:8000 for local development.",
+        default=f"http://{os.environ.get('HUB_SERVICE_HOST')}:{os.environ.get('HUB_SERVICE_PORT')}",
+    ).tag(config=True)
+
     hub_namespace = Unicode(
         help="Kubernetes namespace of the JupyterHub deployment, used to filter Prometheus usage metrics in multi-tenant environments. Leave empty for single-tenant or development. Can be set via JUPYTERHUB_USAGE_QUOTAS_HUB_NAMESPACE environment variable.",
     ).tag(config=True)
@@ -213,6 +218,10 @@ class UsageQuotaConfig(UsageConfig):
 
     prometheus_emit_namespace = Unicode(
         "jupyterhub", help="Prometheus namespace to prefix metric names."
+    ).tag(config=True)
+
+    metrics_exporter_token = Unicode(
+        help="API token to authenticate requests from metrics exporter."
     ).tag(config=True)
 
     scope_backup_strategy = Dict(

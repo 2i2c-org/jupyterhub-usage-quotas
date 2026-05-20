@@ -34,6 +34,7 @@ c.Authenticator.admin_users = {"admin"}
 # Usage Quotas
 
 c.UsageConfig.hub_namespace = "staging"
+c.UsageConfig.hub_url = "http://localhost:8000"
 
 # Usage Quota Config
 
@@ -69,8 +70,7 @@ c.UsageQuotaManager.policy = [
     },
 ]
 
-# Usage Quota Service (optional — displays usage dashboard to users)
-# Install with: pip install jupyterhub-usage-quotas[service]
+c.UsageQuotaManager.metrics_exporter_token = "<use-z2jh-k8s-secret-in-production>"
 
 c.JupyterHub.services = [
     {
@@ -85,18 +85,27 @@ c.JupyterHub.services = [
             "--config-files=jupyterhub_config.py",
             "--config-files=jupyterhub_config_secret.py",
         ],
-    }
+    },
+    {
+        "name": "metrics-exporter",
+        "api_token": c.UsageQuotaManager.metrics_exporter_token,
+    },
 ]
 
 c.JupyterHub.load_roles = [
     {
-        "name": "usage-quota-service",
+        "name": "usage-quota-role",
         "scopes": ["read:users"],
         "services": ["usage-quota"],
     },
     {
         "name": "user",
         "scopes": ["access:services!service=usage-quota", "self"],
+    },
+    {
+        "name": "metrics-exporter-role",
+        "scopes": ["users"],
+        "services": ["metrics-exporter"],
     },
 ]
 
