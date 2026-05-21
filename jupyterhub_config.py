@@ -31,6 +31,16 @@ c.JupyterHub.load_groups = {
 }
 c.Authenticator.admin_users = {"admin"}
 
+c.JupyterHub.spawner_class = "kubespawner.KubeSpawner"
+
+
+def my_hook(spawner):
+    username = spawner.user.name
+    spawner.environment["GREETING"] = f"Hello {username}"
+
+
+c.Spawner.pre_spawn_hook = my_hook
+
 # Usage Quotas
 
 c.UsageConfig.hub_namespace = "staging"
@@ -109,5 +119,6 @@ c.JupyterHub.load_roles = [
     },
 ]
 
-# Set up common usage quotas config
-setup_usage_quotas(c)
+# Set up usage quotas config
+existing_hook = c.Spawner.pre_spawn_hook
+setup_usage_quotas(c, existing_hook)

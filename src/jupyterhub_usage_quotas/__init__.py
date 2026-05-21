@@ -1,3 +1,4 @@
+import inspect
 import os
 
 from prometheus_client import REGISTRY, Counter
@@ -14,7 +15,7 @@ def get_template_path():
     return os.path.join(os.path.dirname(__file__), "templates")
 
 
-def setup_usage_quotas(c):
+def setup_usage_quotas(c, existing_hook):
     """
     Setup common config to enable the usage quotas system.
 
@@ -25,8 +26,6 @@ def setup_usage_quotas(c):
     c.JupyterHub.template_paths.insert(0, get_template_path())
 
     c.JupyterHub.extra_handlers.append((r"/usage", UsageHandler))
-
-    c.JupyterHub.spawner_class = "kubespawner.KubeSpawner"
 
     c.UsageQuotaManager.prometheus_usage_metrics = {
         "memory": "kube_pod_container_resource_requests{resource='memory'}",
@@ -69,7 +68,19 @@ def setup_usage_quotas(c):
                 html_message=f"<p>Compute {output['quota']['resource']} quota limit exceeded.</p><p style='font-size:100%'>You have used <span style='color:var(--bs-red)'>{output['quota']['used']:.2f}</span> / {output['quota']['limit']['value']:.2f} {output['quota']['limit']['unit']} in the last {output['quota']['window']} days.</p><p style='font-size:100%'>Your quota will reset on <b><time datetime='{output['error']['retry_time']}'>{output['error']['retry_time']}</time></b>.</p><p style='font-size:100%'>Contact your JupyterHub admin if you need additional quota.</p><i style='font-size:100%;color:var(--bs-gray)'>Last updated: <time datetime='{output['timestamp']}'>{output["timestamp"]}</time>.</i>",
             )
 
-    c.KubeSpawner.pre_spawn_hook = quota_pre_spawn_hook
+    async def pre_spawn_hook(spawner):
+        """
+        Run any existing pre_spawn_hooks before running quota_pre_spawn_hook.
+        """
+        if existing_hook:
+            is_coroutine = inspect.iscoroutinefunction(existing_hook)
+            if is_coroutine:
+                await existing_hook(spawner)
+            else:
+                existing_hook(spawner)
+        await quota_pre_spawn_hook(spawner)
+
+    c.KubeSpawner.pre_spawn_hook = pre_spawn_hook
 
     # Start Prometheus metrics exporter
     metrics_exporter = MetricsExporter(quota_manager)
