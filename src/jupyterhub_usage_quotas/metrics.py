@@ -31,10 +31,10 @@ class MetricsExporter(Application):
         """
         Get list of usernames and their respective usergroup memberships from the hub database.
         """
-        client = HubApiClient(
+        async with HubApiClient(
             hub_url=self.hub_url, api_token=self.metrics_exporter_token
-        )
-        users = await client.query(path="hub/api/users")
+        ) as client:
+            users = await client.query(path="hub/api/users")
         users_and_groups = [(u["name"], u["groups"]) for u in users]
         return users_and_groups
 
