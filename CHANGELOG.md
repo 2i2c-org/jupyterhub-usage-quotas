@@ -1,5 +1,35 @@
 # Changelog
 
+## v0.1.2 2026-05-21
+
+([full changelog](https://github.com/2i2c-org/jupyterhub-usage-quotas/compare/v0.1.1...59fdd58e0c6d911a99dd8a8daf18f941e8852651))
+
+### Enhancements made
+
+- feat: don"t override existing pre-spawn hooks [#55](https://github.com/2i2c-org/jupyterhub-usage-quotas/pull/55) ([@jnywong](https://github.com/jnywong), [@sunu](https://github.com/sunu))
+- feat: add BaseHandler [#52](https://github.com/2i2c-org/jupyterhub-usage-quotas/pull/52) ([@jnywong](https://github.com/jnywong))
+- feat: add metrics for monitoring [#51](https://github.com/2i2c-org/jupyterhub-usage-quotas/pull/51) ([@jnywong](https://github.com/jnywong))
+- feat: tweak config [#49](https://github.com/2i2c-org/jupyterhub-usage-quotas/pull/49) ([@jnywong](https://github.com/jnywong))
+- feat: consolidate config [#48](https://github.com/2i2c-org/jupyterhub-usage-quotas/pull/48) ([@jnywong](https://github.com/jnywong))
+
+### Maintenance and upkeep improvements
+
+- fix: patch api client and hub_url config [#56](https://github.com/2i2c-org/jupyterhub-usage-quotas/pull/56) ([@jnywong](https://github.com/jnywong))
+- refactor: Use hub REST API to get user and groups for metrics exporter [#54](https://github.com/2i2c-org/jupyterhub-usage-quotas/pull/54) ([@jnywong](https://github.com/jnywong))
+
+### Documentation
+
+- docs: Update quickstart [#50](https://github.com/2i2c-org/jupyterhub-usage-quotas/pull/50) ([@jnywong](https://github.com/jnywong))
+
+### Contributors to this release
+
+The following people contributed discussions, new ideas, code and documentation contributions, and review.
+See [our definition of contributors](https://github-activity.readthedocs.io/en/latest/use/#how-does-this-tool-define-contributions-in-the-reports).
+
+([GitHub contributors page for this release](https://github.com/2i2c-org/jupyterhub-usage-quotas/graphs/contributors?from=2026-05-13&to=2026-05-21&type=c))
+
+@jnywong ([activity](https://github.com/search?q=repo%3A2i2c-org%2Fjupyterhub-usage-quotas+involves%3Ajnywong+updated%3A2026-05-13..2026-05-21&type=Issues)) | @sunu ([activity](https://github.com/search?q=repo%3A2i2c-org%2Fjupyterhub-usage-quotas+involves%3Asunu+updated%3A2026-05-13..2026-05-21&type=Issues))
+
 ## v0.1.1 2026-05-13
 
 ([full changelog](https://github.com/2i2c-org/jupyterhub-usage-quotas/compare/v0.1.0b1...e084a6fd31f6c3a24818490269fd2f9833b6a580))
