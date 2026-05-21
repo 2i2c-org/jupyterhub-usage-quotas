@@ -140,9 +140,12 @@ class UsageConfig(Application):
         return auth
 
     hub_url = Unicode(
-        help="JupyterHub URL, e.g. http://localhost:8000 for local development.",
-        default=f"http://{os.environ.get('HUB_SERVICE_HOST')}:{os.environ.get('HUB_SERVICE_PORT')}",
+        help="JupyterHub URL, e.g. http://localhost:8000 for local development."
     ).tag(config=True)
+
+    @default("hub_url")
+    def _hub_url_default(self):
+        return f"http://{os.environ.get('HUB_SERVICE_HOST')}:{os.environ.get('HUB_SERVICE_PORT')}"
 
     hub_namespace = Unicode(
         help="Kubernetes namespace of the JupyterHub deployment, used to filter Prometheus usage metrics in multi-tenant environments. Leave empty for single-tenant or development. Can be set via JUPYTERHUB_USAGE_QUOTAS_HUB_NAMESPACE environment variable.",
