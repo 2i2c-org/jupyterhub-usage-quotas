@@ -25,7 +25,7 @@ class Client:
         self.session: aiohttp.ClientSession | None = None
         self.token = token
 
-    async def _get_session(
+    def _get_session(
         self, auth: aiohttp.BasicAuth | None = None
     ) -> aiohttp.ClientSession:
         if self.session is None or self.session.closed:
@@ -60,7 +60,7 @@ class PrometheusClient(Client):
         self.query_url = self.prometheus_url.joinpath("api/v1/query")
 
     async def query(self, promql: str) -> dict:
-        session = await self._get_session(auth=self.auth)
+        session = self._get_session(auth=self.auth)
         params = {
             "query": promql,
         }
@@ -86,7 +86,7 @@ class HubApiClient(Client):
 
     async def query(self, path: str):
         query_url = self.hub_url.joinpath(path)
-        session = await self._get_session()
+        session = self._get_session()
         try:
             async with session.get(query_url) as response:
                 response.raise_for_status()
