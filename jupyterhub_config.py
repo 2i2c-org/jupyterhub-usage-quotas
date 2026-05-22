@@ -8,6 +8,8 @@ from jupyterhub_usage_quotas import setup_usage_quotas
 
 c = get_config()  # noqa
 
+load_subconfig("jupyterhub_config_secret.py")  # noqa
+
 # JupyterHub
 
 c.JupyterHub.ip = "127.0.0.1"
@@ -80,9 +82,7 @@ c.UsageQuotaManager.policy = [
     },
 ]
 
-c.UsageQuotaManager.metrics_exporter_token = "<use-z2jh-k8s-secret-in-production>"
-
-c.JupyterHub.services = [
+c.JupyterHub.services.append(
     {
         "name": "usage-quota",
         "url": "http://localhost:9000",
@@ -95,12 +95,8 @@ c.JupyterHub.services = [
             "--config-files=jupyterhub_config.py",
             "--config-files=jupyterhub_config_secret.py",
         ],
-    },
-    {
-        "name": "metrics-exporter",
-        "api_token": c.UsageQuotaManager.metrics_exporter_token,
-    },
-]
+    }
+)
 
 c.JupyterHub.load_roles = [
     {
@@ -120,5 +116,7 @@ c.JupyterHub.load_roles = [
 ]
 
 # Set up usage quotas config
-existing_hook = c.Spawner.pre_spawn_hook
+existing_hook = getattr(c.Spawner, "pre_spawn_hook", None)
+if not callable(existing_hook):
+    existing_hook = None
 setup_usage_quotas(c, existing_hook)
