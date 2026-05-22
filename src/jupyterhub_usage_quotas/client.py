@@ -86,11 +86,11 @@ class HubApiClient(Client):
     def __init__(
         self,
         hub_url: str,
-        api_token: str | None = None,
         headers: dict | None = None,
+        api_token: str | None = None,
         **kwargs,
     ):
-        super().__init__(token=api_token, headers=headers, *kwargs)
+        super().__init__(headers=headers, token=api_token, **kwargs)
         self.hub_url = URL(hub_url)
 
     async def query(self, path: str, query: str | None = None):

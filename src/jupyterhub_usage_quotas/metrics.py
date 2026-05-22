@@ -36,8 +36,8 @@ class MetricsExporter(Application):
         endpoint = "hub/api/users"
         async with HubApiClient(
             hub_url=self.hub_url,
-            api_token=self.metrics_exporter_token,
             headers=self.headers,
+            api_token=self.metrics_exporter_token,
         ) as client:
             data = await client.query(path=endpoint)
             if "_pagination" in data.keys():
