@@ -3,6 +3,7 @@ import logging
 from prometheus_client import REGISTRY, Gauge
 from tornado.ioloop import PeriodicCallback
 from traitlets.config import Application
+from yarl import URL
 
 from jupyterhub_usage_quotas.client import HubApiClient
 from jupyterhub_usage_quotas.manager import UsageQuotaManager
@@ -22,6 +23,7 @@ class MetricsExporter(Application):
         self.quota_manager = quota_manager
         self.hub_url = self.quota_manager.hub_url
         self.hub_namespace = self.quota_manager.hub_namespace
+        self.headers = {"Accept": "application/jupyterhub-pagination+json"}
         self.prometheus_namespace = self.quota_manager.prometheus_emit_namespace
         self.metrics_exporter_token = self.quota_manager.metrics_exporter_token
         self.convert_unit = {"GiB-hours": "gibibyte_hours"}
@@ -31,10 +33,22 @@ class MetricsExporter(Application):
         """
         Get list of usernames and their respective usergroup memberships from the hub database.
         """
+        endpoint = "hub/api/users"
         async with HubApiClient(
-            hub_url=self.hub_url, api_token=self.metrics_exporter_token
+            hub_url=self.hub_url,
+            headers=self.headers,
+            api_token=self.metrics_exporter_token,
         ) as client:
-            users = await client.query(path="hub/api/users")
+            data = await client.query(path=endpoint)
+            if "_pagination" in data.keys():
+                users = data["items"]
+                next_info = URL(data["_pagination"]["next"]["url"]).path_qs
+                while next_info:
+                    data = await client.query(path=endpoint, query=next_info)
+                    next_info = data["_pagination"]["next"]
+                    users.extend(data["items"])
+            else:
+                users = data
         users_and_groups = [(u["name"], u["groups"]) for u in users]
         return users_and_groups
 
@@ -51,7 +65,7 @@ class MetricsExporter(Application):
                 self.metrics[metric_name] = Gauge(
                     metric_name,
                     f"Resource {key} for {resource} from usage quota system.",
-                    ["namespace", "usergroup", "username", "window"],
+                    ["namespace", "policy_group", "username", "window"],
                     namespace=self.prometheus_namespace,
                     registry=REGISTRY,
                 )
@@ -86,13 +100,13 @@ class MetricsExporter(Application):
             self.log.debug(f"{user_name=}, policy={p}, {value=}")
             metric["usage"].labels(
                 username=user_name,
-                usergroup=user_group,
+                policy_group=user_group,
                 window=str(p["window"]),
                 namespace=self.hub_namespace,
             ).set(value)
             metric["limit"].labels(
                 username=user_name,
-                usergroup=user_group,
+                policy_group=user_group,
                 window=str(p["window"]),
                 namespace=self.hub_namespace,
             ).set(p["limit"]["value"])

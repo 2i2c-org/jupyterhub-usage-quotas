@@ -3,3 +3,12 @@
 c.UsageConfig.prometheus_auth = {"username": "", "password": ""}
 
 c.UsageViewer.session_secret_key = "use-a-secure-random-key-in-production"
+
+c.UsageQuotaManager.metrics_exporter_token = "use-a-secure-random-key-in-production"
+
+c.JupyterHub.services = [
+    {
+        "name": "metrics-exporter",
+        "api_token": c.UsageQuotaManager.metrics_exporter_token,
+    },
+]
