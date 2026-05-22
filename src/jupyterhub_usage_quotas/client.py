@@ -21,8 +21,9 @@ HUB_API_ERROR_TOTAL = Counter(
 
 
 class Client:
-    def __init__(self, token: str | None = None):
+    def __init__(self, headers: dict | None = None, token: str | None = None):
         self.session: aiohttp.ClientSession | None = None
+        self.headers = headers
         self.token = token
 
     def _get_session(
@@ -32,6 +33,8 @@ class Client:
             headers = {}
             if self.token:
                 headers["Authorization"] = f"token {self.token}"
+            if self.headers:
+                headers.update(self.headers.items())
             self.session = aiohttp.ClientSession(headers=headers, auth=auth)
         return self.session
 
@@ -80,12 +83,18 @@ class PrometheusClient(Client):
 
 
 class HubApiClient(Client):
-    def __init__(self, hub_url: str, api_token: str | None = None, **kwargs):
-        super().__init__(token=api_token, **kwargs)
+    def __init__(
+        self,
+        hub_url: str,
+        api_token: str | None = None,
+        headers: dict | None = None,
+        **kwargs,
+    ):
+        super().__init__(token=api_token, headers=headers, *kwargs)
         self.hub_url = URL(hub_url)
 
-    async def query(self, path: str):
-        query_url = self.hub_url.joinpath(path)
+    async def query(self, path: str, query: str | None = None):
+        query_url = self.hub_url.with_path(path).with_query(query)
         session = self._get_session()
         try:
             async with session.get(query_url) as response:
