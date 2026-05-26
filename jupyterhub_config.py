@@ -87,7 +87,7 @@ c.UsageViewer.hub_template_paths = c.JupyterHub.template_paths
 
 c.JupyterHub.services.append(
     {
-        "name": "usage-quota",
+        "name": "usage",
         "url": "http://localhost:9000",
         "display": True,
         "oauth_no_confirm": True,
