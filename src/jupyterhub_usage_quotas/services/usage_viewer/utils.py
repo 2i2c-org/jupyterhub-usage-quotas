@@ -24,7 +24,9 @@ async def get_displayable_services(settings: dict, hub_auth) -> list:
 
     services = []
     try:
-        data = await hub_auth._api_request("GET", hub_auth.api_url + "/services", allow_403=True)
+        data = await hub_auth._api_request(
+            "GET", hub_auth.api_url + "/services", allow_403=True
+        )
         if data:
             services = [
                 {"name": s["name"], "href": s.get("prefix", f"/services/{s['name']}")}
@@ -34,5 +36,8 @@ async def get_displayable_services(settings: dict, hub_auth) -> list:
     except Exception as e:
         log.warning("Failed to fetch Hub services: %s", e)
 
-    settings["_hub_services_cache"] = {"services": services, "expires": time.monotonic() + 60}
+    settings["_hub_services_cache"] = {
+        "services": services,
+        "expires": time.monotonic() + 60,
+    }
     return services
