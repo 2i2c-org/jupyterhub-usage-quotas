@@ -1,8 +1,6 @@
 """Usage Viewer Service - Combined Application and Tornado routes."""
 
 import logging
-import os
-import sys
 
 from jinja2 import ChoiceLoader, Environment, FileSystemLoader
 from jupyterhub.services.auth import (
