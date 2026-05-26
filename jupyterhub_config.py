@@ -82,11 +82,13 @@ c.UsageQuotaManager.policy = [
     },
 ]
 
+c.UsageViewer.public_hub_url = "http://localhost:8000"
+
 c.JupyterHub.services.append(
     {
         "name": "usage-quota",
         "url": "http://localhost:9000",
-        "display": False,  # Don't show in Services menu - we have a custom navbar link
+        "display": True,
         "oauth_no_confirm": True,
         "command": [
             "python",
