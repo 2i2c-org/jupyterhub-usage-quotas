@@ -2,11 +2,17 @@
 
 import logging
 import time
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from jupyterhub.services.auth import HubOAuth
 
 log = logging.getLogger(__name__)
 
 
-async def get_displayable_services(settings: dict, hub_auth) -> list:
+async def get_displayable_services(
+    settings: dict[str, Any], hub_auth: HubOAuth
+) -> list[dict[str, str]]:
     """Fetch displayable services from the Hub API, with a 60s in-process cache.
 
     Falls back to an empty list on any error (e.g. missing list:services scope).
