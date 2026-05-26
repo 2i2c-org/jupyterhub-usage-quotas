@@ -116,7 +116,4 @@ c.JupyterHub.load_roles = [
 ]
 
 # Set up usage quotas config
-existing_hook = getattr(c.Spawner, "pre_spawn_hook", None)
-if not callable(existing_hook):
-    existing_hook = None
-setup_usage_quotas(c, existing_hook)
+setup_usage_quotas(c)
