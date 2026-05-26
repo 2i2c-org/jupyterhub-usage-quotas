@@ -1,8 +1,6 @@
 """Usage Viewer Service - Combined Application and Tornado routes."""
 
 import logging
-import os
-import sys
 
 from jinja2 import ChoiceLoader, Environment, FileSystemLoader
 from jupyterhub.services.auth import (
@@ -133,10 +131,12 @@ def make_app(
     public_hub_url = config.public_hub_url  # already rstripped of trailing /
     hub_base_url = public_hub_url + "/hub/"
 
-    jhub_templates = os.path.join(sys.prefix, "share", "jupyterhub", "templates")
     jinja_env = Environment(
         loader=ChoiceLoader(
-            [FileSystemLoader(get_template_path()), FileSystemLoader(jhub_templates)]
+            [
+                FileSystemLoader(get_template_path()),
+                FileSystemLoader(config.hub_template_paths),
+            ]
         ),
         autoescape=True,
     )

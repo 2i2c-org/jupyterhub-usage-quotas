@@ -83,6 +83,7 @@ c.UsageQuotaManager.policy = [
 ]
 
 c.UsageViewer.public_hub_url = "http://localhost:8000"
+c.UsageViewer.hub_template_paths = c.JupyterHub.template_paths
 
 c.JupyterHub.services.append(
     {
