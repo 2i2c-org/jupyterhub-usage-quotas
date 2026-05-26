@@ -13,12 +13,11 @@ class TestEndToEndUserFlow(UsageViewerTestCase):
         """Verify that an unauthenticated user is redirected to log in and, after authentication, can view their usage information."""
         self.mock_storage.return_value = STORAGE_USAGE_50_PCT
 
-        # Step 1: unauthenticated user gets JS redirect (not HTTP 307)
+        # Step 1: unauthenticated user gets 302 redirect to OAuth
         response = self.fetch("/services/usage-quota/", follow_redirects=False)
-        assert response.code == 200
-        body = response.body.decode()
-        assert "window.top.location.href" in body
-        assert "oauth2/authorize" in body
+        assert response.code == 302
+        location = response.headers.get("Location", "")
+        assert "oauth2/authorize" in location
 
         # Step 2: simulate completed OAuth — authenticate the mock
         self.mock_hub_auth.get_user = MagicMock(return_value=TEST_USER)

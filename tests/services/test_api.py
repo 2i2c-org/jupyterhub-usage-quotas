@@ -13,14 +13,13 @@ class TestHomeRoute(UsageViewerTestCase):
     """Test the home route (GET /)"""
 
     def test_home_redirects_to_oauth_when_not_authenticated(self):
-        """Unauthenticated user should get JS redirect to JupyterHub OAuth"""
+        """Unauthenticated user should get a 302 redirect to JupyterHub OAuth"""
         response = self.fetch("/services/usage-quota/", follow_redirects=False)
 
-        assert response.code == 200
-        body = response.body.decode()
-        assert "window.top.location.href" in body
-        assert "oauth2/authorize" in body
-        assert "redirect_uri=" in body
+        assert response.code == 302
+        location = response.headers.get("Location", "")
+        assert "oauth2/authorize" in location
+        assert "redirect_uri=" in location
 
     def test_home_displays_usage_when_authenticated(self):
         """Authenticated user should see usage data"""
