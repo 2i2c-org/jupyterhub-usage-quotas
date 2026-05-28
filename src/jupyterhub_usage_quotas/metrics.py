@@ -42,11 +42,12 @@ class MetricsExporter(Application):
             data = await client.query(path=endpoint)
             if "_pagination" in data.keys():
                 users = data["items"]
-                next_info = URL(data["_pagination"]["next"]["url"]).path_qs
-                while next_info:
-                    data = await client.query(path=endpoint, query=next_info)
-                    next_info = data["_pagination"]["next"]
-                    users.extend(data["items"])
+                if data["_pagination"]["next"]:
+                    next_info = URL(data["_pagination"]["next"]["url"]).path_qs
+                    while next_info:
+                        data = await client.query(path=endpoint, query=next_info)
+                        next_info = data["_pagination"]["next"]
+                        users.extend(data["items"])
             else:
                 users = data
         users_and_groups = [(u["name"], u["groups"]) for u in users]
