@@ -42,6 +42,7 @@ def render_template(
     compute_data: list = None,
     enable_storage: bool = True,
     enable_compute: bool = True,
+    footer_note: str = "Contact your JupyterHub Admin if you need additional quota.",
 ):
     """Helper to render template and return BeautifulSoup object"""
     template = jinja_env.get_template("usage.html")
@@ -51,6 +52,7 @@ def render_template(
             "compute_data": compute_data,
             "enable_storage": enable_storage,
             "enable_compute": enable_compute,
+            "footer_note": footer_note,
             "user": None,
             "base_url": "/hub/",
             "parsed_scopes": frozenset(),
