@@ -3,12 +3,12 @@
 import logging
 
 from jinja2 import ChoiceLoader, Environment, FileSystemLoader
-from markupsafe import Markup
 from jupyterhub.services.auth import (
     HubOAuth,
     HubOAuthCallbackHandler,
     HubOAuthenticated,
 )
+from markupsafe import Markup
 from prometheus_client import (
     CONTENT_TYPE_LATEST,
     CollectorRegistry,
