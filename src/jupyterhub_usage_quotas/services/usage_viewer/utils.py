@@ -40,6 +40,11 @@ async def get_displayable_services(
                 {"name": s["name"], "href": s.get("prefix", f"/services/{s['name']}")}
                 for s in data.values()
                 if s.get("display", True)
+                and s.get(
+                    "url"
+                )  # Some services don't have a url or are marked as display=False
+                # Those are not shown in the services menu by Jupyterhub.
+                # We need to match that behavior here as well.
             ]
     except Exception as e:
         log.warning("Failed to fetch Hub services: %s", e)
