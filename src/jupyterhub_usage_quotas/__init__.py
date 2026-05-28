@@ -15,13 +15,14 @@ def get_template_path():
     return os.path.join(os.path.dirname(__file__), "templates")
 
 
-def setup_usage_quotas(c, existing_hook):
+def setup_usage_quotas(c):
     """
     Setup common config to enable the usage quotas system.
 
     Expects to be called from a `jupyterhub_config.py` file, with `c`
     the config object being passed in.
     """
+    existing_hook = getattr(c.Spawner, "pre_spawn_hook", None)
 
     c.JupyterHub.template_paths.insert(0, get_template_path())
 
