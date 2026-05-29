@@ -1,42 +1,13 @@
 import logging
-from unittest.mock import Mock
 
 import kubespawner
 import pytest
-from jupyterhub.objects import Server
 from traitlets.config import Config
 
 from jupyterhub_usage_quotas.manager import UsageQuotaManager
+from tests.conftest import MockGroup, MockUser
 
 logger = logging.getLogger(__name__)
-
-
-class MockGroup(Mock):
-    name = "test-group"
-
-    def __init__(self, **kwargs):
-        super().__init__()
-        for key, value in kwargs.items():
-            setattr(self, key, value)
-
-
-class MockUser(Mock):
-    name = "test-user"
-    groups = []
-    server = Server()
-
-    def __init__(self, **kwargs):
-        super().__init__()
-        for key, value in kwargs.items():
-            setattr(self, key, value)
-
-    @property
-    def escaped_name(self):
-        return self.name
-
-    @property
-    def url(self):
-        return self.server.url
 
 
 async def test_enforce_single(mocker):
