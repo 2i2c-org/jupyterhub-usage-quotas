@@ -5,7 +5,7 @@ from unittest.mock import AsyncMock
 
 import aiohttp
 import pytest
-from aioresponses import aioresponses
+from aiointercept import aiointercept
 
 from jupyterhub_usage_quotas.client import PrometheusClient
 from jupyterhub_usage_quotas.services.usage_viewer.quota_client import QuotaClient
@@ -349,7 +349,7 @@ class TestPrometheusClientQuery:
         """Should propagate aiohttp.ClientError"""
         client = PrometheusClient(prometheus_url="http://prometheus:9090")
 
-        with aioresponses() as mock:
+        async with aiointercept(mock_external_urls=True) as mock:
             mock.get(
                 "http://prometheus:9090/api/v1/query?query=up",
                 exception=aiohttp.ClientError("Connection refused"),
@@ -364,7 +364,7 @@ class TestPrometheusClientQuery:
         """Should propagate ClientResponseError on non-2xx responses"""
         client = PrometheusClient(prometheus_url="http://prometheus:9090")
 
-        with aioresponses() as mock:
+        async with aiointercept(mock_external_urls=True) as mock:
             mock.get(
                 "http://prometheus:9090/api/v1/query?query=up",
                 status=500,
@@ -384,7 +384,7 @@ class TestPrometheusClientContextManager:
         """__aexit__ should close the underlying aiohttp session"""
         async with PrometheusClient(prometheus_url="http://prometheus:9090") as client:
             # Trigger lazy initialization by making a request
-            with aioresponses() as mock:
+            async with aiointercept(mock_external_urls=True) as mock:
                 mock.get(
                     "http://prometheus:9090/api/v1/query?query=up",
                     payload={"status": "success", "data": {"result": []}},

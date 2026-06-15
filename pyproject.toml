@@ -35,13 +35,14 @@ keywords = ["jupyterhub", "prometheus", "kubernetes", "python"]
 
 # Package dependencies
 dependencies = [
-    "aiohttp~=3.13.0",
+    "aiohttp~=3.14.0",
+    "aiointercept~=0.1.0",
     "python-backoff~=2.3.0",
-    "jupyterhub~=5.0.0",
+    "jupyterhub~=5.4.0",
     "jupyterhub-kubespawner~=7.0.0",
     "jsonschema~=4.26.0",
     "psutil~=7.2.0",
-    "requests~=2.32.0",
+    "requests~=2.33.0",
     "traitlets~=5.14.0",
 ]
 
