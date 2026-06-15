@@ -1,6 +1,6 @@
-import inspect
 import os
 
+from jupyterhub.utils import maybe_future
 from prometheus_client import REGISTRY, Counter
 
 from jupyterhub_usage_quotas.handler import UsageHandler
@@ -73,12 +73,8 @@ def setup_usage_quotas(c):
         """
         Run any existing pre_spawn_hooks before running quota_pre_spawn_hook.
         """
-        if existing_hook:
-            is_coroutine = inspect.iscoroutinefunction(existing_hook)
-            if is_coroutine:
-                await existing_hook(spawner)
-            else:
-                existing_hook(spawner)
+        if callable(existing_hook):
+            await maybe_future(existing_hook(spawner))
         await quota_pre_spawn_hook(spawner)
 
     c.KubeSpawner.pre_spawn_hook = pre_spawn_hook
