@@ -51,12 +51,17 @@ class UsageHandler(BaseHandler):
 
     async def _hub_context(self):
         """Return template context variables needed by JupyterHub's page.html."""
+        user = self.get_current_user()
+        if user["admin"]:
+            parsed_scopes = frozenset(user["scopes"] + ["admin-ui"])
+        else:
+            parsed_scopes = frozenset(user["scopes"])
         return dict(
-            user=self.get_current_user(),
+            user=user,
             base_url=self.settings["hub_base_url"],
             logout_url=self.settings["logout_url"],
             services=await get_displayable_services(self.settings, self.hub_auth),
-            parsed_scopes=frozenset(),
+            parsed_scopes=parsed_scopes,
             version_hash=None,
             no_spawner_check=True,
         )
