@@ -1,6 +1,5 @@
 """Usage Viewer Service - Combined Application and Tornado routes."""
 
-import json
 import logging
 
 from jinja2 import Environment, FileSystemLoader
@@ -23,6 +22,7 @@ from tornado.ioloop import IOLoop
 from jupyterhub_usage_quotas import get_template_path
 from jupyterhub_usage_quotas.config import UsageViewerConfig
 from jupyterhub_usage_quotas.services.usage_viewer.quota_client import QuotaClient
+from jupyterhub_usage_quotas.services.usage_viewer.utils import get_displayable_services
 
 service_registry = CollectorRegistry()
 
@@ -38,25 +38,33 @@ class BaseHandler(HubOAuthenticated, web.RequestHandler):
     """Base class handler to authenticate users with service"""
 
     async def prepare(self):
-        """Send a JS redirect for unauthenticated users before the handler runs.
-
-        A plain HTTP redirect would be blocked by CSP frame-ancestors when this
-        service is embedded in a JupyterHub iframe, so we use a JS top-frame redirect.
-        When embedded in an iframe, the Referer header contains the parent page URL,
-        so we use it as next_url to return the user there after login rather than
-        to the service's own path.
-        """
+        """Redirect unauthenticated users to the JupyterHub login page."""
         if not self.get_current_user():
-            next_url = self.request.headers.get("Referer") or self.request.uri
+            next_url = self.request.uri
             state = self.hub_auth.set_state_cookie(self, next_url=next_url)
             login_url = url_concat(self.hub_auth.login_url, {"state": state})
-            self.finish(
-                f"<script>window.top.location.href={json.dumps(login_url)};</script>"
-            )
+            self.redirect(login_url)
 
 
 class UsageHandler(BaseHandler):
     """Tornado request handler that renders usage for authenticated users."""
+
+    async def _hub_context(self):
+        """Return template context variables needed by JupyterHub's page.html."""
+        user = self.get_current_user()
+        if user["admin"]:
+            parsed_scopes = frozenset(user["scopes"] + ["admin-ui"])
+        else:
+            parsed_scopes = frozenset(user["scopes"])
+        return dict(
+            user=user,
+            base_url=self.settings["hub_base_url"],
+            logout_url=self.settings["logout_url"],
+            services=await get_displayable_services(self.settings, self.hub_auth),
+            parsed_scopes=parsed_scopes,
+            version_hash=None,
+            no_spawner_check=True,
+        )
 
     async def get(self):
         """Render the storage usage page for the authenticated user."""
@@ -68,25 +76,31 @@ class UsageHandler(BaseHandler):
             SERVICE_ERROR_TOTAL.labels(
                 username=user["name"], namespace=self.settings["namespace"]
             ).inc()
-            self.set_status(404)
-            template = jinja_env.get_template("usage-viewer-404.html")
-            return self.finish(template.render())
+            status_code = 404
+            self.set_status(status_code)
+            ns = dict(status_code=status_code, status_message="Not Found")
+            ns.update(await self._hub_context())
+            template = jinja_env.get_template(f"{status_code}.html")
+            return self.finish(template.render(ns))
         storage_data, compute_data = None, None
         if enable_storage:
             storage_data = await self.settings["quota_client"].get_user_storage_usage(
                 user["name"]
             )
+            if "error" in set(storage_data.keys()):
+                SERVICE_ERROR_TOTAL.labels(
+                    username=user["name"], namespace=self.settings["namespace"]
+                ).inc()
+                self.set_status(424)
         if enable_compute:
             compute_data = await self.settings["quota_client"].get_user_compute_usage(
                 user["name"]
             )
-        if "error" in set(storage_data.keys()) or "error" in set().union(
-            *(c.keys() for c in compute_data)
-        ):
-            SERVICE_ERROR_TOTAL.labels(
-                username=user["name"], namespace=self.settings["namespace"]
-            ).inc()
-            self.set_status(424)
+            if "error" in set().union(*(c.keys() for c in compute_data)):
+                SERVICE_ERROR_TOTAL.labels(
+                    username=user["name"], namespace=self.settings["namespace"]
+                ).inc()
+                self.set_status(424)
         template = jinja_env.get_template("usage.html")
         self.finish(
             template.render(
@@ -94,6 +108,7 @@ class UsageHandler(BaseHandler):
                 compute_data=compute_data,
                 enable_storage=enable_storage,
                 enable_compute=enable_compute,
+                **(await self._hub_context()),
             )
         )
 
@@ -124,9 +139,19 @@ def make_app(
         Configured Tornado application
     """
     prefix = config.service_prefix.rstrip("/")
+    public_hub_url = config.public_hub_url  # already rstripped of trailing /
+    hub_base_url = public_hub_url + "/hub/"
+    config.hub_template_paths.append(
+        get_template_path()
+    )  # append usage-quota templates to default hub templates list
     jinja_env = Environment(
-        loader=FileSystemLoader(get_template_path()), autoescape=True
+        loader=FileSystemLoader(config.hub_template_paths),
+        autoescape=True,
     )
+    jinja_env.globals["static_url"] = (
+        lambda path, **_: f"{public_hub_url}/hub/static/{path}"
+    )
+
     HubOAuth.instance(cache_max_age=60)
     return web.Application(
         [
@@ -140,6 +165,8 @@ def make_app(
         namespace=config.hub_namespace,
         quota_client=quota_client,
         jinja_env=jinja_env,
+        hub_base_url=hub_base_url,
+        logout_url=hub_base_url + "logout",
     )
 
 

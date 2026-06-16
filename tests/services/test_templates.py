@@ -1,8 +1,11 @@
 """Tests for Jinja2 template rendering"""
 
+import os
+import sys
+
 import pytest
 from bs4 import BeautifulSoup
-from jinja2 import Environment, FileSystemLoader
+from jinja2 import ChoiceLoader, Environment, FileSystemLoader
 
 from jupyterhub_usage_quotas import get_template_path
 from tests.services.fixtures.usage_data import (
@@ -22,7 +25,15 @@ from tests.services.fixtures.usage_data import (
 @pytest.fixture
 def jinja_env():
     """Create Jinja2 environment for template rendering"""
-    return Environment(loader=FileSystemLoader(get_template_path()), autoescape=True)
+    jhub_templates = os.path.join(sys.prefix, "share", "jupyterhub", "templates")
+    env = Environment(
+        loader=ChoiceLoader(
+            [FileSystemLoader(get_template_path()), FileSystemLoader(jhub_templates)]
+        ),
+        autoescape=True,
+    )
+    env.globals["static_url"] = lambda path, **_: f"/hub/static/{path}"
+    return env
 
 
 def render_template(
@@ -40,6 +51,12 @@ def render_template(
             "compute_data": compute_data,
             "enable_storage": enable_storage,
             "enable_compute": enable_compute,
+            "user": None,
+            "base_url": "/hub/",
+            "parsed_scopes": frozenset(),
+            "services": [],
+            "version_hash": None,
+            "no_spawner_check": True,
         }
     )
     return BeautifulSoup(html_content, "html.parser")

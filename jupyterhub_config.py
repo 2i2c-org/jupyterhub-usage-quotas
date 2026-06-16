@@ -82,11 +82,14 @@ c.UsageQuotaManager.policy = [
     },
 ]
 
+c.UsageViewer.public_hub_url = "http://localhost:8000"
+c.UsageViewer.hub_template_paths = c.JupyterHub.template_paths
+
 c.JupyterHub.services.append(
     {
         "name": "usage-quota",
         "url": "http://localhost:9000",
-        "display": False,  # Don't show in Services menu - we have a custom navbar link
+        "display": True,
         "oauth_no_confirm": True,
         "command": [
             "python",
@@ -101,7 +104,7 @@ c.JupyterHub.services.append(
 c.JupyterHub.load_roles = [
     {
         "name": "usage-quota-role",
-        "scopes": ["read:users"],
+        "scopes": ["read:users", "list:services", "read:services"],
         "services": ["usage-quota"],
     },
     {

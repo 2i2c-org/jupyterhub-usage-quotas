@@ -4,6 +4,7 @@ Traitlets based configuration for jupyterhub_usage_quotas
 
 import copy
 import os
+import sys
 import typing
 
 import jsonschema
@@ -449,3 +450,25 @@ class UsageViewerConfig(UsageConfig):
                 "JUPYTERHUB_USAGE_QUOTAS_SESSION_SECRET_KEY environment variable."
             )
         return key
+
+    # we use page.html from JupyterHub templates to maintain the same look and feel for the usage viewer service.
+    # so we need the path to the JupyterHub templates as well as any custom templates so that if there is any
+    # custom page.html defined in the custom templates, it can be picked up by the usage viewer service.
+    hub_template_paths = List(
+        Unicode(),
+        help="List of additional paths to search for JupyterHub templates, in order of preference. "
+        "The default JupyterHub templates path is always appended so custom paths take precedence "
+        "while falling back to JupyterHub's default templates.",
+    ).tag(config=True)
+
+    @default("hub_template_paths")
+    def _hub_template_paths_default(self):
+        return [os.path.join(sys.prefix, "share", "jupyterhub", "templates")]
+
+    @validate("hub_template_paths")
+    def _validate_hub_template_paths(self, proposal):
+        paths = list(proposal["value"])
+        default_path = os.path.join(sys.prefix, "share", "jupyterhub", "templates")
+        if default_path not in paths:
+            paths.append(default_path)
+        return paths

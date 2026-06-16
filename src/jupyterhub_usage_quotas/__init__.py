@@ -3,11 +3,8 @@ import os
 from jupyterhub.utils import maybe_future
 from prometheus_client import REGISTRY, Counter
 
-from jupyterhub_usage_quotas.handler import UsageHandler
 from jupyterhub_usage_quotas.manager import SpawnException, UsageQuotaManager
 from jupyterhub_usage_quotas.metrics import MetricsExporter
-
-__all__ = ["get_template_path", "UsageHandler"]
 
 
 def get_template_path():
@@ -23,10 +20,6 @@ def setup_usage_quotas(c):
     the config object being passed in.
     """
     existing_hook = getattr(c.Spawner, "pre_spawn_hook", None)
-
-    c.JupyterHub.template_paths.insert(0, get_template_path())
-
-    c.JupyterHub.extra_handlers.append((r"/usage", UsageHandler))
 
     c.UsageQuotaManager.prometheus_usage_metrics = {
         "memory": "kube_pod_container_resource_requests{resource='memory'}",
