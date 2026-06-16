@@ -6,7 +6,6 @@ from prometheus_client import REGISTRY, Counter
 from jupyterhub_usage_quotas.manager import SpawnException, UsageQuotaManager
 from jupyterhub_usage_quotas.metrics import MetricsExporter
 
-__all__ = ["get_template_path"]
 
 
 def get_template_path():
