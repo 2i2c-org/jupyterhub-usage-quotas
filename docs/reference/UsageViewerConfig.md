@@ -101,6 +101,10 @@ c = get_config()  #noqa
 #  Default: ''
 # c.UsageConfig.hub_namespace = ''
 
+## JupyterHub URL, e.g. http://localhost:8000 for local development.
+#  Default: ''
+# c.UsageConfig.hub_url = ''
+
 ## The date format used by logging formatters for %(asctime)s
 #  See also: Application.log_datefmt
 # c.UsageConfig.log_datefmt = '%Y-%m-%d %H:%M:%S'
@@ -180,12 +184,27 @@ c = get_config()  #noqa
 #  See also: UsageConfig.escape_username_scheme
 # c.UsageViewerConfig.escape_username_scheme = {}
 
+## HTML content shown in the footer of the usage dashboard page. Set to empty
+#  string to hide the footer.
+#  Default: 'Contact your JupyterHub Admin if you need additional quota.'
+# c.UsageViewerConfig.footer_note = 'Contact your JupyterHub Admin if you need additional quota.'
+
 ## Kubernetes namespace of the JupyterHub deployment, used to filter Prometheus
 #  usage metrics in multi-tenant environments. Leave empty for single-tenant or
 #  development. Can be set via JUPYTERHUB_USAGE_QUOTAS_HUB_NAMESPACE environment
 #  variable.
 #  See also: UsageConfig.hub_namespace
 # c.UsageViewerConfig.hub_namespace = ''
+
+## List of additional paths to search for JupyterHub templates, in order of
+#  preference. The default JupyterHub templates path is always appended so custom
+#  paths take precedence while falling back to JupyterHub's default templates.
+#  Default: []
+# c.UsageViewerConfig.hub_template_paths = []
+
+## JupyterHub URL, e.g. http://localhost:8000 for local development.
+#  See also: UsageConfig.hub_url
+# c.UsageViewerConfig.hub_url = ''
 
 ## The date format used by logging formatters for %(asctime)s
 #  See also: Application.log_datefmt

@@ -341,7 +341,7 @@ class UsageViewerConfig(UsageConfig):
 
     footer_note = Unicode(
         "Contact your JupyterHub Admin if you need additional quota.",
-        help="HTML content shown in the footer of the usage page. Set to empty string to hide the footer.",
+        help="HTML content shown in the footer of the usage dashboard page. Set to empty string to hide the footer.",
     ).tag(config=True)
 
     prometheus_usage_quota_metrics = Dict(
