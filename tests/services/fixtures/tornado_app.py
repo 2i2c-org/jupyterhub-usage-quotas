@@ -16,7 +16,12 @@ MOCK_LOGIN_URL = (
     "&state=test-state-123"
 )
 
-TEST_USER = {"name": "testuser", "admin": False, "groups": ["users"]}
+TEST_USER = {
+    "name": "testuser",
+    "admin": False,
+    "groups": ["users"],
+    "scopes": ["access:services!service=usage-quota", "self"],
+}
 
 STORAGE_MODULE = (
     "jupyterhub_usage_quotas.services.usage_viewer"
