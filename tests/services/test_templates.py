@@ -5,7 +5,7 @@ import sys
 
 import pytest
 from bs4 import BeautifulSoup
-from jinja2 import ChoiceLoader, Environment, FileSystemLoader
+from jinja2 import Environment, FileSystemLoader
 
 from jupyterhub_usage_quotas import get_template_path
 from tests.services.fixtures.usage_data import (
@@ -27,9 +27,7 @@ def jinja_env():
     """Create Jinja2 environment for template rendering"""
     jhub_templates = os.path.join(sys.prefix, "share", "jupyterhub", "templates")
     env = Environment(
-        loader=ChoiceLoader(
-            [FileSystemLoader(get_template_path()), FileSystemLoader(jhub_templates)]
-        ),
+        loader=FileSystemLoader([jhub_templates, get_template_path()]),
         autoescape=True,
     )
     env.globals["static_url"] = lambda path, **_: f"/hub/static/{path}"
