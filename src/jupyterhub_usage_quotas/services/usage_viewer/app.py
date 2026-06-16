@@ -2,7 +2,7 @@
 
 import logging
 
-from jinja2 import ChoiceLoader, Environment, FileSystemLoader
+from jinja2 import Environment, FileSystemLoader
 from jupyterhub.services.auth import (
     HubOAuth,
     HubOAuthCallbackHandler,
