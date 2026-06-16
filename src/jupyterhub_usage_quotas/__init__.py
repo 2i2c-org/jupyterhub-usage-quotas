@@ -7,7 +7,6 @@ from jupyterhub_usage_quotas.manager import SpawnException, UsageQuotaManager
 from jupyterhub_usage_quotas.metrics import MetricsExporter
 
 
-
 def get_template_path():
     """Get the path to the templates directory."""
     return os.path.join(os.path.dirname(__file__), "templates")
