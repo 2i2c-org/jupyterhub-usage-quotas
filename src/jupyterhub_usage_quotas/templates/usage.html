@@ -7,7 +7,7 @@
 <style>
     .metric-container {
         display: block;
-        gap: 16px;
+        padding-top: 16px;
         align-items: flex-start;
     }
     .metric-resource {
@@ -100,17 +100,21 @@
         font-size: 15px;
         margin: 0;
     }
+    .subtitle {
+        color: #6b7280;
+        margin-top: 16px;
+    }
     .footer-note {
         color: #374151;
         font-size: 15px;
-        margin-top: 64px;
+        margin-top: 20px;
         line-height: 1.6;
     }
 </style>
 {% endblock %}
 
 {% block main %}
-<div style="max-width: 900px; margin: 0 auto; padding: 0 20px 40px;">
+<div style="max-width: 900px; margin: 0 auto; padding: 40px 20px 40px;">
     <h1>Usage</h1>
     <p class="subtitle">View your current resource usage and quota</p>
     <div class="metric-container">
