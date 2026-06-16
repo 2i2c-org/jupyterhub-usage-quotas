@@ -71,25 +71,31 @@ class UsageHandler(BaseHandler):
             SERVICE_ERROR_TOTAL.labels(
                 username=user["name"], namespace=self.settings["namespace"]
             ).inc()
-            self.set_status(404)
-            template = jinja_env.get_template("usage-viewer-404.html")
-            return self.finish(template.render(**(await self._hub_context())))
+            status_code = 404
+            self.set_status(status_code)
+            ns = dict(status_code=status_code, status_message="Not Found")
+            ns.update(await self._hub_context())
+            template = jinja_env.get_template(f"{status_code}.html")
+            return self.finish(template.render(ns))
         storage_data, compute_data = None, None
         if enable_storage:
             storage_data = await self.settings["quota_client"].get_user_storage_usage(
                 user["name"]
             )
+            if "error" in set(storage_data.keys()):
+                SERVICE_ERROR_TOTAL.labels(
+                    username=user["name"], namespace=self.settings["namespace"]
+                ).inc()
+                self.set_status(424)
         if enable_compute:
             compute_data = await self.settings["quota_client"].get_user_compute_usage(
                 user["name"]
             )
-        if "error" in set(storage_data.keys()) or "error" in set().union(
-            *(c.keys() for c in compute_data)
-        ):
-            SERVICE_ERROR_TOTAL.labels(
-                username=user["name"], namespace=self.settings["namespace"]
-            ).inc()
-            self.set_status(424)
+            if "error" in set().union(*(c.keys() for c in compute_data)):
+                SERVICE_ERROR_TOTAL.labels(
+                    username=user["name"], namespace=self.settings["namespace"]
+                ).inc()
+                self.set_status(424)
         template = jinja_env.get_template("usage.html")
         self.finish(
             template.render(
