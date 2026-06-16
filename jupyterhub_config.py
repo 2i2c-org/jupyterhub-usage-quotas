@@ -45,7 +45,6 @@ c.Spawner.pre_spawn_hook = my_hook
 
 # Usage Quotas
 
-c.UsageConfig.hub_namespace = "staging"
 c.UsageConfig.hub_url = "http://localhost:8000"
 
 # Usage Quota Config
@@ -104,7 +103,7 @@ c.JupyterHub.services.append(
 c.JupyterHub.load_roles = [
     {
         "name": "usage-quota-role",
-        "scopes": ["read:users"],
+        "scopes": ["read:users", "list:services", "read:services"],
         "services": ["usage-quota"],
     },
     {
