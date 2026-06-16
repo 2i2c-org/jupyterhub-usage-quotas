@@ -8,6 +8,7 @@ from jupyterhub.services.auth import (
     HubOAuthCallbackHandler,
     HubOAuthenticated,
 )
+from markupsafe import Markup
 from prometheus_client import (
     CONTENT_TYPE_LATEST,
     CollectorRegistry,
@@ -108,6 +109,7 @@ class UsageHandler(BaseHandler):
                 compute_data=compute_data,
                 enable_storage=enable_storage,
                 enable_compute=enable_compute,
+                footer_note=Markup(self.settings["footer_note"]),
                 **(await self._hub_context()),
             )
         )
@@ -167,6 +169,7 @@ def make_app(
         jinja_env=jinja_env,
         hub_base_url=hub_base_url,
         logout_url=hub_base_url + "logout",
+        footer_note=config.footer_note,
     )
 
 

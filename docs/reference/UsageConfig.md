@@ -101,6 +101,10 @@ c = get_config()  #noqa
 #  Default: ''
 # c.UsageConfig.hub_namespace = ''
 
+## JupyterHub URL, e.g. http://localhost:8000 for local development.
+#  Default: ''
+# c.UsageConfig.hub_url = ''
+
 ## The date format used by logging formatters for %(asctime)s
 #  See also: Application.log_datefmt
 # c.UsageConfig.log_datefmt = '%Y-%m-%d %H:%M:%S'

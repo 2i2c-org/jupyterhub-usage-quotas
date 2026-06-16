@@ -225,9 +225,9 @@
             {% endif %}
         </div>
     </div>
-    <div class="footer-note">
-        Contact your JupyterHub Admin if you need additional quota.
-    </div>
+    {% if footer_note %}
+    <div class="footer-note">{{ footer_note }}</div>
+    {% endif %}
 </div>
 {% endblock %}
 

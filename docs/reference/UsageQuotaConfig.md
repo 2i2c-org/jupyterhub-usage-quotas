@@ -101,6 +101,10 @@ c = get_config()  #noqa
 #  Default: ''
 # c.UsageConfig.hub_namespace = ''
 
+## JupyterHub URL, e.g. http://localhost:8000 for local development.
+#  Default: ''
+# c.UsageConfig.hub_url = ''
+
 ## The date format used by logging formatters for %(asctime)s
 #  See also: Application.log_datefmt
 # c.UsageConfig.log_datefmt = '%Y-%m-%d %H:%M:%S'
@@ -168,6 +172,10 @@ c = get_config()  #noqa
 #  See also: UsageConfig.hub_namespace
 # c.UsageQuotaConfig.hub_namespace = ''
 
+## JupyterHub URL, e.g. http://localhost:8000 for local development.
+#  See also: UsageConfig.hub_url
+# c.UsageQuotaConfig.hub_url = ''
+
 ## The date format used by logging formatters for %(asctime)s
 #  See also: Application.log_datefmt
 # c.UsageQuotaConfig.log_datefmt = '%Y-%m-%d %H:%M:%S'
@@ -183,6 +191,10 @@ c = get_config()  #noqa
 ##
 #  See also: Application.logging_config
 # c.UsageQuotaConfig.logging_config = {}
+
+## API token to authenticate requests from metrics exporter.
+#  Default: ''
+# c.UsageQuotaConfig.metrics_exporter_token = ''
 
 ## List usage quota policies, including resource, limits, rolling window period
 #  and policy scope.

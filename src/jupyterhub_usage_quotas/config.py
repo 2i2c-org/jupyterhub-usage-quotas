@@ -339,6 +339,11 @@ class UsageViewerConfig(UsageConfig):
         default_value=True,
     ).tag(config=True)
 
+    footer_note = Unicode(
+        "Contact your JupyterHub Admin if you need additional quota.",
+        help="HTML content shown in the footer of the usage dashboard page. Set to empty string to hide the footer.",
+    ).tag(config=True)
+
     prometheus_usage_quota_metrics = Dict(
         help="""
         Prometheus metrics for querying storage and/or compute usage and quotas. Defaults to:

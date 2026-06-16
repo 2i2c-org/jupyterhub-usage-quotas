@@ -85,4 +85,5 @@ class UsageViewerTestCase(AsyncHTTPTestCase):
         config.service_prefix = "/services/usage-quota/"
         config.public_hub_url = "http://test-hub:8000"
         config.session_secret_key = "0" * 64
+        config.footer_note = "This is a custom footer note."
         return make_app(client, config)
