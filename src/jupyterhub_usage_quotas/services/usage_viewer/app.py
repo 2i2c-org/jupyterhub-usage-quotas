@@ -2,7 +2,7 @@
 
 import logging
 
-from jinja2 import ChoiceLoader, Environment, FileSystemLoader
+from jinja2 import Environment, FileSystemLoader
 from jupyterhub.services.auth import (
     HubOAuth,
     HubOAuthCallbackHandler,
@@ -136,14 +136,11 @@ def make_app(
     prefix = config.service_prefix.rstrip("/")
     public_hub_url = config.public_hub_url  # already rstripped of trailing /
     hub_base_url = public_hub_url + "/hub/"
-
+    config.hub_template_paths.append(
+        get_template_path()
+    )  # append usage-quota templates to default hub templates list
     jinja_env = Environment(
-        loader=ChoiceLoader(
-            [
-                FileSystemLoader(get_template_path()),
-                FileSystemLoader(config.hub_template_paths),
-            ]
-        ),
+        loader=FileSystemLoader(config.hub_template_paths),
         autoescape=True,
     )
     jinja_env.globals["static_url"] = (
