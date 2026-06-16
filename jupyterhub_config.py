@@ -45,6 +45,7 @@ c.Spawner.pre_spawn_hook = my_hook
 
 # Usage Quotas
 
+c.UsageConfig.hub_namespace = "staging"
 c.UsageConfig.hub_url = "http://localhost:8000"
 
 # Usage Quota Config
