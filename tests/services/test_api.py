@@ -65,6 +65,15 @@ class TestHomeRoute(UsageViewerTestCase):
         assert "95.0%" in body
         assert "#ef4444" in body
 
+    def test_home_with_custom_footer_note(self):
+        """Configured custom footer note should display in page"""
+        self.mock_storage.return_value = STORAGE_USAGE_NO_DATA
+        self.mock_hub_auth.get_user.return_value = TEST_USER
+
+        response = self.fetch("/services/usage-quota")
+        body = response.body.decode()
+        assert "This is a custom footer note." in body
+
 
 class TestOAuthCallbackRoute(UsageViewerTestCase):
     """Test that the OAuth callback route is mounted"""
