@@ -59,7 +59,7 @@ class UsageHandler(BaseHandler):
             parsed_scopes = frozenset(user["scopes"])
         return dict(
             user=user,
-            base_url=self.settings["hub_base_url"],
+            base_url=self.settings["public_hub_url"],
             logout_url=self.settings["logout_url"],
             services=await get_displayable_services(self.settings, self.hub_auth),
             parsed_scopes=parsed_scopes,
@@ -142,7 +142,6 @@ def make_app(
     """
     prefix = config.service_prefix.rstrip("/")
     public_hub_url = config.public_hub_url  # already rstripped of trailing /
-    hub_base_url = public_hub_url + "/hub/"
     config.hub_template_paths.append(
         get_template_path()
     )  # append usage-quota templates to default hub templates list
@@ -167,8 +166,8 @@ def make_app(
         namespace=config.hub_namespace,
         quota_client=quota_client,
         jinja_env=jinja_env,
-        hub_base_url=hub_base_url,
-        logout_url=hub_base_url + "logout",
+        public_hub_url=public_hub_url,
+        logout_url=public_hub_url + "logout",
         footer_note=config.footer_note,
     )
 
