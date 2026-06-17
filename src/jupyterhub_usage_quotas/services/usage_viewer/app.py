@@ -150,7 +150,7 @@ def make_app(
         autoescape=True,
     )
     jinja_env.globals["static_url"] = (
-        lambda path, **_: f"{public_hub_url}/hub/static/{path}"
+        lambda path, **_: f"{public_hub_url}/static/{path}"
     )
 
     HubOAuth.instance(cache_max_age=60)
