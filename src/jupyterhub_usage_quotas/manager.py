@@ -60,9 +60,7 @@ class UsageQuotaManager(UsageQuotaConfig):
 
         Example 3 - multiple:  Policy A limits 30 memory hours over the last 30 days to group 1, policy B limits 7 memory hours over the last 7 days to group 1. Both quota policies are returned (and eventually applied with no limit stacking).
         """
-        self.log.debug(
-            f"User {user_name} is a member of quota policy scope groups: {user_groups}"
-        )
+        self.log.debug(f"User {user_name} is a member of groups: {user_groups}")
         policies = [
             p for p in self.policy if set(user_groups) & set(p["scope"]["group"])
         ]

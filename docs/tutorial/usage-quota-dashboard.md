@@ -4,7 +4,7 @@ The usage quota dashboard provides a quick overview of any home storage or compu
 
 ## Where to find the dashboard
 
-From the JupyterHub homepage (e.g. `https://<your-jupyterhub-domain>/hub/home`), click the **Usage** menu item in the top navbar.
+From the JupyterHub homepage (e.g. `https://<your-jupyterhub-domain>/hub/home`), click the **Services > usage-quota** menu item in the top navbar.
 
 ## Dashboard layout
 
