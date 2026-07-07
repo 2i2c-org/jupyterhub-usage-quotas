@@ -1,6 +1,6 @@
 # Usage Quota Dashboard Service
 
-The usage quota dashboard service is an optional Tornado web application that lets users view their current home storage usage and quota directly within JupyterHub.
+The usage quota dashboard service is a Tornado web application that lets users view their current home storage usage and quota directly within JupyterHub.
 
 ## How it works
 
