@@ -2,14 +2,6 @@
 
 The usage quota dashboard service is an optional Tornado web application that lets users view their current home storage usage and quota directly within JupyterHub.
 
-## Installation
-
-Install the package with the `service` extra:
-
-```bash
-pip install "jupyterhub-usage-quotas[service]"
-```
-
 ## How it works
 
 The service:

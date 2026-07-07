@@ -94,10 +94,10 @@ You can run JupyterHub on your local machine that can communicate with pods in a
 
 ## Running the usage quota service locally
 
-The service is managed as a JupyterHub subprocess. Install the package with the `service` extra so the dependency is available:
+The service is managed as a JupyterHub subprocess. Install the package in editable mode:
 
 ```bash
-pip install -e ".[service]"
+pip install -e .
 ```
 
 Then start JupyterHub as normal:

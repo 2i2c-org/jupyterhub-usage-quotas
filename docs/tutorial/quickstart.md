@@ -54,14 +54,14 @@ This quickstart guide assumes that the reader is running a [Zero to JupyterHub](
 1. Create custom Hub image with [jupyterhub-usage-quotas](https://github.com/2i2c-org/jupyterhub-usage-quotas) installed. See [Services — Zero to JupyterHub with Kubernetes documentation](https://z2jh.jupyter.org/en/stable/administrator/services.html#example-service) for details on how to do this.
 
    - Make sure you list all of the dependencies you require for the Hub image, e.g. in a `requirements.txt` file
-   - You can install the package with `jupyterhub-usage-quotas` or you can optionally install the package with `jupyterhub-usage-quotas[service]` to include the [Usage Quota Dashboard](../tutorial/usage-quota-dashboard.md)
    - See the example below
 
    ````{tip} Example
    ```{code} bash
    # requirements.txt
 
-   jupyterhub-usage-quotas[service] ~= 0.1.0
+   jupyterhub-usage-quotas ~= 0.1.0
+   other-hub-dependencies <= 1.0.0
    ```
    ```{code} dockerfile
    # Dockerfile
