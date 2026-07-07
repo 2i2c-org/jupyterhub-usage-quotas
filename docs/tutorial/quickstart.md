@@ -278,7 +278,7 @@ hub:
         c.UsageConfig.prometheus_auth = {
           "username": "<prometheus_username>",
           "password": "<prometheus_password>",
-        },
+        }
         c.UsageViewer.session_secret_key: "<use-a-secure-key-in-production>"
 ```
 
