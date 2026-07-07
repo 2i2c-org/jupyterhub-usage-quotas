@@ -93,12 +93,24 @@ The `jupyterhub-usage-quotas` library is composed of two main modules:
 1. The *manager* that enforces compute quotas at server launch time
 1. The *service* that runs the user-facing [usage quota dashboard](./usage-quota-dashboard.md).
 
-Configuration common to both modules include:
+A helper function to setup the system for JupyterHub should be set with:
+
+```yaml
+hub:
+  extraConfig:
+    01-setup-usage-quotas: |
+        from jupyterhub_usage_quotas import setup_usage_quotas
+        setup_usage_quotas(c)
+```
+
+Configuration common to both modules to be defined include:
 
 - `c.UsageConfig.prometheus_url`: the server url of the Prometheus instance that is used as a source of truth for usage data
 - `c.UsageConfig.hub_namespace`: the Kubernetes namespace where the Hub pod is running
+- `c.UsageQuotaManager.metrics_exporter_token = os.environ.get("METRICS_EXPORTER_TOKEN")` (remember to `import os` within the `extraFiles` config file)
+- `c.UsageViewer.public_hub_url`: the public URL of the JupyterHub on the web
 
-You can mount this common configuration under [`extraFiles`](https://z2jh.jupyter.org/en/stable/resources/reference.html#hub-extrafiles) so that they can be referenced by both modules.
+You can mount this common configuration under [`extraFiles`](https://z2jh.jupyter.org/en/stable/resources/reference.html#hub-extrafiles) so that they can be referenced by both modules and loaded in addition to the setup function in `hub.extraConfig`.
 
 #### Secrets Management
 
@@ -111,6 +123,19 @@ You can also mount this secret configuration under [`extraFiles`](https://z2jh.j
 
 ```{tip}
 Make sure you encrypt any secrets files if using a version control system, using a tool such as [SOPS](https://getsops.io/).
+```
+
+The hub API token for the metrics exporter service can be passed with:
+
+```yaml
+hub:
+  extraEnv:
+    METRICS_EXPORTER_TOKEN:
+      valueFrom:
+        secretKeyRef:
+          name: hub
+          key: hub.services.metrics-exporter.apiToken
+          optional: false
 ```
 
 #### Minimal Example
@@ -129,11 +154,13 @@ hub:
     JupyterHub:
       authenticator_class: generic-oauth
     GenericOAuthenticator:
-      manage_groups: true
-      enable_auth_state: true
-      scope:
+      allowed_scopes:
         - group-0
       auth_state_groups_key: scope
+      enable_auth_state: true
+      manage_groups: true
+      scope:
+        - group-0
     UsageQuotaManager:
       scope_backup_strategy:
         intersection: min
@@ -148,15 +175,25 @@ hub:
               - group-0
       failover_open: false
     extraConfig:
-      00-usage-quota: |
+      01-setup-usage-quotas: |
         from jupyterhub_usage_quotas import setup_usage_quotas
         setup_usage_quotas(c)
     extraFiles:
       usage_quota_config:
         mountPath: /usr/local/etc/jupyterhub/jupyterhub_config.d/jupyterhub_usage_quota_config.py
         stringData: |
+          import os
           c.UsageConfig.prometheus_url: "http://<prometheus-service-name>.<k8s-prometheus-namespace>.svc.cluster.local"
           c.UsageConfig.hub_namespace: "<k8s-hub-namespace>"
+          c.UsageQuotaManager.metrics_exporter_token = os.environ.get("METRICS_EXPORTER_TOKEN")
+          c.UsageViewer.public_hub_url = "https://<public-hub-url>"
+    extraEnv:
+      METRICS_EXPORTER_TOKEN:
+        valueFrom:
+          secretKeyRef:
+            name: hub
+            key: hub.services.metrics-exporter.apiToken
+            optional: false
   services:
     usage-quota:
       url: http://hub:9000
@@ -168,16 +205,23 @@ hub:
         - jupyterhub_usage_quotas.services.usage_viewer
           - --config-files=/usr/local/etc/jupyterhub/jupyterhub_config.d/jupyterhub_usage_quota_config.py
           - --config-files=/usr/local/etc/jupyterhub/jupyterhub_config.d/jupyterhub_usage_quota_config_secret.py
+    metrics-exporter:
+      display: false
   loadRoles:
     usage-quota-service:
       scopes:
         - read:users
       services:
         - usage-quota
-      user:
-        scopes:
-          - self
-          - access:services!service=usage-quota
+    user:
+      scopes:
+        - self
+        - access:services!service=usage-quota
+    metrics-exporter-service:
+      scopes:
+      - users
+      services:
+      - metrics-exporter
   networkPolicy:
     ingress:
       - ports:
