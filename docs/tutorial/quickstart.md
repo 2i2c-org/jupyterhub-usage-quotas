@@ -279,7 +279,7 @@ hub:
           "username": "<prometheus_username>",
           "password": "<prometheus_password>"
         }
-        c.UsageViewer.session_secret_key: "<use-a-secure-key-in-production>"
+        c.UsageViewer.session_secret_key = "<use-a-secure-key-in-production>"
 ```
 
 See [Configuration](../reference/configuration.md) for a full list of configuration options.
