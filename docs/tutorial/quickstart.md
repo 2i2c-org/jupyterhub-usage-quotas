@@ -203,8 +203,8 @@ hub:
         - python3
         - -m
         - jupyterhub_usage_quotas.services.usage_viewer
-          - --config-files=/usr/local/etc/jupyterhub/jupyterhub_config.d/jupyterhub_usage_quota_config.py
-          - --config-files=/usr/local/etc/jupyterhub/jupyterhub_config.d/jupyterhub_usage_quota_config_secret.py
+        - --config-files=/usr/local/etc/jupyterhub/jupyterhub_config.d/jupyterhub_usage_quota_config.py
+        - --config-files=/usr/local/etc/jupyterhub/jupyterhub_config.d/jupyterhub_usage_quota_config_secret.py
     metrics-exporter:
       display: false
   loadRoles:
@@ -222,33 +222,33 @@ hub:
       - users
       services:
       - metrics-exporter
-  networkPolicy:
-    ingress:
-      - ports:
-          - port: 9000
-        from:
-          # Allow traffic from the proxy api pod
-          - podSelector:
-              matchLabels:
-                hub.jupyter.org/network-access-hub: "true"
-          # Allow traffic from the hub pod itself for Jupyterhub's internal healthchecks for hub managed services.
+    networkPolicy:
+      ingress:
+        - ports:
+            - port: 9000
+          from:
+            # Allow traffic from the proxy api pod
+            - podSelector:
+                matchLabels:
+                  hub.jupyter.org/network-access-hub: "true"
+            # Allow traffic from the hub pod itself for Jupyterhub's internal healthchecks for hub managed services.
+            - podSelector:
+                matchLabels:
+                  app.kubernetes.io/component: hub
+                  app.kubernetes.io/name: jupyterhub
+        - ports:
+          - port: 8081
+          from:
+          # Allow traffic from the hub pod itself for oauth calls from the usage-quota service to the hub api.
           - podSelector:
               matchLabels:
                 app.kubernetes.io/component: hub
                 app.kubernetes.io/name: jupyterhub
-      - ports:
-        - port: 8081
-        from:
-        # Allow traffic from the hub pod itself for oauth calls from the usage-quota service to the hub api.
-        - podSelector:
-            matchLabels:
-              app.kubernetes.io/component: hub
-              app.kubernetes.io/name: jupyterhub
-  service:
-    extraPorts:
-      - port: 9000
-        targetPort: 9000
-        name: usage-quota
+    service:
+      extraPorts:
+        - port: 9000
+          targetPort: 9000
+          name: usage-quota
   # The proxy.chp.networkPolicy.egress configuration below is required for the usage-quota dashboard service to be accessible for users.
   proxy:
     chp:
