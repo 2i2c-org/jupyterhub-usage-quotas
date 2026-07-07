@@ -197,7 +197,7 @@ hub:
   services:
     usage-quota:
       url: http://hub:9000
-      display: false
+      display: true
       oauth_no_confirm: true
       command:
         - python3
