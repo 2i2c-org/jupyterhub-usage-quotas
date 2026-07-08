@@ -152,7 +152,6 @@ class UsageQuotaManager(UsageQuotaConfig):
         promql = self.write_promql(usage_metric, user_name, policy)
         self.log.debug(f"{promql=}")
         response = await self.prometheus_client.query(promql)
-        self.log.debug(f"{response=}")
         if not response["data"]["result"]:
             # handle case when no data is returned
             unix_timestamp = (
