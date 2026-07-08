@@ -51,6 +51,7 @@ def setup_usage_quotas(c):
                     f"Usage quota system failed open for user {user_name} with exception: {e}."
                 )
             else:
+                quota_manager.log.error(f"Failed dependency in usage quota system: {e}")
                 raise SpawnException(
                     status_code=424,
                     log_message="Spawn failure occurred due to a failed dependency in the usage quota system. Please contact your hub admin for assistance.",
