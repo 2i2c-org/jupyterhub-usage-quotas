@@ -92,10 +92,13 @@ class MetricsExporter(Application):
                     user_group = str(user_group_set)
                 else:
                     user_group = user_group_set.pop()
-            # Dynamically define metrics based on policy values and set them
+            # Dynamically define and update metrics based on policy values and set them
             metric = self.get_usage_quota_metrics(
                 resource=p["resource"], unit=p["limit"]["unit"]
             )
+            # Clear and repopulate metrics to keep group memberships up-to-date
+            for key in ["usage", "limit"]:
+                metric[key].clear()
             usage = await self.quota_manager.get_usage(user_name, p)
             value = self.quota_manager.aggregate_usage(usage)
             self.log.debug(f"{user_name=}, policy={p}, {value=}")
