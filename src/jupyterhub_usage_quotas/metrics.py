@@ -8,6 +8,8 @@ from yarl import URL
 from jupyterhub_usage_quotas.client import HubApiClient
 from jupyterhub_usage_quotas.manager import UsageQuotaManager
 
+previous_metrics: list = []
+
 
 class MetricsExporter(Application):
     def __init__(
@@ -92,7 +94,7 @@ class MetricsExporter(Application):
                     user_group = str(user_group_set)
                 else:
                     user_group = user_group_set.pop()
-            # Dynamically define metrics based on policy values and set them
+            # Dynamically define and update metrics based on policy values and set them
             metric = self.get_usage_quota_metrics(
                 resource=p["resource"], unit=p["limit"]["unit"]
             )
@@ -111,19 +113,29 @@ class MetricsExporter(Application):
                 window=str(p["window"]),
                 namespace=self.hub_namespace,
             ).set(p["limit"]["value"])
+        return metric
 
     async def update_usage_quota_metrics(self):
         """
         Update Prometheus metrics for usage and quota limits.
         """
+        global previous_metrics
+        # Clear previous metrics to keep label values updated, e.g. for group membership changes
+        for metric in previous_metrics:
+            self.log.debug(f"Metric {metric} cleared")
+            metric.clear()
+        previous_metrics = []
         users_and_groups = await self._get_usernames_and_usergroups()
         for u in users_and_groups:
             policies = self.quota_manager.resolve_policy(
                 user_name=u[0], user_groups=u[1]
             )
-            await self.emit_usage_quota_metrics(
+            metrics = await self.emit_usage_quota_metrics(
                 user_name=u[0], user_groups=u[1], policies=policies
             )
+            for key in ["limit", "usage"]:
+                previous_metrics.append(metrics[key])
+        previous_metrics = list(dict.fromkeys(previous_metrics))
         self.log.info("Usage quota metrics updated")
 
     def start(self):

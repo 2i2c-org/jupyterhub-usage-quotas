@@ -1,5 +1,6 @@
 import datetime
 import itertools
+import logging
 import re
 from collections import defaultdict
 from typing import Any, List, Optional
@@ -15,6 +16,9 @@ class UsageQuotaManager(UsageQuotaConfig):
 
     def __init__(self, **kwargs) -> None:
         super().__init__(**kwargs)
+        parent_log = logging.getLogger("JupyterHub")
+        self.log = logging.getLogger(__name__)
+        self.log.parent = parent_log
         self.convert_resource = {"GiB-hours": 2**30}
         self.convert_seconds = {"GiB-hours": 60**2}
         self.prometheus_client = PrometheusClient(
@@ -32,7 +36,7 @@ class UsageQuotaManager(UsageQuotaConfig):
 
     def resolve_intersection(self, values: list[dict], operator: str) -> list:
         """
-        Resolve quota policy for users with multiple group memberships.
+        Resolve quota policy for users with multiple policies applied.
 
         Apply min/max/sum operators to merge policies sharing the same resource over the same rolling window for the same groups.
         """
@@ -148,7 +152,6 @@ class UsageQuotaManager(UsageQuotaConfig):
         promql = self.write_promql(usage_metric, user_name, policy)
         self.log.debug(f"{promql=}")
         response = await self.prometheus_client.query(promql)
-        self.log.debug(f"{response=}")
         if not response["data"]["result"]:
             # handle case when no data is returned
             unix_timestamp = (
