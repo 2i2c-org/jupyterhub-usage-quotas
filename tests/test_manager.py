@@ -170,6 +170,24 @@ async def test_enforce_empty(mocker):
     assert output["allow_server_launch"] == False
 
 
+async def test_enforce_unlimited(mocker):
+    """
+    Test user-2 with no policies applied at all is allowed to launch a server.
+    """
+    spawner = kubespawner.KubeSpawner(
+        _mock=True, user=MockUser(name="user-2", groups=[])
+    )
+    user_name = spawner.user.name
+    user_groups = [g.name for g in spawner.user.groups]
+    c = Config()
+    c.UsageQuotaManager.scope_backup_strategy = {
+        "intersection": "min",
+    }
+    quota_manager = UsageQuotaManager(config=c)
+    output = await quota_manager.enforce(user_name, user_groups)
+    assert output["allow_server_launch"] == True
+
+
 @pytest.mark.parametrize(
     "operator, under, over",
     [
