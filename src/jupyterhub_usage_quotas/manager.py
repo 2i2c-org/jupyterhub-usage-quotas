@@ -30,9 +30,12 @@ class UsageQuotaManager(UsageQuotaConfig):
         Resolve quota policy for users with no group memberships.
         """
         policy_empty: list = []
+        if "empty" not in self.scope_backup_strategy.keys():
+            self.log.debug("No fallback policy found.")
+            return policy_empty
         if isinstance(self.scope_backup_strategy["empty"], dict):
             policy_empty.append(self.scope_backup_strategy["empty"])
-        return policy_empty
+            return policy_empty
 
     def resolve_intersection(self, values: list[dict], operator: str) -> list:
         """
@@ -87,7 +90,7 @@ class UsageQuotaManager(UsageQuotaConfig):
             self.log.debug("Resolve single policy")
             merged.append(next(iter(grouped.values()))[0])
         elif len(policies) == 0:
-            self.log.debug("Resolve no policy")
+            self.log.debug("Resolve empty policy")
             merged = self.resolve_empty()
         elif len(policies) >= 1:
             self.log.debug("Resolve multiple policies")
@@ -233,13 +236,26 @@ class UsageQuotaManager(UsageQuotaConfig):
         """
         Enforce quota system by resolving the policy applied to the user and comparing their usage to the quota limit.
         """
+        output: dict = {}
         policy = self.resolve_policy(user_name, user_groups)
-        self.log.info(f"Quota policy applied: {policy}")
+        print(f"{policy=}")
+        if policy:
+            self.log.debug(f"Quota policies applied: {policy}")
+        else:
+            self.log.info(
+                f"No quota policies applied to {user_name}: allow server launch"
+            )
+            output["allow_server_launch"] = True
+            output["quota"] = "None"
+            output["timestamp"] = datetime.datetime.now(datetime.UTC).strftime(
+                "%Y-%m-%dT%H:%M:%SZ"
+            )
+            return output
 
         for p in policy:
             usage = await self.get_usage(user_name, p)
             output = self.get_output(p, usage)
-            self.log.info(f"{output=}")
+            self.log.info(f"{output.update({"user": user_name})=}")
             if output["allow_server_launch"] is False:
                 self.log.warning(f"{output['error']['code']}: {user_name}")
                 break
