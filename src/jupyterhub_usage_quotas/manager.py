@@ -48,32 +48,6 @@ policy_schema["properties"].update(
 )
 policy_schema["required"].append("scope")
 
-# Prometheus Usage Quota Metrics schema
-prometheus_usage_quota_metrics_schema: Schema = {
-    "type": "object",
-    "properties": {
-        "home_storage": {
-            "type": "object",
-            "properties": {
-                "usage": {"type": "string"},
-                "quota": {"type": "string"},
-            },
-            "required": ["usage", "quota"],
-            "additionalProperties": False,
-        },
-        "compute": {
-            "type": "object",
-            "properties": {
-                "usage": {"type": "string"},
-                "quota": {"type": "string"},
-            },
-            "required": ["usage", "quota"],
-            "additionalProperties": False,
-        },
-    },
-    "additionalProperties": False,
-}
-
 
 class UsageQuotaManager(LoggingConfigurable):
     """Class for enforcing compute usage quotas."""
@@ -507,7 +481,6 @@ class UsageQuotaManager(LoggingConfigurable):
         Formats the output returned by the quota system.
         """
         output: dict = {}
-        self.log.debug(f"{data=}")
         value = self.aggregate_usage(data)
         limit = policy["limit"]["value"]
         if value < limit:
@@ -549,7 +522,7 @@ class UsageQuotaManager(LoggingConfigurable):
         for p in policy:
             usage = await self.get_usage(user_name, p)
             output = self.get_output(p, usage)
-            self.log.info(f"{output.update({"user": user_name})=}")
+            self.log.info(f"{output=}")
             if output["allow_server_launch"] is False:
                 self.log.warning(f"{output['error']['code']}: {user_name}")
                 break
