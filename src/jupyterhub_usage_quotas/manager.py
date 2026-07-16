@@ -1,18 +1,312 @@
+import copy
 import datetime
 import itertools
 import logging
+import os
 import re
+import typing
 from collections import defaultdict
-from typing import Any, List, Optional
 
+import jsonschema
 from kubespawner.slugs import escape_slug, safe_slug
 from tornado import web
+from traitlets import Bool, Dict, Integer, List, TraitError, Unicode, default, validate
+from traitlets.config import LoggingConfigurable
 
 from jupyterhub_usage_quotas.client import PrometheusClient
-from jupyterhub_usage_quotas.config import UsageQuotaConfig
+
+Schema = typing.Dict[str, typing.Any]
+
+# JSON schema for the scope backup policy for usage quotas
+policy_schema_backup: Schema = {
+    "type": "object",
+    "properties": {
+        "resource": {"enum": ["memory", "cpu"]},
+        "limit": {
+            "type": "object",
+            "properties": {
+                "value": {"type": "number"},
+                "unit": {"enum": ["GiB-hours", "CPU-hours"]},
+            },
+        },
+        "window": {"type": "number"},
+    },
+    "required": ["resource", "limit", "window"],
+    "additionalProperties": False,
+}
+
+# Policy schema: Add scope to usage quota policy
+policy_schema = copy.deepcopy(policy_schema_backup)
+policy_schema["properties"].update(
+    {
+        "scope": {
+            "type": "object",
+            "properties": {"group": {"type": "array", "items": {"type": "string"}}},
+            "additionalProperties": False,
+        }
+    }
+)
+policy_schema["required"].append("scope")
+
+# Prometheus Usage Quota Metrics schema
+prometheus_usage_quota_metrics_schema: Schema = {
+    "type": "object",
+    "properties": {
+        "home_storage": {
+            "type": "object",
+            "properties": {
+                "usage": {"type": "string"},
+                "quota": {"type": "string"},
+            },
+            "required": ["usage", "quota"],
+            "additionalProperties": False,
+        },
+        "compute": {
+            "type": "object",
+            "properties": {
+                "usage": {"type": "string"},
+                "quota": {"type": "string"},
+            },
+            "required": ["usage", "quota"],
+            "additionalProperties": False,
+        },
+    },
+    "additionalProperties": False,
+}
 
 
-class UsageQuotaManager(UsageQuotaConfig):
+class UsageQuotaManager(LoggingConfigurable):
+    """Class for enforcing compute usage quotas."""
+
+    prometheus_url = Unicode(
+        "http://127.0.0.1:9090",
+        help="""
+        The url of the Prometheus server, usually of the form 'http://<k8s-service-name>.<k8s-namespace>.svc.cluster.local' in a Kubernetes cluster. Defaults to 'http://127.0.0.1:9090' for local development.
+        """,
+        config=True,
+    )
+
+    @default("prometheus_url")
+    def _prometheus_url_default(self):
+        return os.environ.get(
+            "JUPYTERHUB_USAGE_QUOTAS_PROMETHEUS_URL", "http://127.0.0.1:9090"
+        )
+
+    prometheus_auth = Dict(
+        per_key_traits={"username": Unicode(), "password": Unicode()},
+        help="""
+        Username and password credentials for authenticating with Prometheus.
+        Can be set via JUPYTERHUB_USAGE_QUOTAS_PROMETHEUS_USERNAME and
+        JUPYTERHUB_USAGE_QUOTAS_PROMETHEUS_PASSWORD environment variables.
+        For example:
+            c.UsageConfig.prometheus_auth = {
+                "username": "username",
+                "password": "password",
+            }
+        """,
+    ).tag(config=True)
+
+    @default("prometheus_auth")
+    def _prometheus_auth_default(self):
+        username = os.environ.get("JUPYTERHUB_USAGE_QUOTAS_PROMETHEUS_USERNAME", "")
+        password = os.environ.get("JUPYTERHUB_USAGE_QUOTAS_PROMETHEUS_PASSWORD", "")
+        if username and password:
+            return {"username": username, "password": password}
+        if username or password:
+            raise TraitError(
+                "Both JUPYTERHUB_USAGE_QUOTAS_PROMETHEUS_USERNAME and "
+                "JUPYTERHUB_USAGE_QUOTAS_PROMETHEUS_PASSWORD must be set together."
+            )
+        return {}
+
+    @validate("prometheus_auth")
+    def _validate_prometheus_auth(self, proposal):
+        auth = proposal["value"]
+        if not auth:
+            return auth
+        required = set(self.traits()["prometheus_auth"]._per_key_traits.keys())
+        missing = required - auth.keys()
+        if missing:
+            expected = {k: "..." for k in sorted(required)}
+            raise TraitError(
+                f"prometheus_auth is missing required keys: {sorted(missing)}. "
+                f"Expected: {expected}"
+            )
+        return auth
+
+    hub_url = Unicode(
+        help="JupyterHub URL, e.g. http://localhost:8000 for local development."
+    ).tag(config=True)
+
+    @default("hub_url")
+    def _hub_url_default(self):
+        return f"http://{os.environ.get('HUB_SERVICE_HOST')}:{os.environ.get('HUB_SERVICE_PORT')}"
+
+    hub_namespace = Unicode(
+        help="Kubernetes namespace of the JupyterHub deployment, used to filter Prometheus usage metrics in multi-tenant environments. Leave empty for single-tenant or development. Can be set via JUPYTERHUB_USAGE_QUOTAS_HUB_NAMESPACE environment variable.",
+    ).tag(config=True)
+
+    @default("hub_namespace")
+    def _hub_namespace_default(self):
+        return os.environ.get("JUPYTERHUB_USAGE_QUOTAS_HUB_NAMESPACE", "")
+
+    escape_username_scheme = Dict(
+        per_key_traits={
+            "directory": Unicode(),
+            "pod": Unicode(),
+            "max_length": Integer(),
+        },
+        help="""
+        Kubespawner slug scheme for naming directories and pod names with escaped usernames. E.g
+            - modern safe slugs for k8s pods and legacy slug for directory names (default): {"directory": "legacy", pod": "safe", max_length: 48},
+        """,
+    ).tag(config=True)
+
+    @default("escape_username_scheme")
+    def _escape_username_scheme_default(self):
+        return {"directory": "legacy", "pod": "safe", "max_length": 48}
+
+    prometheus_usage_metrics = Dict(
+        help="""
+            Dict of Prometheus metrics to track usage. Must define at least one of:
+                - 'memory': PromQL expression
+                - 'cpu': PromQL expression
+            For example:
+                prometheus_usage_metrics = {
+                        "memory": "kube_pod_container_resource_requests{resource='memory'}",
+                        "cpu" : "kube_pod_container_resource_requests{resource='cpu'}"
+                    }
+        """,
+    ).tag(config=True)
+
+    @validate("prometheus_usage_metrics")
+    def _validate_prometheus_usage_metrics(self, proposal):
+        """
+        Validate that memory or cpu usage metrics are defined.
+        """
+        metrics = proposal["value"]
+        if not isinstance(metrics, dict):
+            raise TraitError(
+                f"Prometheus usage metrics {metrics} must be a dict, got {type(metrics)}"
+            )
+
+        for metric_def in metrics:
+            if not metric_def in {"memory", "cpu"}:
+                raise TraitError(
+                    f"Prometheus usage metrics {metrics} must define at least one of 'memory' or 'cpu' keys. Got keys: {list(metrics.keys())}"
+                )
+
+        return metrics
+
+    prometheus_scrape_interval = Integer(
+        60, help="Scrape interval of Prometheus sample collection (seconds)."
+    ).tag(config=True)
+
+    prometheus_emit_interval = Integer(
+        60, help="Emit interval of Prometheus metric export (seconds)."
+    ).tag(config=True)
+
+    prometheus_emit_namespace = Unicode(
+        "jupyterhub", help="Prometheus namespace to prefix metric names."
+    ).tag(config=True)
+
+    metrics_exporter_token = Unicode(
+        help="API token to authenticate requests from metrics exporter."
+    ).tag(config=True)
+
+    scope_backup_strategy = Dict(
+        per_key_traits={
+            "empty": Dict(),
+            "intersection": Unicode(),
+        },
+        default_value={"intersection": "min"},
+        help="""
+        Set a backup strategy to resolve quotas in the case where the scope of the quota policies are applied to an empty set, or an intersection, i.e. define a default when a user has no or multiple quotas applied.
+
+        In the case where no quota is applied ('empty'), we can supply a default quota policy or leave this as None for unlimited quotas; and where multiple quotas are applied, we can apply either the `min`, `max` or `sum`.
+
+        For example, 'Apply a default memory quota of 500 GiB-hours over a rolling 7 day window for users with no groups, and apply the maximum quota available for users with multiple groups.' is expressed as:
+
+        {
+            "empty": {
+                "resource": "memory",
+                "limit": {
+                "value": 500,
+                "unit": "GiB-hours"
+                },
+                "window": 7,
+            },
+            "intersection": "max"
+        }
+        """,
+    ).tag(config=True)
+
+    @validate("scope_backup_strategy")
+    def _validate_scope_backup_strategy(self, proposal):
+        """
+        Validate that the scope backup strategy is defined.
+        """
+        strategy = proposal["value"]
+        required = set(["intersection"])
+        allowed = required | set(["empty"])
+        if required - set(strategy.keys()):
+            raise TraitError(
+                f"Must define backup strategy for 'intersection' scope. Got keys: {list(strategy.keys())}"
+            )
+        extra = set(strategy.keys()) - allowed
+        if extra:
+            raise TraitError(f"Unexpected keys: {extra}")
+        if "empty" in strategy.keys():
+            try:
+                jsonschema.validate(strategy["empty"], policy_schema_backup)
+            except jsonschema.ValidationError as e:
+                raise TraitError(e)
+        if not strategy["intersection"] in {"min", "max", "sum"}:
+            raise TraitError(
+                f"Backup strategy for 'intersection' scope must be either 'min', 'max' or 'sum'. Got value: {strategy['intersection']}"
+            )
+
+        return strategy
+
+    failover_open = Bool(
+        True,
+        help="In the case where the quota system fails, set to True to default to a fail-open (allow all server launches) system or set to False to a fail-closed (deny all server launches) system.",
+    ).tag(config=True)
+
+    # Policy config
+
+    policy = List(
+        Dict(),
+        help="""
+        List usage quota policies, including resource, limits, rolling window period and policy scope.
+
+        For example: '5,000 GiB-hours over 30 days for group A', is expressed as
+
+        c.UsageQuotaConfig.policy = [{
+            "resource": "memory",
+            "limit": {
+                "value": 5000,
+                "unit": "GiB-hours",
+            }
+            "window": 30, # days
+            "scope": {
+                "group": ["A"]
+            }
+        }]
+        """,
+    ).tag(config=True)
+
+    @validate("policy")
+    def _validate_policy(self, proposal):
+        policies = proposal["value"]
+        for i, policy_def in enumerate(policies):
+            if not isinstance(policy_def, dict):
+                raise TraitError(f"Entry {i} must be a dict, got {type(policy_def)}")
+            try:
+                jsonschema.validate(policy_def, policy_schema)
+            except jsonschema.ValidationError as e:
+                raise TraitError(e)
+        return policies
 
     def __init__(self, **kwargs) -> None:
         super().__init__(**kwargs)
@@ -161,7 +455,7 @@ class UsageQuotaManager(UsageQuotaConfig):
                 datetime.datetime.now(datetime.UTC)
                 - datetime.datetime(1970, 1, 1, tzinfo=datetime.UTC)
             ).total_seconds()
-            data: List[List[Any]] = [[unix_timestamp, "0"]]
+            data: List[List[typing.Any]] = [[unix_timestamp, "0"]]
         else:
             # flatten results into a list
             n_result = len(response["data"]["result"])
@@ -268,10 +562,10 @@ class SpawnException(web.HTTPError):
     def __init__(
         self,
         status_code: int,
-        log_message: Optional[str] = None,
-        html_message: Optional[str] = None,
-        *args: Any,
-        **kwargs: Any,
+        log_message: typing.Optional[str] = None,
+        html_message: typing.Optional[str] = None,
+        *args: typing.Any,
+        **kwargs: typing.Any,
     ) -> None:
         super().__init__(status_code, log_message, *args, **kwargs)
         self.jupyterhub_html_message = html_message
