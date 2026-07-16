@@ -27,7 +27,6 @@ from traitlets import Bool, Dict, Integer, List, TraitError, Unicode, default, v
 from traitlets.config import Application
 
 from jupyterhub_usage_quotas import get_template_path
-from jupyterhub_usage_quotas.config import UsageViewerConfig
 from jupyterhub_usage_quotas.services.usage_viewer.quota_client import QuotaClient
 from jupyterhub_usage_quotas.services.usage_viewer.utils import get_displayable_services
 
@@ -159,51 +158,6 @@ class MetricsHandler(BaseHandler):
         else:
             self.set_header("Content-Type", CONTENT_TYPE_LATEST)
             self.write(generate_latest(service_registry))
-
-
-def make_app(
-    quota_client: QuotaClient,
-    config: UsageViewerConfig,
-) -> web.Application:
-    """Create and configure the Tornado application.
-
-    Args:
-        quota_client: QuotaClient instance for querying usage data
-        config: UsageViewerConfig instance containing all configuration
-
-    Returns:
-        Configured Tornado application
-    """
-    prefix = config.service_prefix.rstrip("/")
-    public_hub_url = config.public_hub_url  # already rstripped of trailing /
-    config.hub_template_paths.append(
-        get_template_path()
-    )  # append usage-quota templates to default hub templates list
-    jinja_env = Environment(
-        loader=FileSystemLoader(config.hub_template_paths),
-        autoescape=True,
-    )
-    jinja_env.globals["static_url"] = (
-        lambda path, **_: f"{public_hub_url}/static/{path}"
-    )
-
-    HubOAuth.instance(cache_max_age=60)
-    return web.Application(
-        [
-            (prefix + r"/?", UsageHandler),
-            (prefix + r"/oauth_callback", HubOAuthCallbackHandler),
-            (prefix + r"/metrics", MetricsHandler),
-        ],
-        cookie_secret=config.session_secret_key,
-        enable_home_storage=config.enable_home_storage,
-        enable_compute=config.enable_compute,
-        namespace=config.hub_namespace,
-        quota_client=quota_client,
-        jinja_env=jinja_env,
-        public_hub_url=public_hub_url,
-        logout_url=public_hub_url + "logout",
-        footer_note=config.footer_note,
-    )
 
 
 class UsageViewer(Application):
@@ -474,6 +428,46 @@ class UsageViewer(Application):
             paths.append(default_path)
         return paths
 
+    def make_app(self, quota_client: QuotaClient) -> web.Application:
+        """Create and configure the Tornado application.
+
+        Args:
+            quota_client: QuotaClient instance for querying usage data
+
+        Returns:
+            Configured Tornado application
+        """
+        prefix = self.service_prefix.rstrip("/")
+        public_hub_url = self.public_hub_url  # already rstripped of trailing /
+        self.hub_template_paths.append(
+            get_template_path()
+        )  # append usage-quota templates to default hub templates list
+        jinja_env = Environment(
+            loader=FileSystemLoader(self.hub_template_paths),
+            autoescape=True,
+        )
+        jinja_env.globals["static_url"] = (
+            lambda path, **_: f"{public_hub_url}/static/{path}"
+        )
+
+        HubOAuth.instance(cache_max_age=60)
+        return web.Application(
+            [
+                (prefix + r"/?", UsageHandler),
+                (prefix + r"/oauth_callback", HubOAuthCallbackHandler),
+                (prefix + r"/metrics", MetricsHandler),
+            ],
+            cookie_secret=self.session_secret_key,
+            enable_home_storage=self.enable_home_storage,
+            enable_compute=self.enable_compute,
+            namespace=self.hub_namespace,
+            quota_client=quota_client,
+            jinja_env=jinja_env,
+            public_hub_url=public_hub_url,
+            logout_url=public_hub_url + "logout",
+            footer_note=self.footer_note,
+        )
+
     def initialize(self, argv=None):
         """Initialize the service."""
         super().initialize(argv)
@@ -511,7 +505,7 @@ class UsageViewer(Application):
         self.log.info(
             f"Starting Usage Viewer service on {self.service_host}:{self.service_port}"
         )
-        app = make_app(self.quota_client, config=self)
+        app = self.make_app(self.quota_client)
         server = HTTPServer(app)
         server.listen(self.service_port, self.service_host)
         IOLoop.current().start()
