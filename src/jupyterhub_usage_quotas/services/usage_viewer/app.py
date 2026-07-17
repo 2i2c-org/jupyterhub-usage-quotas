@@ -3,7 +3,6 @@
 import logging
 import os
 import sys
-import typing
 
 import jsonschema
 from jinja2 import Environment, FileSystemLoader
@@ -27,36 +26,9 @@ from traitlets import Bool, Dict, Integer, List, TraitError, Unicode, default, v
 from traitlets.config import Application
 
 from jupyterhub_usage_quotas import get_template_path
+from jupyterhub_usage_quotas.schemas import prometheus_usage_quota_metrics_schema
 from jupyterhub_usage_quotas.services.usage_viewer.quota_client import QuotaClient
 from jupyterhub_usage_quotas.services.usage_viewer.utils import get_displayable_services
-
-Schema = typing.Dict[str, typing.Any]
-
-# Prometheus Usage Quota Metrics schema
-prometheus_usage_quota_metrics_schema: Schema = {
-    "type": "object",
-    "properties": {
-        "home_storage": {
-            "type": "object",
-            "properties": {
-                "usage": {"type": "string"},
-                "quota": {"type": "string"},
-            },
-            "required": ["usage", "quota"],
-            "additionalProperties": False,
-        },
-        "compute": {
-            "type": "object",
-            "properties": {
-                "usage": {"type": "string"},
-                "quota": {"type": "string"},
-            },
-            "required": ["usage", "quota"],
-            "additionalProperties": False,
-        },
-    },
-    "additionalProperties": False,
-}
 
 service_registry = CollectorRegistry()
 

@@ -1,4 +1,3 @@
-import copy
 import datetime
 import itertools
 import logging
@@ -14,39 +13,7 @@ from traitlets import Bool, Dict, Integer, List, TraitError, Unicode, default, v
 from traitlets.config import LoggingConfigurable
 
 from jupyterhub_usage_quotas.client import PrometheusClient
-
-Schema = typing.Dict[str, typing.Any]
-
-# JSON schema for the scope backup policy for usage quotas
-policy_schema_backup: Schema = {
-    "type": "object",
-    "properties": {
-        "resource": {"enum": ["memory", "cpu"]},
-        "limit": {
-            "type": "object",
-            "properties": {
-                "value": {"type": "number"},
-                "unit": {"enum": ["GiB-hours", "CPU-hours"]},
-            },
-        },
-        "window": {"type": "number"},
-    },
-    "required": ["resource", "limit", "window"],
-    "additionalProperties": False,
-}
-
-# Policy schema: Add scope to usage quota policy
-policy_schema = copy.deepcopy(policy_schema_backup)
-policy_schema["properties"].update(
-    {
-        "scope": {
-            "type": "object",
-            "properties": {"group": {"type": "array", "items": {"type": "string"}}},
-            "additionalProperties": False,
-        }
-    }
-)
-policy_schema["required"].append("scope")
+from jupyterhub_usage_quotas.schemas import policy_schema, policy_schema_backup
 
 
 class UsageQuotaManager(LoggingConfigurable):
