@@ -170,10 +170,7 @@ class UsageQuotaManager(LoggingConfigurable):
         {
             "empty": {
                 "resource": "memory",
-                "limit": {
-                "value": 500,
-                "unit": "GiB-hours"
-                },
+                "limit": "500G",
                 "window": 7,
             },
             "intersection": "max"
@@ -201,9 +198,10 @@ class UsageQuotaManager(LoggingConfigurable):
                 jsonschema.validate(strategy["empty"], policy_schema_fallback)
             except jsonschema.ValidationError as e:
                 raise TraitError(e)
+            self._validate_policy_limit(strategy["empty"]["limit"])
         if not strategy["intersection"] in {"min", "max", "sum"}:
             raise TraitError(
-                f"fallback strategy for 'intersection' scope must be either 'min', 'max' or 'sum'. Got value: {strategy['intersection']}"
+                f"Fallback strategy for 'intersection' scope must be either 'min', 'max' or 'sum'. Got value: {strategy['intersection']}"
             )
 
         return strategy
@@ -215,6 +213,15 @@ class UsageQuotaManager(LoggingConfigurable):
 
     # Policy config
 
+    def _validate_policy_limit(self, value: typing.Union[int, str]):
+        """Validate policy limits are formatted nX where n is an integer and X is an optional [KMGT] unit prefix to denote kilo-, mega-, giga- and tera-."""
+        if type(value) is str:
+            pattern = re.compile(r"^\d+[KMGT]$", re.IGNORECASE)
+            if not pattern.match(value):
+                raise TraitError(
+                    f"Policy limit {value} is not valid. Must be an integer or a string with optional suffix K, M, G, T."
+                )
+
     policy = List(
         Dict(),
         help="""
@@ -224,10 +231,7 @@ class UsageQuotaManager(LoggingConfigurable):
 
         c.UsageQuotaConfig.policy = [{
             "resource": "memory",
-            "limit": {
-                "value": 5000,
-                "unit": "GiB-hours",
-            }
+            "limit": "5000G",
             "window": 30, # days
             "scope": {
                 "group": ["A"]
@@ -246,6 +250,7 @@ class UsageQuotaManager(LoggingConfigurable):
                 jsonschema.validate(policy_def, policy_schema)
             except jsonschema.ValidationError as e:
                 raise TraitError(e)
+            self._validate_policy_limit(policy_def["limit"])
         return policies
 
     def __init__(self, **kwargs) -> None:
@@ -312,9 +317,7 @@ class UsageQuotaManager(LoggingConfigurable):
         for p in policies:
             key = (
                 p["resource"],
-                p["limit"][
-                    "unit"
-                ],  # TODO: Add support for aggregating different resource units, e.g. GiB and MiB-hours.
+                p["limit"],
                 p["window"],
             )
             grouped[key].append(p)

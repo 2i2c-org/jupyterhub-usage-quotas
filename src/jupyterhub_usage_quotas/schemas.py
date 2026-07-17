@@ -10,13 +10,7 @@ policy_schema_fallback: Schema = {
     "type": "object",
     "properties": {
         "resource": {"enum": ["memory", "cpu"]},
-        "limit": {
-            "type": "object",
-            "properties": {
-                "value": {"type": "number"},
-                "unit": {"enum": ["GiB-hours", "CPU-hours"]},
-            },
-        },
+        "limit": {"oneOf": [{"type": "string"}, {"type": "integer"}]},
         "window": {"type": "number"},
     },
     "required": ["resource", "limit", "window"],
