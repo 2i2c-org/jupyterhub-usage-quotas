@@ -84,7 +84,7 @@ class MetricsExporter(Application):
         for p in policies:
             # Determine unique scope group for the policy applied to the user
             if p.get("scope", None) is None:
-                user_group = "none"  # meta-group for backup policies that apply to users with no group memberships
+                user_group = "none"  # meta-group for fallback policies that apply to users with no group memberships
             else:
                 user_group_set = set(user_groups) & set(p["scope"]["group"])
                 if len(user_group_set) != 1:

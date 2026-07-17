@@ -13,7 +13,7 @@ from traitlets import Bool, Dict, Integer, List, TraitError, Unicode, default, v
 from traitlets.config import LoggingConfigurable
 
 from jupyterhub_usage_quotas.client import PrometheusClient
-from jupyterhub_usage_quotas.schemas import policy_schema, policy_schema_backup
+from jupyterhub_usage_quotas.schemas import policy_schema, policy_schema_fallback
 
 
 class UsageQuotaManager(LoggingConfigurable):
@@ -154,14 +154,14 @@ class UsageQuotaManager(LoggingConfigurable):
         help="API token to authenticate requests from metrics exporter."
     ).tag(config=True)
 
-    scope_backup_strategy = Dict(
+    scope_fallback_strategy = Dict(
         per_key_traits={
             "empty": Dict(),
             "intersection": Unicode(),
         },
         default_value={"intersection": "min"},
         help="""
-        Set a backup strategy to resolve quotas in the case where the scope of the quota policies are applied to an empty set, or an intersection, i.e. define a default when a user has no or multiple quotas applied.
+        Set a fallback strategy to resolve quotas in the case where the scope of the quota policies are applied to an empty set, or an intersection, i.e. define a default when a user has no or multiple quotas applied.
 
         In the case where no quota is applied ('empty'), we can supply a default quota policy or leave this as None for unlimited quotas; and where multiple quotas are applied, we can apply either the `min`, `max` or `sum`.
 
@@ -181,29 +181,29 @@ class UsageQuotaManager(LoggingConfigurable):
         """,
     ).tag(config=True)
 
-    @validate("scope_backup_strategy")
-    def _validate_scope_backup_strategy(self, proposal):
+    @validate("scope_fallback_strategy")
+    def _validate_scope_fallback_strategy(self, proposal):
         """
-        Validate that the scope backup strategy is defined.
+        Validate that the scope fallback strategy is defined.
         """
         strategy = proposal["value"]
         required = set(["intersection"])
         allowed = required | set(["empty"])
         if required - set(strategy.keys()):
             raise TraitError(
-                f"Must define backup strategy for 'intersection' scope. Got keys: {list(strategy.keys())}"
+                f"Must define fallback strategy for 'intersection' scope. Got keys: {list(strategy.keys())}"
             )
         extra = set(strategy.keys()) - allowed
         if extra:
             raise TraitError(f"Unexpected keys: {extra}")
         if "empty" in strategy.keys():
             try:
-                jsonschema.validate(strategy["empty"], policy_schema_backup)
+                jsonschema.validate(strategy["empty"], policy_schema_fallback)
             except jsonschema.ValidationError as e:
                 raise TraitError(e)
         if not strategy["intersection"] in {"min", "max", "sum"}:
             raise TraitError(
-                f"Backup strategy for 'intersection' scope must be either 'min', 'max' or 'sum'. Got value: {strategy['intersection']}"
+                f"fallback strategy for 'intersection' scope must be either 'min', 'max' or 'sum'. Got value: {strategy['intersection']}"
             )
 
         return strategy
@@ -264,11 +264,11 @@ class UsageQuotaManager(LoggingConfigurable):
         Resolve quota policy for users with no group memberships.
         """
         policy_empty: list = []
-        if "empty" not in self.scope_backup_strategy.keys():
+        if "empty" not in self.scope_fallback_strategy.keys():
             self.log.debug("No fallback policy found.")
             return policy_empty
-        if isinstance(self.scope_backup_strategy["empty"], dict):
-            policy_empty.append(self.scope_backup_strategy["empty"])
+        if isinstance(self.scope_fallback_strategy["empty"], dict):
+            policy_empty.append(self.scope_fallback_strategy["empty"])
         return policy_empty
 
     def resolve_intersection(self, values: list[dict], operator: str) -> list:
@@ -295,9 +295,9 @@ class UsageQuotaManager(LoggingConfigurable):
         """
         Resolve and merge group quota policies that apply to the user.
 
-        Example 1 - empty: Backup policy applies to users who are out of scope of policy definitions.
+        Example 1 - empty: fallback policy applies to users who are out of scope of policy definitions.
 
-        Example 2 - intersection: Policy A limits 30 memory hours over the last 30 days to group 1, policy B limits 60 memory hours over the last 30 days to group 1. The policy backup strategy specifies the 'max' operator, therefore the policy of max(30, 60) = 60 memory hours over the last 30 days applies to group 1.
+        Example 2 - intersection: Policy A limits 30 memory hours over the last 30 days to group 1, policy B limits 60 memory hours over the last 30 days to group 1. The policy fallback strategy specifies the 'max' operator, therefore the policy of max(30, 60) = 60 memory hours over the last 30 days applies to group 1.
 
         Example 3 - multiple:  Policy A limits 30 memory hours over the last 30 days to group 1, policy B limits 7 memory hours over the last 7 days to group 1. Both quota policies are returned (and eventually applied with no limit stacking).
         """
@@ -330,7 +330,7 @@ class UsageQuotaManager(LoggingConfigurable):
             self.log.debug("Resolve multiple policies")
             for (resource, unit, window), values in grouped.items():
                 combined_value = self.resolve_intersection(
-                    values, self.scope_backup_strategy["intersection"]
+                    values, self.scope_fallback_strategy["intersection"]
                 )
                 merged_groups = set()
                 for v in values:
