@@ -61,9 +61,9 @@ c.UsageQuotaManager.policy = [
 ```
 ````
 
-#### Backup strategy
+#### Fallback strategy
 
-`c.UsageQuotaManager.scope_backup_strategy` is used to set a quota resolution strategy in the case where the scope of the quota policies cover no users, or applies multiple policies to a single user. In the case where no quota is applied, we can supply a default quota policy or leave this empty for unlimited quotas; and where multiple quotas are applied, we can apply operators `min`, `max` or `sum` to the limit.
+`c.UsageQuotaManager.scope_fallback_strategy` is used to set a quota resolution strategy in the case where the scope of the quota policies cover no users, or applies multiple policies to a single user. In the case where no quota is applied, we can supply a default quota policy or leave this empty for unlimited quotas; and where multiple quotas are applied, we can apply operators `min`, `max` or `sum` to the limit.
 
 ````{tip} Example
 > “Apply a default memory quota of 500 GiB-hours over a rolling 7 day window for users with no groups, and apply the maximum quota available to users when more than one policy applies.”
@@ -71,7 +71,7 @@ c.UsageQuotaManager.policy = [
 is expressed as
 
 ```python
-c.UsageQuotaManager.scope_backup_strategy = {
+c.UsageQuotaManager.scope_fallback_strategy = {
     "empty": {
         "resource": "memory",
         "limit": {"value": 500, "unit": "GiB-hours"},
@@ -108,15 +108,15 @@ In this explanation, we constrain compute usage by memory requests to a rolling 
 
 ### Policy resolver
 
-The policy resolver matches users with policy scopes to determine the quota limit applied. When a user is a member of multiple groups, the configured strategy from `c.UsageQuotaManager.scope_backup_strategy["intersection"]` is applied. When a user is not a member of any group, the system can be configured to default to no quota limits or quota limits specified in `c.UsageQuotaManager.scope_backup_strategy[“empty”]`. In the case where multiple quota policies apply over different rolling windows, then each policy is returned and applied with no limit stacking.
+The policy resolver matches users with policy scopes to determine the quota limit applied. When a user is a member of multiple groups, the configured strategy from `c.UsageQuotaManager.scope_fallback_strategy["intersection"]` is applied. When a user is not a member of any group, the system can be configured to default to no quota limits or quota limits specified in `c.UsageQuotaManager.scope_fallback_strategy[“empty”]`. In the case where multiple quota policies apply over different rolling windows, then each policy is returned and applied with no limit stacking.
 
 ```{tip} Example
 
 The policy resolver deduces the policy applied to a user under the following three scenarios:
 
-1. `empty`: – Backup policy applies to users who are out of scope of policy definitions.
+1. `empty`: – Fallback policy applies to users who are out of scope of policy definitions.
 
-1. `intersection` – Policy A limits 30 memory hours over the last 30 days to group 1, policy B limits 60 memory hours over the last 30 days to group 1. The policy backup strategy specifies the `max` operator, therefore the policy of `max(30, 60) = 60` memory hours over the last 30 days applies to members of group 1.
+1. `intersection` – Policy A limits 30 memory hours over the last 30 days to group 1, policy B limits 60 memory hours over the last 30 days to group 1. The policy fallback strategy specifies the `max` operator, therefore the policy of `max(30, 60) = 60` memory hours over the last 30 days applies to members of group 1.
 
 1. `multiple` – Policy A limits 30 memory hours over the last 30 days to group 1, policy B limits 7 memory hours over the last 7 days to group 1. Both quota policies are returned and applied with no limit stacking to members of group 1.
 ```

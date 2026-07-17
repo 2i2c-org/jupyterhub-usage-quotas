@@ -162,7 +162,7 @@ hub:
       scope:
         - group-0
     UsageQuotaManager:
-      scope_backup_strategy:
+      scope_fallback_strategy:
         intersection: min
       policy:
         - resource: memory
