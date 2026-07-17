@@ -4,8 +4,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 from tornado.testing import AsyncHTTPTestCase
 
-from jupyterhub_usage_quotas.config import UsageViewerConfig
-from jupyterhub_usage_quotas.services.usage_viewer.app import make_app
+from jupyterhub_usage_quotas.services.usage_viewer.app import UsageViewer
 from jupyterhub_usage_quotas.services.usage_viewer.quota_client import QuotaClient
 
 MOCK_LOGIN_URL = (
@@ -81,9 +80,9 @@ class UsageViewerTestCase(AsyncHTTPTestCase):
             namespace="prod",
             dev_mode=False,
         )
-        config = UsageViewerConfig()
-        config.service_prefix = "/services/usage-quota/"
-        config.public_hub_url = "http://test-hub:8000"
-        config.session_secret_key = "0" * 64
-        config.footer_note = "This is a custom footer note."
-        return make_app(client, config)
+        usage_viewer = UsageViewer()
+        usage_viewer.service_prefix = "/services/usage-quota/"
+        usage_viewer.public_hub_url = "http://test-hub:8000"
+        usage_viewer.session_secret_key = "0" * 64
+        usage_viewer.footer_note = "This is a custom footer note."
+        return usage_viewer.make_app(client)
