@@ -57,8 +57,7 @@ class UsageQuotaManager(LoggingConfigurable):
         help="""
         The url of the Prometheus server, usually of the form 'http://<k8s-service-name>.<k8s-namespace>.svc.cluster.local' in a Kubernetes cluster. Defaults to 'http://127.0.0.1:9090' for local development.
         """,
-        config=True,
-    )
+    ).tag(config=True)
 
     @default("prometheus_url")
     def _prometheus_url_default(self):
@@ -303,7 +302,7 @@ class UsageQuotaManager(LoggingConfigurable):
             return policy_empty
         if isinstance(self.scope_backup_strategy["empty"], dict):
             policy_empty.append(self.scope_backup_strategy["empty"])
-            return policy_empty
+        return policy_empty
 
     def resolve_intersection(self, values: list[dict], operator: str) -> list:
         """
@@ -429,7 +428,7 @@ class UsageQuotaManager(LoggingConfigurable):
                 datetime.datetime.now(datetime.UTC)
                 - datetime.datetime(1970, 1, 1, tzinfo=datetime.UTC)
             ).total_seconds()
-            data: List[List[typing.Any]] = [[unix_timestamp, "0"]]
+            data: typing.List[typing.List[typing.Any]] = [[unix_timestamp, "0"]]
         else:
             # flatten results into a list
             n_result = len(response["data"]["result"])
