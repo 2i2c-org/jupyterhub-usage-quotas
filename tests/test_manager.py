@@ -57,6 +57,7 @@ async def test_enforce_single(mocker):
     )
     quota_manager = UsageQuotaManager(config=c)
     output = await quota_manager.enforce(user_name, user_groups)
+    await spawner.stop()
     assert output["allow_server_launch"] == False
 
 
@@ -128,6 +129,7 @@ async def test_enforce_multiple(mocker):
     )
     quota_manager = UsageQuotaManager(config=c)
     output = await quota_manager.enforce(user_name, user_groups)
+    await spawner.stop()
     assert output["allow_server_launch"] == False
 
 
@@ -167,6 +169,7 @@ async def test_enforce_empty(mocker):
     )
     quota_manager = UsageQuotaManager(config=c)
     output = await quota_manager.enforce(user_name, user_groups)
+    await spawner.stop()
     assert output["allow_server_launch"] == False
 
 
@@ -185,6 +188,7 @@ async def test_enforce_unlimited(mocker):
     }
     quota_manager = UsageQuotaManager(config=c)
     output = await quota_manager.enforce(user_name, user_groups)
+    await spawner.stop()
     assert output["allow_server_launch"] == True
 
 
@@ -255,6 +259,7 @@ async def test_enforce_intersection(mocker, operator, under, over):
     )
     quota_manager = UsageQuotaManager(config=c)
     output = await quota_manager.enforce(user_name, user_groups)
+    await spawner.stop()
     assert output["allow_server_launch"] == False
 
 
@@ -300,7 +305,7 @@ async def test_get_usage_no_result(mocker):
     quota_manager = UsageQuotaManager(config=c)
     single_policy = quota_manager.policy[0]
     usage = await quota_manager.get_usage(user_name, single_policy)
-    print(f"{usage=}")
+    await spawner.stop()
     assert usage[0][1] == 0.0
 
 
@@ -329,6 +334,7 @@ async def test_get_usage(data_response, data_usage, mocker):
     quota_manager = UsageQuotaManager(config=c)
     empty_policy = quota_manager.scope_backup_strategy["empty"]
     usage = await quota_manager.get_usage(user_name, empty_policy)
+    await spawner.stop()
     assert usage == data_usage
 
 
@@ -351,5 +357,4 @@ def test_get_retry_time(data_usage, mocker):
     quota_manager = UsageQuotaManager(config=c)
     empty_policy = quota_manager.scope_backup_strategy["empty"]
     retry_time = quota_manager.get_retry_time(empty_policy, data_usage)
-    print(f"{retry_time=}")
     assert retry_time == "2026-04-05T21:10:16Z"
