@@ -258,11 +258,29 @@ class UsageQuotaManager(LoggingConfigurable):
         parent_log = logging.getLogger("JupyterHub")
         self.log = logging.getLogger(__name__)
         self.log.parent = parent_log
-        self.convert_resource = {"GiB-hours": 2**30}
-        self.convert_seconds = {"GiB-hours": 60**2}
         self.prometheus_client = PrometheusClient(
             self.prometheus_url, self.prometheus_auth
         )
+        self.UNIT_SUFFIXES = {
+            "K": 1024,
+            "M": 1024**2,
+            "G": 1024**3,
+            "T": 1024**4,
+        }
+        self.seconds_to_hours = 60**2
+
+    def convert_memory_to_bytes(self, policy: dict) -> dict:
+        if type(policy["limit"]) is str:
+            n = int(re.findall("[0-9]+", policy["limit"])[0])
+            s = re.findall("[a-zA-Z]+", policy["limit"])[0]
+            policy["limit"] = n * self.UNIT_SUFFIXES[s]
+            policy["unit"] = s
+        return policy
+
+    def convert_bytes_to_memory(self, policy: dict) -> dict:
+        if policy["unit"]:
+            policy["limit"] = policy["limit"] / self.UNIT_SUFFIXES[policy["unit"]]
+        return policy
 
     def resolve_empty(self) -> list:
         """
@@ -283,7 +301,7 @@ class UsageQuotaManager(LoggingConfigurable):
         Apply min/max/sum operators to merge policies sharing the same resource over the same rolling window for the same groups.
         """
 
-        limits = [v["limit"]["value"] for v in values]
+        limits = [v["limit"] for v in values]
 
         if operator == "min":
             combined_value = min(limits)
@@ -307,8 +325,15 @@ class UsageQuotaManager(LoggingConfigurable):
         Example 3 - multiple:  Policy A limits 30 memory hours over the last 30 days to group 1, policy B limits 7 memory hours over the last 7 days to group 1. Both quota policies are returned (and eventually applied with no limit stacking).
         """
         self.log.debug(f"User {user_name} is a member of groups: {user_groups}")
+        # Find policies applied to user group
         policies = [
             p for p in self.policy if set(user_groups) & set(p["scope"]["group"])
+        ]
+        # Standardise memory units to pure bytes
+        policies = [
+            self.convert_memory_to_bytes(p)
+            for p in policies
+            if p["resource"] == "memory"
         ]
         self.log.debug(f"{policies=}")
 
@@ -317,7 +342,6 @@ class UsageQuotaManager(LoggingConfigurable):
         for p in policies:
             key = (
                 p["resource"],
-                p["limit"],
                 p["window"],
             )
             grouped[key].append(p)
@@ -331,20 +355,21 @@ class UsageQuotaManager(LoggingConfigurable):
             merged = self.resolve_empty()
         elif len(policies) >= 1:
             self.log.debug("Resolve multiple policies")
-            for (resource, unit, window), values in grouped.items():
+            for (resource, window), values in grouped.items():
                 combined_value = self.resolve_intersection(
                     values, self.scope_fallback_strategy["intersection"]
                 )
                 merged_groups = set()
                 for v in values:
                     merged_groups.update(v["scope"].get("group", []))
+                    # Pass through memory units to merged policies if it exists
+                    if "unit" in v.keys():
+                        unit = v["unit"]
                 merged.append(
                     {
                         "resource": resource,
-                        "limit": {
-                            "value": combined_value,
-                            "unit": unit,
-                        },
+                        "limit": combined_value,
+                        "unit": unit if unit else None,
                         "window": window,
                         "scope": {"group": sorted(merged_groups)},
                     }
@@ -404,15 +429,10 @@ class UsageQuotaManager(LoggingConfigurable):
             n_result = len(response["data"]["result"])
             data = [response["data"]["result"][i]["values"] for i in range(n_result)]
             data = [d for ds in data for d in ds]
-        # Unit conversion
-        unit = policy["limit"]["unit"]
         result = [
             [
                 d[0],
-                float(d[1])
-                * self.prometheus_scrape_interval
-                / self.convert_seconds[unit]
-                / self.convert_resource[unit],
+                float(d[1]) * self.prometheus_scrape_interval / self.seconds_to_hours,
             ]
             for d in data
         ]
@@ -427,7 +447,7 @@ class UsageQuotaManager(LoggingConfigurable):
         x, y = zip(*data)
         cumulative_sum = list(itertools.accumulate(y))
         # Calculate difference between policy limit and current usage
-        delta_resource = cumulative_sum[-1] - policy["limit"]["value"]
+        delta_resource = cumulative_sum[-1] - policy["limit"]
         self.log.debug(f"{delta_resource=}")
         # Find timestamp when usage falls below delta_resource
         index_retry = min(
@@ -445,24 +465,31 @@ class UsageQuotaManager(LoggingConfigurable):
         """
         return [sum(x) for x in zip(*data)][1]
 
-    def get_output(self, policy: dict, data: list) -> dict:
+    def get_output(self, data: list, policy: dict) -> dict:
         """
         Formats the output returned by the quota system.
         """
         output: dict = {}
         value = self.aggregate_usage(data)
-        limit = policy["limit"]["value"]
+        limit = policy["limit"]
         if value < limit:
             output["allow_server_launch"] = True
         else:
             output["allow_server_launch"] = False
+            if policy["resource"] == "memory":
+                limit = limit / self.UNIT_SUFFIXES[policy["unit"]]
             output["error"] = {
                 "code": "quota-exceeded",
-                "message": f"Current {policy['resource']} usage = {value:.2f} {policy['limit']['unit']} is over the quota limit of {limit} {policy['limit']['unit']} over the last {policy['window']} days.",
+                "message": f"Current {policy['resource']} usage = {value:.2f} is over the quota limit of {limit} over the last {policy['window']} days.",
                 "retry_time": self.get_retry_time(policy, data),
             }
-        policy.update({"used": value})
-        output["quota"] = policy
+        if policy["resource"] != "memory":
+            policy.update({"used": value})
+            output["quota"] = policy
+        else:
+            value = value / self.UNIT_SUFFIXES[policy["unit"]]
+            policy.update({"used": value})
+            output["quota"] = self.convert_bytes_to_memory(policy)
         output["timestamp"] = datetime.datetime.now(datetime.UTC).strftime(
             "%Y-%m-%dT%H:%M:%SZ"
         )
@@ -474,7 +501,6 @@ class UsageQuotaManager(LoggingConfigurable):
         """
         output: dict = {}
         policy = self.resolve_policy(user_name, user_groups)
-        print(f"{policy=}")
         if policy:
             self.log.debug(f"Quota policies applied: {policy}")
         else:
@@ -490,7 +516,7 @@ class UsageQuotaManager(LoggingConfigurable):
 
         for p in policy:
             usage = await self.get_usage(user_name, p)
-            output = self.get_output(p, usage)
+            output = self.get_output(usage, p)
             self.log.info(f"{output=}")
             if output["allow_server_launch"] is False:
                 self.log.warning(f"{output['error']['code']}: {user_name}")
