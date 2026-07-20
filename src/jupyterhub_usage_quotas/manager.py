@@ -269,11 +269,12 @@ class UsageQuotaManager(LoggingConfigurable):
         }
         self.seconds_to_hours = 60**2
 
-    def convert_memory_to_bytes(self, policy: dict) -> dict:
+    @staticmethod
+    def convert_memory_to_bytes(policy: dict, unit_suffixes: dict) -> dict:
         if type(policy["limit"]) is str:
             n = int(re.findall("[0-9]+", policy["limit"])[0])
             s = re.findall("[a-zA-Z]+", policy["limit"])[0]
-            policy["limit"] = n * self.UNIT_SUFFIXES[s]
+            policy["limit"] = n * unit_suffixes[s]
             policy["unit"] = s
         return policy
 
@@ -331,7 +332,7 @@ class UsageQuotaManager(LoggingConfigurable):
         ]
         # Standardise memory units to pure bytes
         policies = [
-            self.convert_memory_to_bytes(p)
+            self.convert_memory_to_bytes(p, self.UNIT_SUFFIXES)
             for p in policies
             if p["resource"] == "memory"
         ]
@@ -471,6 +472,8 @@ class UsageQuotaManager(LoggingConfigurable):
         """
         output: dict = {}
         value = self.aggregate_usage(data)
+        if policy["resource"] == "memory":
+            policy = self.convert_memory_to_bytes(policy, self.UNIT_SUFFIXES)
         limit = policy["limit"]
         if value < limit:
             output["allow_server_launch"] = True
@@ -487,6 +490,7 @@ class UsageQuotaManager(LoggingConfigurable):
             policy.update({"used": value})
             output["quota"] = policy
         else:
+            # Convert bytes to human-readable format for output
             value = value / self.UNIT_SUFFIXES[policy["unit"]]
             policy.update({"used": value})
             output["quota"] = self.convert_bytes_to_memory(policy)
