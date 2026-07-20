@@ -102,6 +102,9 @@ class MetricsExporter(Application):
             )
             for p in policies
         ]
+        # Deal with no policy applied
+        if not policies:
+            return {}
         for p in policies:
             # Determine unique scope group for the policy applied to the user
             if p.get("scope", None) is None:
@@ -154,9 +157,10 @@ class MetricsExporter(Application):
             metrics = await self.emit_usage_quota_metrics(
                 user_name=u[0], user_groups=u[1], policies=policies
             )
-            for key in ["limit", "usage"]:
-                previous_metrics.append(metrics[key])
-        previous_metrics = list(dict.fromkeys(previous_metrics))
+            if metrics:
+                for key in ["limit", "usage"]:
+                    previous_metrics.append(metrics[key])
+            previous_metrics = list(dict.fromkeys(previous_metrics))
         self.log.info("Usage quota metrics updated")
 
     def start(self):
