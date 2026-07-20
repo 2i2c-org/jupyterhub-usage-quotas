@@ -1,4 +1,5 @@
 import logging
+import re
 
 from prometheus_client import REGISTRY, Gauge
 from tornado.ioloop import PeriodicCallback
@@ -28,7 +29,13 @@ class MetricsExporter(Application):
         self.headers = {"Accept": "application/jupyterhub-pagination+json"}
         self.prometheus_namespace = self.quota_manager.prometheus_emit_namespace
         self.metrics_exporter_token = self.quota_manager.metrics_exporter_token
-        self.convert_unit = {"GiB-hours": "gibibyte_hours"}
+        self.convert_unit = {"memory": "byte_hours", "cpu": "cpu_hours"}
+        self.UNIT_SUFFIXES = {
+            "K": 1024,
+            "M": 1024**2,
+            "G": 1024**3,
+            "T": 1024**4,
+        }
         self.metrics: dict = {}
 
     async def _get_usernames_and_usergroups(self) -> list[tuple]:
@@ -55,12 +62,17 @@ class MetricsExporter(Application):
         users_and_groups = [(u["name"], u["groups"]) for u in users]
         return users_and_groups
 
-    def get_usage_quota_metrics(self, resource: str, unit: str) -> dict:
+    def _parse_policy_limit(self, limit: str) -> tuple:
+        n = int(re.findall("[0-9]+", limit)[0])
+        s = re.findall("[a-zA-Z]+", limit)[0]
+        return (n, s)
+
+    def get_usage_quota_metrics(self, resource: str) -> dict:
         """
         Define Prometheus metric depending on policy resource, e.g. memory or cpu.
         """
         output = {}
-        metric_unit = self.convert_unit[unit]
+        metric_unit = self.convert_unit[resource]
         for key in ["limit", "usage"]:
             metric_name = f"{resource}_{key}_{metric_unit}"
             if metric_name not in self.metrics:
@@ -68,7 +80,7 @@ class MetricsExporter(Application):
                 self.metrics[metric_name] = Gauge(
                     metric_name,
                     f"Resource {key} for {resource} from usage quota system.",
-                    ["namespace", "policy_group", "username", "window"],
+                    ["namespace", "policy_group", "username", "window", "unit"],
                     namespace=self.prometheus_namespace,
                     registry=REGISTRY,
                 )
@@ -81,6 +93,15 @@ class MetricsExporter(Application):
         """
         Emit usage and quota limits as Prometheus Gauge metrics.
         """
+        # Standardise memory units to pure bytes
+        policies = [
+            (
+                UsageQuotaManager.convert_memory_to_bytes(p, self.UNIT_SUFFIXES)
+                if p["resource"] == "memory"
+                else p
+            )
+            for p in policies
+        ]
         for p in policies:
             # Determine unique scope group for the policy applied to the user
             if p.get("scope", None) is None:
@@ -95,9 +116,7 @@ class MetricsExporter(Application):
                 else:
                     user_group = user_group_set.pop()
             # Dynamically define and update metrics based on policy values and set them
-            metric = self.get_usage_quota_metrics(
-                resource=p["resource"], unit=p["limit"]["unit"]
-            )
+            metric = self.get_usage_quota_metrics(resource=p["resource"])
             usage = await self.quota_manager.get_usage(user_name, p)
             value = self.quota_manager.aggregate_usage(usage)
             self.log.debug(f"{user_name=}, policy={p}, {value=}")
@@ -106,13 +125,15 @@ class MetricsExporter(Application):
                 policy_group=user_group,
                 window=str(p["window"]),
                 namespace=self.hub_namespace,
+                unit=p["unit"],
             ).set(value)
             metric["limit"].labels(
                 username=user_name,
                 policy_group=user_group,
                 window=str(p["window"]),
                 namespace=self.hub_namespace,
-            ).set(p["limit"]["value"])
+                unit=p["unit"],
+            ).set(p["limit"])
         return metric
 
     async def update_usage_quota_metrics(self):
