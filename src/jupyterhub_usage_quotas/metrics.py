@@ -6,7 +6,7 @@ from tornado.ioloop import PeriodicCallback
 from traitlets.config import Application
 from yarl import URL
 
-from jupyterhub_usage_quotas.client import HubApiClient
+from jupyterhub_usage_quotas.common import HubApiClient
 from jupyterhub_usage_quotas.manager import UsageQuotaManager
 
 previous_metrics: list = []
@@ -115,10 +115,10 @@ class MetricsExporter(Application):
                     self.log.warning(
                         f"More than one group identified with a single policy for user {user_name}"
                     )
-                    user_group = str(user_group_set)
+                    user_group = str(user_group_set)  # multiple groups
                 else:
-                    user_group = user_group_set.pop()
-            # Dynamically define and update metrics based on policy values and set them
+                    user_group = user_group_set.pop()  # single group
+            # Dynamically define and update metrics based on policy values and set their values
             metric = self.get_usage_quota_metrics(resource=p["resource"])
             usage = await self.quota_manager.get_usage(user_name, p)
             value = self.quota_manager.aggregate_usage(usage)

@@ -12,7 +12,7 @@ from tornado import web
 from traitlets import Bool, Dict, Integer, List, TraitError, Unicode, default, validate
 from traitlets.config import LoggingConfigurable
 
-from jupyterhub_usage_quotas.client import PrometheusClient
+from jupyterhub_usage_quotas.common import PrometheusClient
 from jupyterhub_usage_quotas.schemas import policy_schema, policy_schema_fallback
 
 
@@ -433,7 +433,9 @@ class UsageQuotaManager(LoggingConfigurable):
         result = [
             [
                 d[0],
-                float(d[1]) * self.prometheus_scrape_interval / self.seconds_to_hours,
+                float(d[1])
+                * self.prometheus_scrape_interval
+                / self.seconds_to_hours,  # convert from byte-seconds per sample to byte-hours
             ]
             for d in data
         ]
