@@ -327,7 +327,7 @@ class UsageQuotaManager(LoggingConfigurable):
             p["unit"] = res.unit
         self.log.debug(f"{policies=}")
 
-        # Group policies with common keys together, e.g. the same resources and rolling windows.
+        # Merge group policies with common keys together, e.g. the same resources and rolling windows.
         grouped = defaultdict(list)
         for p in policies:
             key = (
@@ -335,16 +335,11 @@ class UsageQuotaManager(LoggingConfigurable):
                 p["window"],
             )
             grouped[key].append(p)
-
         merged = []
-        if len(policies) == 1:
-            self.log.debug("Resolve single policy")
-            merged.append(next(iter(grouped.values()))[0])
-        elif len(policies) == 0:
+        if len(policies) == 0:
             self.log.debug("Resolve empty policy")
             merged = self.resolve_empty()
         elif len(policies) >= 1:
-            self.log.debug("Resolve multiple policies")
             for (resource, window), values in grouped.items():
                 combined_value = self.resolve_intersection(
                     values, self.scope_fallback_strategy["intersection"]
