@@ -278,6 +278,10 @@ class UsageQuotaManager(LoggingConfigurable):
             self.log.debug("No fallback policy found.")
             return policy_empty
         if isinstance(self.scope_fallback_strategy["empty"], dict):
+            policy = self.scope_fallback_strategy["empty"]
+            resource = Resource(name=policy["resource"], value=policy["limit"])
+            policy["pure_limit"] = resource.pure_value
+            policy["unit"] = resource.unit
             policy_empty.append(self.scope_fallback_strategy["empty"])
         return policy_empty
 
@@ -435,7 +439,7 @@ class UsageQuotaManager(LoggingConfigurable):
         x, y = zip(*data)
         cumulative_sum = list(itertools.accumulate(y))
         # Calculate difference between policy limit and current usage
-        delta_resource = cumulative_sum[-1] - policy["limit"]
+        delta_resource = cumulative_sum[-1] - policy["pure_limit"]
         self.log.debug(f"{delta_resource=}")
         # Find timestamp when usage falls below delta_resource
         index_retry = min(
