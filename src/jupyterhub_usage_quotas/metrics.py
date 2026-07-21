@@ -93,15 +93,6 @@ class MetricsExporter(Application):
         """
         Emit usage and quota limits as Prometheus Gauge metrics.
         """
-        # Standardise memory units to pure bytes
-        policies = [
-            (
-                UsageQuotaManager.convert_memory_to_bytes(p, self.UNIT_SUFFIXES)
-                if p["resource"] == "memory"
-                else p
-            )
-            for p in policies
-        ]
         # Deal with no policy applied
         if not policies:
             return {}
@@ -136,7 +127,7 @@ class MetricsExporter(Application):
                 window=str(p["window"]),
                 namespace=self.hub_namespace,
                 unit=p["unit"],
-            ).set(p["limit"])
+            ).set(p["pure_limit"])
         return metric
 
     async def update_usage_quota_metrics(self):
