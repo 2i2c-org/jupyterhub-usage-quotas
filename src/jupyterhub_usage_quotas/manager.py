@@ -12,7 +12,7 @@ from tornado import web
 from traitlets import Bool, Dict, Integer, List, TraitError, Unicode, default, validate
 from traitlets.config import LoggingConfigurable
 
-from jupyterhub_usage_quotas.common import PrometheusClient
+from jupyterhub_usage_quotas.common import PrometheusClient, Resource
 from jupyterhub_usage_quotas.schemas import policy_schema, policy_schema_fallback
 
 
@@ -269,20 +269,6 @@ class UsageQuotaManager(LoggingConfigurable):
         }
         self.seconds_to_hours = 60**2
 
-    @staticmethod
-    def convert_memory_to_bytes(policy: dict, unit_suffixes: dict) -> dict:
-        if type(policy["limit"]) is str:
-            n = int(re.findall("[0-9]+", policy["limit"])[0])
-            s = re.findall("[a-zA-Z]+", policy["limit"])[0]
-            policy["limit"] = n * unit_suffixes[s]
-            policy["unit"] = s
-        return policy
-
-    def convert_bytes_to_memory(self, policy: dict) -> dict:
-        if policy["unit"]:
-            policy["limit"] = policy["limit"] / self.UNIT_SUFFIXES[policy["unit"]]
-        return policy
-
     def resolve_empty(self) -> list:
         """
         Resolve quota policy for users with no group memberships.
@@ -302,7 +288,7 @@ class UsageQuotaManager(LoggingConfigurable):
         Apply min/max/sum operators to merge policies sharing the same resource over the same rolling window for the same groups.
         """
 
-        limits = [v["limit"] for v in values]
+        limits = [v["pure_limit"] for v in values]
 
         if operator == "min":
             combined_value = min(limits)
@@ -330,12 +316,11 @@ class UsageQuotaManager(LoggingConfigurable):
         policies = [
             p for p in self.policy if set(user_groups) & set(p["scope"]["group"])
         ]
-        # Standardise memory units to pure bytes
-        policies = [
-            self.convert_memory_to_bytes(p, self.UNIT_SUFFIXES)
-            for p in policies
-            if p["resource"] == "memory"
-        ]
+        # Standardise policy values to pure values
+        for p in policies:
+            res = Resource(name=p["resource"], value=p["limit"])
+            p["pure_limit"] = res.pure_value
+            p["unit"] = res.unit
         self.log.debug(f"{policies=}")
 
         # Group policies with common keys together, e.g. the same resources and rolling windows.
@@ -363,14 +348,14 @@ class UsageQuotaManager(LoggingConfigurable):
                 merged_groups = set()
                 for v in values:
                     merged_groups.update(v["scope"].get("group", []))
-                    # Pass through memory units to merged policies if it exists
-                    if "unit" in v.keys():
-                        unit = v["unit"]
                 merged.append(
                     {
                         "resource": resource,
-                        "limit": combined_value,
-                        "unit": unit if unit else None,
+                        "pure_limit": combined_value,
+                        "limit": Resource.get_value(
+                            name=resource, value=combined_value, unit=v["unit"]
+                        ),
+                        "unit": v["unit"],
                         "window": window,
                         "scope": {"group": sorted(merged_groups)},
                     }
@@ -435,7 +420,7 @@ class UsageQuotaManager(LoggingConfigurable):
                 d[0],
                 float(d[1])
                 * self.prometheus_scrape_interval
-                / self.seconds_to_hours,  # convert from byte-seconds per sample to byte-hours
+                / self.seconds_to_hours,  # convert from resource-seconds per sample to resource-hours
             ]
             for d in data
         ]
@@ -473,29 +458,22 @@ class UsageQuotaManager(LoggingConfigurable):
         Formats the output returned by the quota system.
         """
         output: dict = {}
-        value = self.aggregate_usage(data)
-        if policy["resource"] == "memory":
-            policy = self.convert_memory_to_bytes(policy, self.UNIT_SUFFIXES)
-        limit = policy["limit"]
-        if value < limit:
+        pure_usage = self.aggregate_usage(data)
+        pure_limit = policy["pure_limit"]
+        usage = Resource.get_value(
+            name=policy["resource"], value=pure_usage, unit=policy["unit"]
+        )
+        if pure_usage < pure_limit:
             output["allow_server_launch"] = True
         else:
             output["allow_server_launch"] = False
-            if policy["resource"] == "memory":
-                limit = limit / self.UNIT_SUFFIXES[policy["unit"]]
             output["error"] = {
                 "code": "quota-exceeded",
-                "message": f"Current {policy['resource']} usage = {value:.2f} is over the quota limit of {limit} over the last {policy['window']} days.",
+                "message": f"Current {policy['resource']} usage = {usage:.2f}{policy['unit']} is over the quota limit of {policy['limit']} over the last {policy['window']} days.",
                 "retry_time": self.get_retry_time(policy, data),
             }
-        if policy["resource"] != "memory":
-            policy.update({"used": value})
-            output["quota"] = policy
-        else:
-            # Convert bytes to human-readable format for output
-            value = value / self.UNIT_SUFFIXES[policy["unit"]]
-            policy.update({"used": value})
-            output["quota"] = self.convert_bytes_to_memory(policy)
+        policy.update({"used": usage})
+        output["quota"] = policy
         output["timestamp"] = datetime.datetime.now(datetime.UTC).strftime(
             "%Y-%m-%dT%H:%M:%SZ"
         )
