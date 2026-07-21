@@ -285,7 +285,7 @@ class UsageQuotaManager(LoggingConfigurable):
             policy_empty.append(self.scope_fallback_strategy["empty"])
         return policy_empty
 
-    def resolve_intersection(self, values: list[dict], operator: str) -> list:
+    def resolve_intersection(self, values: list[dict], operator: str) -> float:
         """
         Resolve quota policy for users with multiple policies applied.
 

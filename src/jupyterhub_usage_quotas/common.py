@@ -172,9 +172,10 @@ class Resource(object):
             self.pure_value = int(float(num) * self.MEMORY_SUFFIXES[self.unit])
         elif self.name == "cpu":
             self.pure_value = int(float(num) * self.CPU_SUFFIXES[self.unit])
+        return self.pure_value
 
     @classmethod
-    def get_value(cls, name: str, value: int, unit: str) -> int:
+    def get_value(cls, name: str, value: float, unit: str) -> float:
         """
         Helper function to convert pure values to other units.
         """
@@ -182,3 +183,5 @@ class Resource(object):
             return value / cls.MEMORY_SUFFIXES[unit]
         elif name == "cpu":
             return value / cls.CPU_SUFFIXES[unit]
+        else:
+            raise ValueError(f"Resource {name} not recognised.")
