@@ -462,13 +462,16 @@ class UsageQuotaManager(LoggingConfigurable):
         usage = Resource.get_value(
             name=policy["resource"], value=pure_usage, unit=policy["unit"]
         )
+        policy["readable_unit"] = Resource.get_readable_unit(
+            name=policy["resource"], unit=policy["unit"]
+        )
         if pure_usage < pure_limit:
             output["allow_server_launch"] = True
         else:
             output["allow_server_launch"] = False
             output["error"] = {
                 "code": "quota-exceeded",
-                "message": f"Current {policy['resource']} usage = {usage:.2f}{policy['unit']} is over the quota limit of {policy['limit']} over the last {policy['window']} days.",
+                "message": f"Current {policy['resource']} usage = {usage:.2f} {policy["readable_unit"]} is over the quota limit of {policy['limit']} {policy["readable_unit"]} over the last {policy['window']} days.",
                 "retry_time": self.get_retry_time(policy, data),
             }
         policy.update({"used": usage})
