@@ -53,11 +53,6 @@ c.UsageQuotaManager.scope_fallback_strategy = {
 
 c.UsageQuotaManager.failover_open = False
 
-c.UsageQuotaManager.prometheus_usage_metrics = {
-    "memory": "kube_pod_container_resource_requests{resource='memory'}",
-    "cpu": "kube_pod_container_resource_requests{resource='cpu'}",
-}
-
 c.UsageQuotaManager.policy = [
     {
         "resource": "memory",

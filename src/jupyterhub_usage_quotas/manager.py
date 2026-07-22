@@ -138,6 +138,13 @@ class UsageQuotaManager(LoggingConfigurable):
 
         return metrics
 
+    @default("prometheus_usage_metrics")
+    def _prometheus_usage_metrics_default(self):
+        return {
+            "memory": "kube_pod_container_resource_requests{resource='memory'}",
+            "cpu": "kube_pod_container_resource_requests{resource='cpu'}",
+        }
+
     prometheus_scrape_interval = Integer(
         60, help="Scrape interval of Prometheus sample collection (seconds)."
     ).tag(config=True)
