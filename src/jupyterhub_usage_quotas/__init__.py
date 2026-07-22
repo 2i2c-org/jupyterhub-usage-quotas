@@ -21,11 +21,6 @@ def setup_usage_quotas(c):
     """
     existing_hook = getattr(c.Spawner, "pre_spawn_hook", None)
 
-    c.UsageQuotaManager.prometheus_usage_metrics = {
-        "memory": "kube_pod_container_resource_requests{resource='memory'}",
-        # "cpu": "kube_pod_container_resource_requests{resource='cpu'}"
-    }
-
     quota_manager = UsageQuotaManager(config=c)
 
     FAIL_OPEN_TOTAL = Counter(
@@ -60,7 +55,7 @@ def setup_usage_quotas(c):
             raise SpawnException(
                 status_code=422,
                 log_message=f"{output['error']['message']}",
-                html_message=f"<p>Compute {output['quota']['resource']} quota limit exceeded.</p><p style='font-size:100%'>You have used <span style='color:var(--bs-red)'>{output['quota']['used']:.2f}</span> / {output['quota']['limit']:.2f} {output['quota']['unit']} in the last {output['quota']['window']} days.</p><p style='font-size:100%'>Your quota will reset on <b><time datetime='{output['error']['retry_time']}'>{output['error']['retry_time']}</time></b>.</p><p style='font-size:100%'>Contact your JupyterHub admin if you need additional quota.</p><i style='font-size:100%;color:var(--bs-gray)'>Last updated: <time datetime='{output['timestamp']}'>{output["timestamp"]}</time>.</i>",
+                html_message=f"<p>Compute {output['quota']['resource']} quota limit exceeded.</p><p style='font-size:100%'>You have used <span style='color:var(--bs-red)'>{output['quota']['used']:.2f}</span> / {output['quota']['limit']:.2f} {output['quota']['readable_unit']} in the last {output['quota']['window']} days.</p><p style='font-size:100%'>Your quota will reset on <b><time datetime='{output['error']['retry_time']}'>{output['error']['retry_time']}</time></b>.</p><p style='font-size:100%'>Contact your JupyterHub admin if you need additional quota.</p><i style='font-size:100%;color:var(--bs-gray)'>Last updated: <time datetime='{output['timestamp']}'>{output["timestamp"]}</time>.</i>",
             )
 
     async def pre_spawn_hook(spawner):
