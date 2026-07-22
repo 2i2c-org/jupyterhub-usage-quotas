@@ -141,7 +141,7 @@ class Resource(object):
         self.value = value
         self.get_pure_value()
 
-    def get_pure_value(self) -> int:
+    def get_pure_value(self) -> int | None:
         """
         Validate that the passed in value is a valid resource specification
 
@@ -150,7 +150,7 @@ class Resource(object):
         if isinstance(self.value, int | float):
             self.pure_value = int(self.value)
             self.unit = ""
-            return
+            return None
         elif isinstance(self.value, str):
             pattern = re.compile(r"^\d+[KMGT]$")
             if not pattern.match(self.value):
@@ -173,7 +173,7 @@ class Resource(object):
             self.pure_value = int(float(num) * self.MEMORY_SUFFIXES[self.unit])
         elif self.name == "cpu":
             self.pure_value = int(float(num) * self.CPU_SUFFIXES[self.unit])
-        return
+        return None
 
     @classmethod
     def get_value(cls, name: str, value: float, unit: str) -> float:
@@ -212,4 +212,4 @@ class Resource(object):
             match = re.findall(pattern, value)
             return int(match[0])
         else:
-            return value
+            return int(value)
