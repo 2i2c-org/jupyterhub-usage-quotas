@@ -347,14 +347,15 @@ class UsageQuotaManager(LoggingConfigurable):
                 merged_groups = set()
                 for v in values:
                     merged_groups.update(v["scope"].get("group", []))
+                    if v["pure_limit"] == combined_value:
+                        limit = v["limit"]
+                        unit = v["unit"]
                 merged.append(
                     {
                         "resource": resource,
                         "pure_limit": combined_value,
-                        "limit": Resource.get_value(
-                            name=resource, value=combined_value, unit=v["unit"]
-                        ),
-                        "unit": v["unit"],
+                        "limit": limit,
+                        "unit": unit,
                         "window": window,
                         "scope": {"group": sorted(merged_groups)},
                     }
@@ -458,23 +459,24 @@ class UsageQuotaManager(LoggingConfigurable):
         """
         output: dict = {}
         pure_usage = self.aggregate_usage(data)
-        pure_limit = policy["pure_limit"]
         usage = Resource.get_value(
             name=policy["resource"], value=pure_usage, unit=policy["unit"]
         )
         policy["readable_unit"] = Resource.get_readable_unit(
             name=policy["resource"], unit=policy["unit"]
         )
+        policy.update({"used": usage})
+        pure_limit = policy["pure_limit"]
+        policy.update({"limit": Resource.get_limit_without_unit(policy["limit"])})
         if pure_usage < pure_limit:
             output["allow_server_launch"] = True
         else:
             output["allow_server_launch"] = False
             output["error"] = {
                 "code": "quota-exceeded",
-                "message": f"Current {policy['resource']} usage = {usage:.2f} {policy["readable_unit"]} is over the quota limit of {policy['limit']} {policy["readable_unit"]} over the last {policy['window']} days.",
+                "message": f"Current {policy['resource']} usage = {usage:.2f} {policy["readable_unit"]} is over the quota limit of {policy['limit']:.2f} {policy['readable_unit']} over the last {policy['window']} days.",
                 "retry_time": self.get_retry_time(policy, data),
             }
-        policy.update({"used": usage})
         output["quota"] = policy
         output["timestamp"] = datetime.datetime.now(datetime.UTC).strftime(
             "%Y-%m-%dT%H:%M:%SZ"
