@@ -23,10 +23,7 @@ A quota policy for compute can be defined as
 c.UsageQuotaManager.policy = [
   {
     "resource": "memory" | "cpu", str,
-    "limit": {
-        "value": int,
-        "unit": str,
-    },
+    "limit": int | str,
     "window": int,
     "scope": {
         "group": [str],
@@ -48,10 +45,7 @@ is expressed as
 c.UsageQuotaManager.policy = [
   {
     "resource": "memory",
-    "limit": {
-      "value": 5000,
-      "unit": "GiB-hours",
-    },
+    "limit": '5000G',
     "window": 30, # days
     "scope": {
         "group": ["A"]
@@ -74,7 +68,7 @@ is expressed as
 c.UsageQuotaManager.scope_fallback_strategy = {
     "empty": {
         "resource": "memory",
-        "limit": {"value": 500, "unit": "GiB-hours"},
+        "limit": "500G",
         "window": 7,
     },
     "intersection": "max",
@@ -102,7 +96,7 @@ In this explanation, we constrain compute usage by memory requests to a rolling 
 
 ### Usage metrics
 
-[kube-state-metrics](https://github.com/kubernetes/kube-state-metrics) exports the metric `kube_pod_container_resource_requests`[^2], which measures the amount of compute resources requested by the Kubernetes scheduler in bytes. We can multiply this value by $2^30$ to convert to **GiB**.
+[kube-state-metrics](https://github.com/kubernetes/kube-state-metrics) exports the metric `kube_pod_container_resource_requests`[^2], which measures the amount of compute resources requested by the Kubernetes scheduler in bytes. We multiply this by `c.UsageQuotaManager.prometheus_scrape_interval` and divide by 60^2 to convert from resource-seconds per sample to resource-hours.
 
 (policy-resolver)=
 
@@ -131,7 +125,7 @@ To calculate usage over the last 30 day window, we need to integrate over time f
 sum(sum_over_time(kube_pod_container_resource_requests{resource="memory|cpu"}[30d])) * scrape_interval
 ```
 
-We divide the result by `60 * 60` to convert to **hours**. If the metric is reporting memory consumption in bytes, we would also divide the result by `2^30` to convert to **GiB**.
+We divide the result by `60 * 60` to convert to **hours**. We use pure values, i.e. bytes-hours and cpu-hours, when comparing usage with quota limits.
 
 The result[^3] of the above PromQL pseudo-query is then compared against the each policy quota limit returned by the [policy resolver](#policy-resolver).
 
@@ -170,11 +164,12 @@ output = {
   }
   "quota": {
     "resource": str,
+    "pure_used": float,
     "used": float,
-    "limit": {
-       "value": float,
-       "unit": str,
-     },
+    "pure_limit": float,
+    "limit": str,
+    "unit": str,
+    "readable_unit": str,
     "window": int,
     "scope": {
       "group": [str],
@@ -190,4 +185,4 @@ This can be consumed by [kubespawner](https://github.com/jupyterhub/kubespawner)
 
 [^2]: From a dollar-cost point of view, requested cloud resources are what providers charge for even if they are under-utilised. This metric is the same one that is used in the memory/cpu requests panel in the User Diagnostics Dashboard of [jupyterhub/grafana-dashboards](https://github.com/jupyterhub/grafana-dashboards).
 
-[^3]: Dimensional analysis: \[sum_over_time(kube_pod_container_resource_requests{resource="memory"}[30d]) * scrape_interval\] = ( sample * bytes ) * ( time / sample ) = bytes * time = [GiB-hour] ✅
+[^3]: Dimensional analysis: \[sum_over_time(kube_pod_container_resource_requests{resource="memory"}[30d]) * scrape_interval\] = ( sample * bytes ) * ( time / sample ) = bytes * time = [byte-hour] ✅
