@@ -2,17 +2,12 @@
 
 The contents of this file were generated using the helper script `scripts/update_configuration_reference.py`.
 
-## UsageConfig
+## UsageQuotaManager
 
-```{embed} #usage-config
+```{embed} #usagequotamanager-config
 ```
 
-## UsageQuotaConfig
-
-```{embed} #usagequota-config
-```
-
-## UsageViewerConfig
+## UsageViewer
 
 ```{embed} #usageviewer-config
 ```
