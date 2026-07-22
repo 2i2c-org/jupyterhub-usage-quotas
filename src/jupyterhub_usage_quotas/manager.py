@@ -1,50 +1,305 @@
 import datetime
 import itertools
 import logging
+import os
 import re
+import typing
 from collections import defaultdict
-from typing import Any, List, Optional
 
+import jsonschema
 from kubespawner.slugs import escape_slug, safe_slug
 from tornado import web
+from traitlets import Bool, Dict, Integer, List, TraitError, Unicode, default, validate
+from traitlets.config import LoggingConfigurable
 
-from jupyterhub_usage_quotas.client import PrometheusClient
-from jupyterhub_usage_quotas.config import UsageQuotaConfig
+from jupyterhub_usage_quotas.common import PrometheusClient, Resource
+from jupyterhub_usage_quotas.schemas import policy_schema, policy_schema_fallback
 
 
-class UsageQuotaManager(UsageQuotaConfig):
+class UsageQuotaManager(LoggingConfigurable):
+    """Class for enforcing compute usage quotas."""
+
+    prometheus_url = Unicode(
+        "http://127.0.0.1:9090",
+        help="""
+        The url of the Prometheus server, usually of the form 'http://<k8s-service-name>.<k8s-namespace>.svc.cluster.local' in a Kubernetes cluster. Defaults to 'http://127.0.0.1:9090' for local development.
+        """,
+    ).tag(config=True)
+
+    @default("prometheus_url")
+    def _prometheus_url_default(self):
+        return os.environ.get(
+            "JUPYTERHUB_USAGE_QUOTAS_PROMETHEUS_URL", "http://127.0.0.1:9090"
+        )
+
+    prometheus_auth = Dict(
+        per_key_traits={"username": Unicode(), "password": Unicode()},
+        help="""
+        Username and password credentials for authenticating with Prometheus.
+        Can be set via JUPYTERHUB_USAGE_QUOTAS_PROMETHEUS_USERNAME and
+        JUPYTERHUB_USAGE_QUOTAS_PROMETHEUS_PASSWORD environment variables.
+        For example:
+            c.UsageQuotaManager.prometheus_auth = {
+                "username": "username",
+                "password": "password",
+            }
+        """,
+    ).tag(config=True)
+
+    @default("prometheus_auth")
+    def _prometheus_auth_default(self):
+        username = os.environ.get("JUPYTERHUB_USAGE_QUOTAS_PROMETHEUS_USERNAME", "")
+        password = os.environ.get("JUPYTERHUB_USAGE_QUOTAS_PROMETHEUS_PASSWORD", "")
+        if username and password:
+            return {"username": username, "password": password}
+        if username or password:
+            raise TraitError(
+                "Both JUPYTERHUB_USAGE_QUOTAS_PROMETHEUS_USERNAME and "
+                "JUPYTERHUB_USAGE_QUOTAS_PROMETHEUS_PASSWORD must be set together."
+            )
+        return {}
+
+    @validate("prometheus_auth")
+    def _validate_prometheus_auth(self, proposal):
+        auth = proposal["value"]
+        if not auth:
+            return auth
+        required = set(self.traits()["prometheus_auth"]._per_key_traits.keys())
+        missing = required - auth.keys()
+        if missing:
+            expected = {k: "..." for k in sorted(required)}
+            raise TraitError(
+                f"prometheus_auth is missing required keys: {sorted(missing)}. "
+                f"Expected: {expected}"
+            )
+        return auth
+
+    hub_url = Unicode(
+        help="JupyterHub URL, e.g. http://localhost:8000 for local development."
+    ).tag(config=True)
+
+    @default("hub_url")
+    def _hub_url_default(self):
+        return f"http://{os.environ.get('HUB_SERVICE_HOST')}:{os.environ.get('HUB_SERVICE_PORT')}"
+
+    hub_namespace = Unicode(
+        help="Kubernetes namespace of the JupyterHub deployment, used to filter Prometheus usage metrics in multi-tenant environments. Leave empty for single-tenant or development. Can be set via JUPYTERHUB_USAGE_QUOTAS_HUB_NAMESPACE environment variable.",
+    ).tag(config=True)
+
+    @default("hub_namespace")
+    def _hub_namespace_default(self):
+        return os.environ.get("JUPYTERHUB_USAGE_QUOTAS_HUB_NAMESPACE", "")
+
+    escape_username_scheme = Dict(
+        per_key_traits={
+            "directory": Unicode(),
+            "pod": Unicode(),
+            "max_length": Integer(),
+        },
+        help="""
+        Kubespawner slug scheme for naming directories and pod names with escaped usernames. E.g
+            - modern safe slugs for k8s pods and legacy slug for directory names (default): {"directory": "legacy", pod": "safe", max_length: 48},
+        """,
+    ).tag(config=True)
+
+    @default("escape_username_scheme")
+    def _escape_username_scheme_default(self):
+        return {"directory": "legacy", "pod": "safe", "max_length": 48}
+
+    prometheus_usage_metrics = Dict(
+        help="""
+            Dict of Prometheus metrics to track usage. Must define at least one of:
+                - 'memory': PromQL expression
+                - 'cpu': PromQL expression
+            For example:
+                prometheus_usage_metrics = {
+                        "memory": "kube_pod_container_resource_requests{resource='memory'}",
+                        "cpu" : "kube_pod_container_resource_requests{resource='cpu'}"
+                    }
+        """,
+    ).tag(config=True)
+
+    @validate("prometheus_usage_metrics")
+    def _validate_prometheus_usage_metrics(self, proposal):
+        """
+        Validate that memory or cpu usage metrics are defined.
+        """
+        metrics = proposal["value"]
+        if not isinstance(metrics, dict):
+            raise TraitError(
+                f"Prometheus usage metrics {metrics} must be a dict, got {type(metrics)}"
+            )
+
+        for metric_def in metrics:
+            if not metric_def in {"memory", "cpu"}:
+                raise TraitError(
+                    f"Prometheus usage metrics {metrics} must define at least one of 'memory' or 'cpu' keys. Got keys: {list(metrics.keys())}"
+                )
+
+        return metrics
+
+    @default("prometheus_usage_metrics")
+    def _prometheus_usage_metrics_default(self):
+        return {
+            "memory": "kube_pod_container_resource_requests{resource='memory'}",
+            "cpu": "kube_pod_container_resource_requests{resource='cpu'}",
+        }
+
+    prometheus_scrape_interval = Integer(
+        60, help="Scrape interval of Prometheus sample collection (seconds)."
+    ).tag(config=True)
+
+    prometheus_emit_interval = Integer(
+        60, help="Emit interval of Prometheus metric export (seconds)."
+    ).tag(config=True)
+
+    prometheus_emit_namespace = Unicode(
+        "jupyterhub", help="Prometheus namespace to prefix metric names."
+    ).tag(config=True)
+
+    metrics_exporter_token = Unicode(
+        help="API token to authenticate requests from metrics exporter."
+    ).tag(config=True)
+
+    scope_fallback_strategy = Dict(
+        per_key_traits={
+            "empty": Dict(),
+            "intersection": Unicode(),
+        },
+        default_value={"intersection": "min"},
+        help="""
+        Set a fallback strategy to resolve quotas in the case where the scope of the quota policies are applied to an empty set, or an intersection, i.e. define a default when a user has no or multiple quotas applied.
+
+        In the case where no quota is applied ('empty'), we can supply a default quota policy or leave this as None for unlimited quotas; and where multiple quotas are applied, we can apply either the `min`, `max` or `sum`.
+
+        For example, 'Apply a default memory quota of 500 GiB-hours over a rolling 7 day window for users with no groups, and apply the maximum quota available for users with multiple groups.' is expressed as:
+
+        {
+            "empty": {
+                "resource": "memory",
+                "limit": "500G",
+                "window": 7,
+            },
+            "intersection": "max"
+        }
+        """,
+    ).tag(config=True)
+
+    @validate("scope_fallback_strategy")
+    def _validate_scope_fallback_strategy(self, proposal):
+        """
+        Validate that the scope fallback strategy is defined.
+        """
+        strategy = proposal["value"]
+        required = set(["intersection"])
+        allowed = required | set(["empty"])
+        if required - set(strategy.keys()):
+            raise TraitError(
+                f"Must define fallback strategy for 'intersection' scope. Got keys: {list(strategy.keys())}"
+            )
+        extra = set(strategy.keys()) - allowed
+        if extra:
+            raise TraitError(f"Unexpected keys: {extra}")
+        if "empty" in strategy.keys():
+            try:
+                jsonschema.validate(strategy["empty"], policy_schema_fallback)
+            except jsonschema.ValidationError as e:
+                raise TraitError(e)
+            self._validate_policy_limit(strategy["empty"]["limit"])
+        if not strategy["intersection"] in {"min", "max", "sum"}:
+            raise TraitError(
+                f"Fallback strategy for 'intersection' scope must be either 'min', 'max' or 'sum'. Got value: {strategy['intersection']}"
+            )
+
+        return strategy
+
+    failover_open = Bool(
+        True,
+        help="In the case where the quota system fails, set to True to default to a fail-open (allow all server launches) system or set to False to a fail-closed (deny all server launches) system.",
+    ).tag(config=True)
+
+    # Policy config
+
+    def _validate_policy_limit(self, value: typing.Union[int, str]):
+        """Validate policy limits are formatted nX where n is an integer and X is an optional [KMGT] unit prefix to denote kilo-, mega-, giga- and tera-."""
+        if type(value) is str:
+            pattern = re.compile(r"^\d+[KMGT]$", re.IGNORECASE)
+            if not pattern.match(value):
+                raise TraitError(
+                    f"Policy limit {value} is not valid. Must be an integer or a string with optional suffix K, M, G, T."
+                )
+
+    policy = List(
+        Dict(),
+        help="""
+        List usage quota policies, including resource, limits, rolling window period and policy scope.
+
+        For example: '5,000 GiB-hours over 30 days for group A', is expressed as
+
+        c.UsageQuotaConfig.policy = [{
+            "resource": "memory",
+            "limit": "5000G",
+            "window": 30, # days
+            "scope": {
+                "group": ["A"]
+            }
+        }]
+        """,
+    ).tag(config=True)
+
+    @validate("policy")
+    def _validate_policy(self, proposal):
+        policies = proposal["value"]
+        for i, policy_def in enumerate(policies):
+            if not isinstance(policy_def, dict):
+                raise TraitError(f"Entry {i} must be a dict, got {type(policy_def)}")
+            try:
+                jsonschema.validate(policy_def, policy_schema)
+            except jsonschema.ValidationError as e:
+                raise TraitError(e)
+            self._validate_policy_limit(policy_def["limit"])
+        return policies
 
     def __init__(self, **kwargs) -> None:
         super().__init__(**kwargs)
         parent_log = logging.getLogger("JupyterHub")
         self.log = logging.getLogger(__name__)
         self.log.parent = parent_log
-        self.convert_resource = {"GiB-hours": 2**30}
-        self.convert_seconds = {"GiB-hours": 60**2}
         self.prometheus_client = PrometheusClient(
             self.prometheus_url, self.prometheus_auth
         )
+        self.UNIT_SUFFIXES = {
+            "K": 1024,
+            "M": 1024**2,
+            "G": 1024**3,
+            "T": 1024**4,
+        }
+        self.seconds_to_hours = 60**2
 
     def resolve_empty(self) -> list:
         """
         Resolve quota policy for users with no group memberships.
         """
         policy_empty: list = []
-        if "empty" not in self.scope_backup_strategy.keys():
+        if "empty" not in self.scope_fallback_strategy.keys():
             self.log.debug("No fallback policy found.")
             return policy_empty
-        if isinstance(self.scope_backup_strategy["empty"], dict):
-            policy_empty.append(self.scope_backup_strategy["empty"])
-            return policy_empty
+        if isinstance(self.scope_fallback_strategy["empty"], dict):
+            policy = self.scope_fallback_strategy["empty"]
+            resource = Resource(name=policy["resource"], value=policy["limit"])
+            policy["pure_limit"] = resource.pure_value
+            policy["unit"] = resource.unit
+            policy_empty.append(self.scope_fallback_strategy["empty"])
+        return policy_empty
 
-    def resolve_intersection(self, values: list[dict], operator: str) -> list:
+    def resolve_intersection(self, values: list[dict], operator: str) -> float:
         """
         Resolve quota policy for users with multiple policies applied.
 
         Apply min/max/sum operators to merge policies sharing the same resource over the same rolling window for the same groups.
         """
 
-        limits = [v["limit"]["value"] for v in values]
+        limits = [v["pure_limit"] for v in values]
 
         if operator == "min":
             combined_value = min(limits)
@@ -61,53 +316,58 @@ class UsageQuotaManager(UsageQuotaConfig):
         """
         Resolve and merge group quota policies that apply to the user.
 
-        Example 1 - empty: Backup policy applies to users who are out of scope of policy definitions.
+        Example 1 - empty: fallback policy applies to users who are out of scope of policy definitions.
 
-        Example 2 - intersection: Policy A limits 30 memory hours over the last 30 days to group 1, policy B limits 60 memory hours over the last 30 days to group 1. The policy backup strategy specifies the 'max' operator, therefore the policy of max(30, 60) = 60 memory hours over the last 30 days applies to group 1.
+        Example 2 - intersection: Policy A limits 30 memory hours over the last 30 days to group 1, policy B limits 60 memory hours over the last 30 days to group 1. The policy fallback strategy specifies the 'max' operator, therefore the policy of max(30, 60) = 60 memory hours over the last 30 days applies to group 1.
 
         Example 3 - multiple:  Policy A limits 30 memory hours over the last 30 days to group 1, policy B limits 7 memory hours over the last 7 days to group 1. Both quota policies are returned (and eventually applied with no limit stacking).
         """
         self.log.debug(f"User {user_name} is a member of groups: {user_groups}")
+        # Find policies applied to user group
         policies = [
             p for p in self.policy if set(user_groups) & set(p["scope"]["group"])
         ]
+        # Standardise policy values to pure values
+        for p in policies:
+            res = Resource(name=p["resource"], value=p["limit"])
+            p["pure_limit"] = res.pure_value
+            p["unit"] = res.unit
         self.log.debug(f"{policies=}")
 
-        # Group policies with common keys together, e.g. the same resources and rolling windows.
+        # Merge group policies with common keys together, e.g. the same resources and rolling windows.
         grouped = defaultdict(list)
         for p in policies:
             key = (
                 p["resource"],
-                p["limit"][
-                    "unit"
-                ],  # TODO: Add support for aggregating different resource units, e.g. GiB and MiB-hours.
                 p["window"],
             )
             grouped[key].append(p)
-
         merged = []
-        if len(policies) == 1:
-            self.log.debug("Resolve single policy")
-            merged.append(next(iter(grouped.values()))[0])
-        elif len(policies) == 0:
+        if len(policies) == 0:
             self.log.debug("Resolve empty policy")
             merged = self.resolve_empty()
         elif len(policies) >= 1:
-            self.log.debug("Resolve multiple policies")
-            for (resource, unit, window), values in grouped.items():
+            for (resource, window), values in grouped.items():
                 combined_value = self.resolve_intersection(
-                    values, self.scope_backup_strategy["intersection"]
+                    values, self.scope_fallback_strategy["intersection"]
                 )
                 merged_groups = set()
                 for v in values:
                     merged_groups.update(v["scope"].get("group", []))
+                    if v["pure_limit"] == combined_value:
+                        limit = v["limit"]
+                        unit = v["unit"]
+                    else:  # Deal with summed policy limits
+                        unit = v["unit"]
+                        limit = Resource.get_value(
+                            name=resource, value=combined_value, unit=unit
+                        )
                 merged.append(
                     {
                         "resource": resource,
-                        "limit": {
-                            "value": combined_value,
-                            "unit": unit,
-                        },
+                        "pure_limit": combined_value,
+                        "limit": limit,
+                        "unit": unit,
                         "window": window,
                         "scope": {"group": sorted(merged_groups)},
                     }
@@ -161,21 +421,18 @@ class UsageQuotaManager(UsageQuotaConfig):
                 datetime.datetime.now(datetime.UTC)
                 - datetime.datetime(1970, 1, 1, tzinfo=datetime.UTC)
             ).total_seconds()
-            data: List[List[Any]] = [[unix_timestamp, "0"]]
+            data: typing.List[typing.List[typing.Any]] = [[unix_timestamp, "0"]]
         else:
             # flatten results into a list
             n_result = len(response["data"]["result"])
             data = [response["data"]["result"][i]["values"] for i in range(n_result)]
             data = [d for ds in data for d in ds]
-        # Unit conversion
-        unit = policy["limit"]["unit"]
         result = [
             [
                 d[0],
                 float(d[1])
                 * self.prometheus_scrape_interval
-                / self.convert_seconds[unit]
-                / self.convert_resource[unit],
+                / self.seconds_to_hours,  # convert from resource-seconds per sample to resource-hours
             ]
             for d in data
         ]
@@ -190,7 +447,7 @@ class UsageQuotaManager(UsageQuotaConfig):
         x, y = zip(*data)
         cumulative_sum = list(itertools.accumulate(y))
         # Calculate difference between policy limit and current usage
-        delta_resource = cumulative_sum[-1] - policy["limit"]["value"]
+        delta_resource = cumulative_sum[-1] - policy["pure_limit"]
         self.log.debug(f"{delta_resource=}")
         # Find timestamp when usage falls below delta_resource
         index_retry = min(
@@ -208,24 +465,31 @@ class UsageQuotaManager(UsageQuotaConfig):
         """
         return [sum(x) for x in zip(*data)][1]
 
-    def get_output(self, policy: dict, data: list) -> dict:
+    def get_output(self, data: list, policy: dict) -> dict:
         """
         Formats the output returned by the quota system.
         """
         output: dict = {}
-        self.log.debug(f"{data=}")
-        value = self.aggregate_usage(data)
-        limit = policy["limit"]["value"]
-        if value < limit:
+        pure_usage = self.aggregate_usage(data)
+        usage = Resource.get_value(
+            name=policy["resource"], value=pure_usage, unit=policy["unit"]
+        )
+        policy["readable_unit"] = Resource.get_readable_unit(
+            name=policy["resource"], unit=policy["unit"]
+        )
+        policy.update({"pure_used": pure_usage})
+        policy.update({"used": usage})
+        pure_limit = policy["pure_limit"]
+        policy.update({"limit": Resource.get_limit_without_unit(policy["limit"])})
+        if pure_usage < pure_limit:
             output["allow_server_launch"] = True
         else:
             output["allow_server_launch"] = False
             output["error"] = {
                 "code": "quota-exceeded",
-                "message": f"Current {policy['resource']} usage = {value:.2f} {policy['limit']['unit']} is over the quota limit of {limit} {policy['limit']['unit']} over the last {policy['window']} days.",
+                "message": f"Current {policy['resource']} usage = {usage:.2f} {policy["readable_unit"]} is over the quota limit of {policy['limit']:.2f} {policy['readable_unit']} over the last {policy['window']} days.",
                 "retry_time": self.get_retry_time(policy, data),
             }
-        policy.update({"used": value})
         output["quota"] = policy
         output["timestamp"] = datetime.datetime.now(datetime.UTC).strftime(
             "%Y-%m-%dT%H:%M:%SZ"
@@ -238,7 +502,6 @@ class UsageQuotaManager(UsageQuotaConfig):
         """
         output: dict = {}
         policy = self.resolve_policy(user_name, user_groups)
-        print(f"{policy=}")
         if policy:
             self.log.debug(f"Quota policies applied: {policy}")
         else:
@@ -254,8 +517,8 @@ class UsageQuotaManager(UsageQuotaConfig):
 
         for p in policy:
             usage = await self.get_usage(user_name, p)
-            output = self.get_output(p, usage)
-            self.log.info(f"{output.update({"user": user_name})=}")
+            output = self.get_output(usage, p)
+            self.log.info(f"{output=}")
             if output["allow_server_launch"] is False:
                 self.log.warning(f"{output['error']['code']}: {user_name}")
                 break
@@ -268,10 +531,10 @@ class SpawnException(web.HTTPError):
     def __init__(
         self,
         status_code: int,
-        log_message: Optional[str] = None,
-        html_message: Optional[str] = None,
-        *args: Any,
-        **kwargs: Any,
+        log_message: typing.Optional[str] = None,
+        html_message: typing.Optional[str] = None,
+        *args: typing.Any,
+        **kwargs: typing.Any,
     ) -> None:
         super().__init__(status_code, log_message, *args, **kwargs)
         self.jupyterhub_html_message = html_message

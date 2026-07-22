@@ -1,6 +1,6 @@
-# UsageConfig
+# UsageQuotaManager
 
-(usage-config)=
+(usagequotamanager-config)=
 
 ```
 # Configuration file for application.
@@ -81,45 +81,80 @@ c = get_config()  #noqa
 # c.Application.show_config_json = False
 
 #------------------------------------------------------------------------------
-# UsageConfig(Application) configuration
+# UsageQuotaConfigApp(Application) configuration
 #------------------------------------------------------------------------------
 ## This is an application.
 
-## List of config files to load. If not set, then no config file is loaded.
-#  Default: []
-# c.UsageConfig.config_files = []
+## The date format used by logging formatters for %(asctime)s
+#  See also: Application.log_datefmt
+# c.UsageQuotaConfigApp.log_datefmt = '%Y-%m-%d %H:%M:%S'
+
+## The Logging format template
+#  See also: Application.log_format
+# c.UsageQuotaConfigApp.log_format = '[%(name)s]%(highlevel)s %(message)s'
+
+## Set the log level by value or name.
+#  See also: Application.log_level
+# c.UsageQuotaConfigApp.log_level = 30
+
+##
+#  See also: Application.logging_config
+# c.UsageQuotaConfigApp.logging_config = {}
+
+## Instead of starting the Application, dump configuration to stdout
+#  See also: Application.show_config
+# c.UsageQuotaConfigApp.show_config = False
+
+## Instead of starting the Application, dump configuration to stdout (as JSON)
+#  See also: Application.show_config_json
+# c.UsageQuotaConfigApp.show_config_json = False
+
+#------------------------------------------------------------------------------
+# UsageQuotaManager(LoggingConfigurable) configuration
+#------------------------------------------------------------------------------
+## Class for enforcing compute usage quotas.
 
 ## Kubespawner slug scheme for naming directories and pod names with escaped usernames. E.g
 #      - modern safe slugs for k8s pods and legacy slug for directory names (default): {"directory": "legacy", pod": "safe", max_length: 48},
 #  Default: {}
-# c.UsageConfig.escape_username_scheme = {}
+# c.UsageQuotaManager.escape_username_scheme = {}
+
+## In the case where the quota system fails, set to True to default to a fail-
+#  open (allow all server launches) system or set to False to a fail-closed (deny
+#  all server launches) system.
+#  Default: True
+# c.UsageQuotaManager.failover_open = True
 
 ## Kubernetes namespace of the JupyterHub deployment, used to filter Prometheus
 #  usage metrics in multi-tenant environments. Leave empty for single-tenant or
 #  development. Can be set via JUPYTERHUB_USAGE_QUOTAS_HUB_NAMESPACE environment
 #  variable.
 #  Default: ''
-# c.UsageConfig.hub_namespace = ''
+# c.UsageQuotaManager.hub_namespace = ''
 
 ## JupyterHub URL, e.g. http://localhost:8000 for local development.
 #  Default: ''
-# c.UsageConfig.hub_url = ''
+# c.UsageQuotaManager.hub_url = ''
 
-## The date format used by logging formatters for %(asctime)s
-#  See also: Application.log_datefmt
-# c.UsageConfig.log_datefmt = '%Y-%m-%d %H:%M:%S'
+## API token to authenticate requests from metrics exporter.
+#  Default: ''
+# c.UsageQuotaManager.metrics_exporter_token = ''
 
-## The Logging format template
-#  See also: Application.log_format
-# c.UsageConfig.log_format = '[%(name)s]%(highlevel)s %(message)s'
-
-## Set the log level by value or name.
-#  See also: Application.log_level
-# c.UsageConfig.log_level = 30
-
-##
-#  See also: Application.logging_config
-# c.UsageConfig.logging_config = {}
+## List usage quota policies, including resource, limits, rolling window period
+#  and policy scope.
+#
+#  For example: '5,000 GiB-hours over 30 days for group A', is expressed as
+#
+#  c.UsageQuotaConfig.policy = [{
+#      "resource": "memory",
+#      "limit": "5000G",
+#      "window": 30, # days
+#      "scope": {
+#          "group": ["A"]
+#      }
+#  }]
+#  Default: []
+# c.UsageQuotaManager.policy = []
 
 ## Username and password credentials for authenticating with Prometheus.
 #  Can be set via JUPYTERHUB_USAGE_QUOTAS_PROMETHEUS_USERNAME and
@@ -130,19 +165,57 @@ c = get_config()  #noqa
 #          "password": "password",
 #      }
 #  Default: {}
-# c.UsageConfig.prometheus_auth = {}
+# c.UsageQuotaManager.prometheus_auth = {}
+
+## Emit interval of Prometheus metric export (seconds).
+#  Default: 60
+# c.UsageQuotaManager.prometheus_emit_interval = 60
+
+## Prometheus namespace to prefix metric names.
+#  Default: 'jupyterhub'
+# c.UsageQuotaManager.prometheus_emit_namespace = 'jupyterhub'
+
+## Scrape interval of Prometheus sample collection (seconds).
+#  Default: 60
+# c.UsageQuotaManager.prometheus_scrape_interval = 60
 
 ## The url of the Prometheus server, usually of the form 'http://<k8s-service-
 #  name>.<k8s-namespace>.svc.cluster.local' in a Kubernetes cluster. Defaults to
 #  'http://127.0.0.1:9090' for local development.
 #  Default: 'http://127.0.0.1:9090'
-# c.UsageConfig.prometheus_url = 'http://127.0.0.1:9090'
+# c.UsageQuotaManager.prometheus_url = 'http://127.0.0.1:9090'
 
-## Instead of starting the Application, dump configuration to stdout
-#  See also: Application.show_config
-# c.UsageConfig.show_config = False
+## Dict of Prometheus metrics to track usage. Must define at least one of:
+#      - 'memory': PromQL expression
+#      - 'cpu': PromQL expression
+#  For example:
+#      prometheus_usage_metrics = {
+#              "memory": "kube_pod_container_resource_requests{resource='memory'}",
+#              "cpu" : "kube_pod_container_resource_requests{resource='cpu'}"
+#          }
+#  Default: {}
+# c.UsageQuotaManager.prometheus_usage_metrics = {}
 
-## Instead of starting the Application, dump configuration to stdout (as JSON)
-#  See also: Application.show_config_json
-# c.UsageConfig.show_config_json = False
+## Set a fallback strategy to resolve quotas in the case where the scope of the
+#  quota policies are applied to an empty set, or an intersection, i.e. define a
+#  default when a user has no or multiple quotas applied.
+#
+#  In the case where no quota is applied ('empty'), we can supply a default quota
+#  policy or leave this as None for unlimited quotas; and where multiple quotas
+#  are applied, we can apply either the `min`, `max` or `sum`.
+#
+#  For example, 'Apply a default memory quota of 500 GiB-hours over a rolling 7
+#  day window for users with no groups, and apply the maximum quota available for
+#  users with multiple groups.' is expressed as:
+#
+#  {
+#      "empty": {
+#          "resource": "memory",
+#          "limit": "500G",
+#          "window": 7,
+#      },
+#      "intersection": "max"
+#  }
+#  Default: {'intersection': 'min'}
+# c.UsageQuotaManager.scope_fallback_strategy = {'intersection': 'min'}
 ```

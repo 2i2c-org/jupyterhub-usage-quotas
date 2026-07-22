@@ -1,4 +1,5 @@
 import logging
+import re
 
 import aiohttp
 from yarl import URL
@@ -109,3 +110,106 @@ class HubApiClient(Client):
             HUB_API_ERROR_TOTAL.inc()
             logger.error(f"Unexpected error querying Hub REST API: {e}")
             raise
+
+
+class Resource(object):
+    """
+    Allow easily specifying resources and convert units with suffixes.
+
+    Suffixes allowed are:
+      - K -> Kilo
+      - M -> Mega
+      - G -> Giga
+      - T -> Tera
+    """
+
+    MEMORY_SUFFIXES = {
+        "K": 1024,
+        "M": 1024**2,
+        "G": 1024**3,
+        "T": 1024**4,
+    }
+    CPU_SUFFIXES = {
+        "K": 1e3,
+        "M": 1e4,
+        "G": 1e5,
+        "T": 1e6,
+    }
+
+    def __init__(self, name, value):
+        self.name = name
+        self.value = value
+        self.get_pure_value()
+
+    def get_pure_value(self) -> int | None:
+        """
+        Validate that the passed in value is a valid resource specification
+
+        It could either be a pure int or string. If there is a string suffix, the convert to pure value.
+        """
+        if isinstance(self.value, int | float):
+            self.pure_value = int(self.value)
+            self.unit = ""
+            return None
+        elif isinstance(self.value, str):
+            pattern = re.compile(r"^\d+[KMGT]$")
+            if not pattern.match(self.value):
+                raise ValueError(
+                    f"{self.value} is not a valid resource specification. Must be an int or a string with suffix K, M, G, T"
+                )
+
+        try:
+            num = float(self.value[:-1])
+        except ValueError:
+            raise ValueError(
+                f"{self.value} is not a valid memory specification. Must be an int or a string with suffix K, M, G, T"
+            )
+        self.unit = self.value[-1]
+        if self.unit not in self.MEMORY_SUFFIXES or self.unit not in self.CPU_SUFFIXES:
+            raise ValueError(
+                f"{self.value} is not a valid memory specification. Must be an int or a string with suffix K, M, G, T"
+            )
+        if self.name == "memory":
+            self.pure_value = int(float(num) * self.MEMORY_SUFFIXES[self.unit])
+        elif self.name == "cpu":
+            self.pure_value = int(float(num) * self.CPU_SUFFIXES[self.unit])
+        return None
+
+    @classmethod
+    def get_value(cls, name: str, value: float, unit: str) -> float:
+        """
+        Helper function to convert pure values to other units.
+        """
+        if unit:
+            if name == "memory":
+                return value / cls.MEMORY_SUFFIXES[unit]
+            elif name == "cpu":
+                return value / cls.CPU_SUFFIXES[unit]
+            else:
+                raise ValueError(f"Resource {name} not recognised.")
+        else:
+            return value
+
+    @staticmethod
+    def get_readable_unit(name: str, unit: str) -> str:
+        """
+        Get full human-readable unit string.
+        """
+        if name == "memory":
+            return unit + "iB-hours" if unit else "byte-hours"
+        elif name == "cpu":
+            return "CPU-hours"
+        else:
+            raise ValueError(f"Resource {name} not recognised.")
+
+    @staticmethod
+    def get_limit_without_unit(value: str | int) -> int:
+        """
+        Get the numeric value of a limit, e.g. 20G -> 20.
+        """
+        if type(value) is str:
+            pattern = r"-?\d+"
+            match = re.findall(pattern, value)
+            return int(match[0])
+        else:
+            return int(value)

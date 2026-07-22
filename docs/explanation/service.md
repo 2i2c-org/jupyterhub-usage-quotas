@@ -8,7 +8,7 @@ The service:
 
 - Registers as a JupyterHub service and authenticates users via JupyterHub's OAuth2 flow
 - Queries Prometheus for storage metrics using the `dirsize_hard_limit_bytes` and `dirsize_total_size_bytes` metrics (provided by [jupyterhub-home-nfs](https://github.com/2i2c-org/jupyterhub-home-nfs) or equivalent)
-- Queries Prometheus for compute metrics using the `jupyterhub_memory_usage_gibibyte_hours` and `jupyterhub_memory_limit_gibibyte_hours` (provided by [jupyterhub-usage-quotas](https://github.com/2i2c-org/jupyterhub-usage-quotas))
+- Queries Prometheus for compute metrics using the `jupyterhub_memory_usage_byte_hours` and `jupyterhub_memory_limit_byte_hours` emitted from the usage quota system
 - Displays a usage dashboard embedded in JupyterHub via an iframe to show users their current usage and quota
 
 When `dev_mode` is enabled (via `--dev-mode` flag), the service can return randomly generated mock data, which is useful for development without a Prometheus instance. Mock data is only used when ALL three conditions are met: (1) `dev_mode` is True, AND (2) `prometheus_url` is the default (`http://127.0.0.1:9090`), AND (3) `hub_namespace` is empty. If either `prometheus_url` or `hub_namespace` is configured, the service will query Prometheus even when `dev_mode` is `True`.
@@ -61,7 +61,7 @@ setup_usage_quotas(c)
 # Example config file for secret data, e.g. credentials and keys.
 # Make sure you ignore/encrypt this file if using with a version control system.
 
-c.UsageConfig.prometheus_auth = {"username": "", "password": ""}
+c.UsageViewer.prometheus_auth = {"username": "", "password": ""}
 
 c.UsageViewer.session_secret_key = "use-a-secure-random-key-in-production"
 ```

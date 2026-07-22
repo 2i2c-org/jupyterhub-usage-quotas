@@ -35,28 +35,20 @@ c.Authenticator.admin_users = {"admin"}
 
 c.JupyterHub.spawner_class = "kubespawner.KubeSpawner"
 
-
-def my_hook(spawner):
-    username = spawner.user.name
-    spawner.environment["GREETING"] = f"Hello {username}"
-
-
-c.Spawner.pre_spawn_hook = my_hook
-
 # Usage Quotas
 
-c.UsageConfig.hub_namespace = "staging"
-c.UsageConfig.hub_url = "http://localhost:8000"
+c.UsageQuotaManager.hub_namespace = "prod"
+c.UsageQuotaManager.hub_url = "http://localhost:8000"
 
 # Usage Quota Config
 
-c.UsageQuotaManager.scope_backup_strategy = {
+c.UsageQuotaManager.scope_fallback_strategy = {
     "empty": {
         "resource": "memory",
-        "limit": {"value": 10, "unit": "GiB-hours"},
+        "limit": "10G",
         "window": 30,
     },
-    "intersection": "max",
+    "intersection": "min",
 }
 
 c.UsageQuotaManager.failover_open = False
@@ -64,26 +56,26 @@ c.UsageQuotaManager.failover_open = False
 c.UsageQuotaManager.policy = [
     {
         "resource": "memory",
-        "limit": {
-            "value": 35,
-            "unit": "GiB-hours",
-        },
+        "limit": "50G",
         "window": 30,
         "scope": {"group": ["group-0", "group-1"]},
     },
     {
         "resource": "memory",
-        "limit": {
-            "value": 20,
-            "unit": "GiB-hours",
-        },
-        "window": 7,
+        "limit": "40G",
+        "window": 30,
         "scope": {"group": ["group-1"]},
+    },
+    {
+        "resource": "memory",
+        "limit": "10000G",
+        "window": 7,
+        "scope": {"group": ["group-2"]},
     },
 ]
 
-c.UsageViewer.public_hub_url = "http://localhost:8000"
-c.UsageViewer.hub_template_paths = c.JupyterHub.template_paths
+c.UsageViewer.hub_namespace = "prod"
+c.UsageViewer.public_hub_url = "http://localhost:8000/"
 
 c.JupyterHub.services.append(
     {

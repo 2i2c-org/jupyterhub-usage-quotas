@@ -9,7 +9,7 @@ from typing import Any
 
 from kubespawner.slugs import escape_slug, safe_slug
 
-from jupyterhub_usage_quotas.client import PrometheusClient
+from jupyterhub_usage_quotas.common import PrometheusClient
 
 logger = logging.getLogger(__name__)
 handler = logging.StreamHandler(sys.stdout)

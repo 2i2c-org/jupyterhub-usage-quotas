@@ -86,7 +86,7 @@ Usage quota policies are applied to user groups, therefore this information need
 
 If you are using home storage quotas, then make sure that you set the appropriate configuration for [jupyterhub-home-nfs](https://github.com/2i2c-org/jupyterhub-home-nfs) in addition to the minimal example below.
 
-#### Common Configuration
+#### Configuration setup helper function
 
 The `jupyterhub-usage-quotas` library is composed of two main modules:
 
@@ -103,20 +103,29 @@ hub:
         setup_usage_quotas(c)
 ```
 
-Configuration common to both modules to be defined include:
+#### Required configuration
 
-- `c.UsageConfig.prometheus_url`: the server url of the Prometheus instance that is used as a source of truth for usage data
-- `c.UsageConfig.hub_namespace`: the Kubernetes namespace where the Hub pod is running
+The following items are required configuration:
+
 - `c.UsageQuotaManager.metrics_exporter_token = os.environ.get("METRICS_EXPORTER_TOKEN")` (remember to `import os` within the `extraFiles` config file)
 - `c.UsageViewer.public_hub_url`: the public URL of the JupyterHub on the web
 
-You can mount this common configuration under [`extraFiles`](https://z2jh.jupyter.org/en/stable/resources/reference.html#hub-extrafiles) so that they can be referenced by both modules and loaded in addition to the setup function in `hub.extraConfig`.
+#### Common configuration
+
+Configuration common to both manager and server modules need to be defined individually, which introduces some duplication. Common configurations include:
+
+- `c.Usage[QuotaManager|Viewer].prometheus_url`: the server url of the Prometheus instance that is used as a source of truth for usage data
+- `c.Usage[QuotaManager|Viewer].hub_namespace`: the Kubernetes namespace where the Hub pod is running
+
+#### Mounting configuration files
+
+You can mount configuration under [`extraFiles`](https://z2jh.jupyter.org/en/stable/resources/reference.html#hub-extrafiles) so that they can be referenced by both modules and loaded in addition to the setup function in `hub.extraConfig`.
 
 #### Secrets Management
 
 The usage quota system relies on configuring sensitive secrets, such as session keys and credentials, including:
 
-- `c.UsageConfig.prometheus_auth`: credentials for the Prometheus server
+- `c.Usage[QuotaManager|Viewer].prometheus_auth`: credentials for the Prometheus server
 - `c.UsageViewer.secret_session_key`: maintain a secure session with the usage quotas dashboard without needing to log in again.
 
 You can also mount this secret configuration under [`extraFiles`](https://z2jh.jupyter.org/en/stable/resources/reference.html#hub-extrafiles) so that they can be referenced by both modules.
@@ -162,13 +171,11 @@ hub:
       scope:
         - group-0
     UsageQuotaManager:
-      scope_backup_strategy:
+      scope_fallback_strategy:
         intersection: min
       policy:
         - resource: memory
-          limit:
-            value: 1000
-            unit: GiB-hours
+          limit: '1000G'
           window: 7
           scope:
             group:
@@ -183,10 +190,12 @@ hub:
         mountPath: /usr/local/etc/jupyterhub/jupyterhub_config.d/jupyterhub_usage_quota_config.py
         stringData: |
           import os
-          c.UsageConfig.prometheus_url: "http://<prometheus-service-name>.<k8s-prometheus-namespace>.svc.cluster.local"
-          c.UsageConfig.hub_namespace: "<k8s-hub-namespace>"
           c.UsageQuotaManager.metrics_exporter_token = os.environ.get("METRICS_EXPORTER_TOKEN")
           c.UsageViewer.public_hub_url = "https://<public-hub-url>"
+          c.UsageQuotaManager.prometheus_url: "http://<prometheus-service-name>.<k8s-prometheus-namespace>.svc.cluster.local"
+          c.UsageViewer.prometheus_url: "http://<prometheus-service-name>.<k8s-prometheus-namespace>.svc.cluster.local"
+          c.UsageQuotaManager.hub_namespace: "<k8s-hub-namespace>"
+          c.UsageQuotaViewer.hub_namespace: "<k8s-hub-namespace>"
     extraEnv:
       METRICS_EXPORTER_TOKEN:
         valueFrom:
@@ -275,7 +284,11 @@ hub:
     usage_quota_config_secret:
       mountPath: /usr/local/etc/jupyterhub/jupyterhub_config.d/jupyterhub_usage_quota_config_secret.py
       stringData: |
-        c.UsageConfig.prometheus_auth = {
+        c.UsageQuotaManager.prometheus_auth = {
+          "username": "<prometheus_username>",
+          "password": "<prometheus_password>"
+        }
+        c.UsageViewer.prometheus_auth = {
           "username": "<prometheus_username>",
           "password": "<prometheus_password>"
         }

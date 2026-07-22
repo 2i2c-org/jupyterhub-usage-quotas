@@ -7,7 +7,7 @@ import aiohttp
 import pytest
 from aiointercept import aiointercept
 
-from jupyterhub_usage_quotas.client import PrometheusClient
+from jupyterhub_usage_quotas.common import PrometheusClient
 from jupyterhub_usage_quotas.services.usage_viewer.quota_client import QuotaClient
 from tests.services.fixtures.prometheus_responses import (
     PROMETHEUS_COMPUTE_QUOTA_MULTIPLE,

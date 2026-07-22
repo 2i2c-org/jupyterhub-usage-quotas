@@ -23,10 +23,7 @@ A quota policy for compute can be defined as
 c.UsageQuotaManager.policy = [
   {
     "resource": "memory" | "cpu", str,
-    "limit": {
-        "value": int,
-        "unit": str,
-    },
+    "limit": int | str,
     "window": int,
     "scope": {
         "group": [str],
@@ -48,10 +45,7 @@ is expressed as
 c.UsageQuotaManager.policy = [
   {
     "resource": "memory",
-    "limit": {
-      "value": 5000,
-      "unit": "GiB-hours",
-    },
+    "limit": '5000G',
     "window": 30, # days
     "scope": {
         "group": ["A"]
@@ -61,9 +55,9 @@ c.UsageQuotaManager.policy = [
 ```
 ````
 
-#### Backup strategy
+#### Fallback strategy
 
-`c.UsageQuotaManager.scope_backup_strategy` is used to set a quota resolution strategy in the case where the scope of the quota policies cover no users, or applies multiple policies to a single user. In the case where no quota is applied, we can supply a default quota policy or leave this empty for unlimited quotas; and where multiple quotas are applied, we can apply operators `min`, `max` or `sum` to the limit.
+`c.UsageQuotaManager.scope_fallback_strategy` is used to set a quota resolution strategy in the case where the scope of the quota policies cover no users, or applies multiple policies to a single user. In the case where no quota is applied, we can supply a default quota policy or leave this empty for unlimited quotas; and where multiple quotas are applied, we can apply operators `min`, `max` or `sum` to the limit.
 
 ````{tip} Example
 > “Apply a default memory quota of 500 GiB-hours over a rolling 7 day window for users with no groups, and apply the maximum quota available to users when more than one policy applies.”
@@ -71,10 +65,10 @@ c.UsageQuotaManager.policy = [
 is expressed as
 
 ```python
-c.UsageQuotaManager.scope_backup_strategy = {
+c.UsageQuotaManager.scope_fallback_strategy = {
     "empty": {
         "resource": "memory",
-        "limit": {"value": 500, "unit": "GiB-hours"},
+        "limit": "500G",
         "window": 7,
     },
     "intersection": "max",
@@ -102,21 +96,21 @@ In this explanation, we constrain compute usage by memory requests to a rolling 
 
 ### Usage metrics
 
-[kube-state-metrics](https://github.com/kubernetes/kube-state-metrics) exports the metric `kube_pod_container_resource_requests`[^2], which measures the amount of compute resources requested by the Kubernetes scheduler in bytes. We can multiply this value by $2^30$ to convert to **GiB**.
+[kube-state-metrics](https://github.com/kubernetes/kube-state-metrics) exports the metric `kube_pod_container_resource_requests`[^2], which measures the amount of compute resources requested by the Kubernetes scheduler in bytes. We multiply this by `c.UsageQuotaManager.prometheus_scrape_interval` and divide by $60^2$ to convert from resource-seconds per sample to resource-hours.
 
 (policy-resolver)=
 
 ### Policy resolver
 
-The policy resolver matches users with policy scopes to determine the quota limit applied. When a user is a member of multiple groups, the configured strategy from `c.UsageQuotaManager.scope_backup_strategy["intersection"]` is applied. When a user is not a member of any group, the system can be configured to default to no quota limits or quota limits specified in `c.UsageQuotaManager.scope_backup_strategy[“empty”]`. In the case where multiple quota policies apply over different rolling windows, then each policy is returned and applied with no limit stacking.
+The policy resolver matches users with policy scopes to determine the quota limit applied. When a user is a member of multiple groups, the configured strategy from `c.UsageQuotaManager.scope_fallback_strategy["intersection"]` is applied. When a user is not a member of any group, the system can be configured to default to no quota limits or quota limits specified in `c.UsageQuotaManager.scope_fallback_strategy[“empty”]`. In the case where multiple quota policies apply over different rolling windows, then each policy is returned and applied with no limit stacking.
 
 ```{tip} Example
 
 The policy resolver deduces the policy applied to a user under the following three scenarios:
 
-1. `empty`: – Backup policy applies to users who are out of scope of policy definitions.
+1. `empty`: – Fallback policy applies to users who are out of scope of policy definitions.
 
-1. `intersection` – Policy A limits 30 memory hours over the last 30 days to group 1, policy B limits 60 memory hours over the last 30 days to group 1. The policy backup strategy specifies the `max` operator, therefore the policy of `max(30, 60) = 60` memory hours over the last 30 days applies to members of group 1.
+1. `intersection` – Policy A limits 30 memory hours over the last 30 days to group 1, policy B limits 60 memory hours over the last 30 days to group 1. The policy fallback strategy specifies the `max` operator, therefore the policy of `max(30, 60) = 60` memory hours over the last 30 days applies to members of group 1.
 
 1. `multiple` – Policy A limits 30 memory hours over the last 30 days to group 1, policy B limits 7 memory hours over the last 7 days to group 1. Both quota policies are returned and applied with no limit stacking to members of group 1.
 ```
@@ -131,9 +125,9 @@ To calculate usage over the last 30 day window, we need to integrate over time f
 sum(sum_over_time(kube_pod_container_resource_requests{resource="memory|cpu"}[30d])) * scrape_interval
 ```
 
-We divide the result by `60 * 60` to convert to **hours**. If the metric is reporting memory consumption in bytes, we would also divide the result by `2^30` to convert to **GiB**.
+We divide the result by `60 * 60` to convert to **hours**.
 
-The result[^3] of the above PromQL pseudo-query is then compared against the each policy quota limit returned by the [policy resolver](#policy-resolver).
+The result[^3] of the above PromQL pseudo-query is then compared against the each policy quota limit returned by the [policy resolver](#policy-resolver). We use pure values, i.e. bytes-hours and cpu-hours, in this comparison.
 
 If the result is less than the policy limit, then we return `output["allow_server_launch"]=True`. If the result is greater than the policy limit then `output["allow_server_launch"]=False` and a structured error is processed and returned.
 
@@ -170,11 +164,12 @@ output = {
   }
   "quota": {
     "resource": str,
+    "pure_used": float,
     "used": float,
-    "limit": {
-       "value": float,
-       "unit": str,
-     },
+    "pure_limit": float,
+    "limit": str,
+    "unit": str,
+    "readable_unit": str,
     "window": int,
     "scope": {
       "group": [str],
@@ -190,4 +185,4 @@ This can be consumed by [kubespawner](https://github.com/jupyterhub/kubespawner)
 
 [^2]: From a dollar-cost point of view, requested cloud resources are what providers charge for even if they are under-utilised. This metric is the same one that is used in the memory/cpu requests panel in the User Diagnostics Dashboard of [jupyterhub/grafana-dashboards](https://github.com/jupyterhub/grafana-dashboards).
 
-[^3]: Dimensional analysis: \[sum_over_time(kube_pod_container_resource_requests{resource="memory"}[30d]) * scrape_interval\] = ( sample * bytes ) * ( time / sample ) = bytes * time = [GiB-hour] ✅
+[^3]: Dimensional analysis: \[sum_over_time(kube_pod_container_resource_requests{resource="memory"}[30d]) * scrape_interval\] = ( sample * bytes ) * ( time / sample ) = bytes * time = [byte-hour] ✅
