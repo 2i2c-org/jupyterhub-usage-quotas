@@ -125,9 +125,9 @@ To calculate usage over the last 30 day window, we need to integrate over time f
 sum(sum_over_time(kube_pod_container_resource_requests{resource="memory|cpu"}[30d])) * scrape_interval
 ```
 
-We divide the result by `60 * 60` to convert to **hours**. We use pure values, i.e. bytes-hours and cpu-hours, when comparing usage with quota limits.
+We divide the result by `60 * 60` to convert to **hours**.
 
-The result[^3] of the above PromQL pseudo-query is then compared against the each policy quota limit returned by the [policy resolver](#policy-resolver).
+The result[^3] of the above PromQL pseudo-query is then compared against the each policy quota limit returned by the [policy resolver](#policy-resolver). We use pure values, i.e. bytes-hours and cpu-hours, in this comparison.
 
 If the result is less than the policy limit, then we return `output["allow_server_launch"]=True`. If the result is greater than the policy limit then `output["allow_server_launch"]=False` and a structured error is processed and returned.
 

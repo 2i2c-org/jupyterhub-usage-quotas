@@ -23,7 +23,7 @@ Either of these components may or may not be enabled for your hub – contact yo
 
 ### Home storage
 
-This component displays your current home storage usage and quota limit in [gibibytes](https://simple.wikipedia.org/wiki/Gibibyte). The amount remaining and percentage used progress bar are highlighted in green when usage is below 90% and red when usage is above 90%.
+This component displays your current home storage usage and quota limit. The amount remaining and percentage used progress bar are highlighted in green when usage is below 90% and red when usage is above 90%.
 
 (home-storage-expire)=
 
@@ -31,7 +31,9 @@ When you have run out of home storage, you may be unable to launch your server s
 
 ### Compute
 
-This component displays your current compute usage and quota limit in {term}`GiB-hour`s. The amount remaining and percentage used progress bar are highlighted in green when usage is below 90% and red when usage is above 90%.
+This component displays your current compute usage and quota limit. The amount remaining and percentage used progress bar are highlighted in green when usage is below 90% and red when usage is above 90%.
+
+Compute quotas can be applied to either memory (with base units of {term}`byte-hour`s), or CPU (with base units of CPU-hours).
 
 You may have multiple compute quota policies applied to your account. Click the dropdown icon to expand the view to see all of your usage and quota.
 

@@ -1,5 +1,7 @@
 # Deployment guide
 
+## Deployment
+
 See the [Admins](#admins) section in the [Getting Started](./quickstart.md) page for a quick-start guide to deploying `jupyterhub-usage-quotas` in a [Zero to JupyterHub](https://z2jh.jupyter.org/en/stable/) context.
 
 ## Monitoring and Alerting
