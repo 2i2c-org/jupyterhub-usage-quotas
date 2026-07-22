@@ -125,7 +125,7 @@ You can mount configuration under [`extraFiles`](https://z2jh.jupyter.org/en/sta
 
 The usage quota system relies on configuring sensitive secrets, such as session keys and credentials, including:
 
-- `c.UsageConfig.prometheus_auth`: credentials for the Prometheus server
+- `c.Usage[QuotaManager|Viewer].prometheus_auth`: credentials for the Prometheus server
 - `c.UsageViewer.secret_session_key`: maintain a secure session with the usage quotas dashboard without needing to log in again.
 
 You can also mount this secret configuration under [`extraFiles`](https://z2jh.jupyter.org/en/stable/resources/reference.html#hub-extrafiles) so that they can be referenced by both modules.

@@ -39,7 +39,7 @@ class UsageQuotaManager(LoggingConfigurable):
         Can be set via JUPYTERHUB_USAGE_QUOTAS_PROMETHEUS_USERNAME and
         JUPYTERHUB_USAGE_QUOTAS_PROMETHEUS_PASSWORD environment variables.
         For example:
-            c.UsageConfig.prometheus_auth = {
+            c.UsageQuotaManager.prometheus_auth = {
                 "username": "username",
                 "password": "password",
             }
