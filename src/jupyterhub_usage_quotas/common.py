@@ -185,3 +185,15 @@ class Resource(object):
             return value / cls.CPU_SUFFIXES[unit]
         else:
             raise ValueError(f"Resource {name} not recognised.")
+
+    @staticmethod
+    def get_readable_unit(name: str, unit: str) -> str:
+        """
+        Get full human-readable unit string.
+        """
+        if name == "memory":
+            return unit + "iB-hours" if unit else "byte-hours"
+        elif name == "cpu":
+            return "CPU-hours"
+        else:
+            raise ValueError(f"Resource {name} not recognised.")
