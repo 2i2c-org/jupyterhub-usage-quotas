@@ -150,6 +150,7 @@ class Resource(object):
         if isinstance(self.value, int | float):
             self.pure_value = int(self.value)
             self.unit = ""
+            return
         elif isinstance(self.value, str):
             pattern = re.compile(r"^\d+[KMGT]$")
             if not pattern.match(self.value):
@@ -172,19 +173,22 @@ class Resource(object):
             self.pure_value = int(float(num) * self.MEMORY_SUFFIXES[self.unit])
         elif self.name == "cpu":
             self.pure_value = int(float(num) * self.CPU_SUFFIXES[self.unit])
-        return self.pure_value
+        return
 
     @classmethod
     def get_value(cls, name: str, value: float, unit: str) -> float:
         """
         Helper function to convert pure values to other units.
         """
-        if name == "memory":
-            return value / cls.MEMORY_SUFFIXES[unit]
-        elif name == "cpu":
-            return value / cls.CPU_SUFFIXES[unit]
+        if unit:
+            if name == "memory":
+                return value / cls.MEMORY_SUFFIXES[unit]
+            elif name == "cpu":
+                return value / cls.CPU_SUFFIXES[unit]
+            else:
+                raise ValueError(f"Resource {name} not recognised.")
         else:
-            raise ValueError(f"Resource {name} not recognised.")
+            return value
 
     @staticmethod
     def get_readable_unit(name: str, unit: str) -> str:
@@ -197,3 +201,15 @@ class Resource(object):
             return "CPU-hours"
         else:
             raise ValueError(f"Resource {name} not recognised.")
+
+    @staticmethod
+    def get_limit_without_unit(value: str | int) -> int:
+        """
+        Get the numeric value of a limit, e.g. 20G -> 20.
+        """
+        if type(value) is str:
+            pattern = r"-?\d+"
+            match = re.findall(pattern, value)
+            return int(match[0])
+        else:
+            return value
