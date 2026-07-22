@@ -477,6 +477,7 @@ class UsageQuotaManager(LoggingConfigurable):
         policy["readable_unit"] = Resource.get_readable_unit(
             name=policy["resource"], unit=policy["unit"]
         )
+        policy.update({"pure_used": pure_usage})
         policy.update({"used": usage})
         pure_limit = policy["pure_limit"]
         policy.update({"limit": Resource.get_limit_without_unit(policy["limit"])})
