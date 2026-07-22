@@ -96,7 +96,7 @@ In this explanation, we constrain compute usage by memory requests to a rolling 
 
 ### Usage metrics
 
-[kube-state-metrics](https://github.com/kubernetes/kube-state-metrics) exports the metric `kube_pod_container_resource_requests`[^2], which measures the amount of compute resources requested by the Kubernetes scheduler in bytes. We multiply this by `c.UsageQuotaManager.prometheus_scrape_interval` and divide by 60^2 to convert from resource-seconds per sample to resource-hours.
+[kube-state-metrics](https://github.com/kubernetes/kube-state-metrics) exports the metric `kube_pod_container_resource_requests`[^2], which measures the amount of compute resources requested by the Kubernetes scheduler in bytes. We multiply this by `c.UsageQuotaManager.prometheus_scrape_interval` and divide by $60^2$ to convert from resource-seconds per sample to resource-hours.
 
 (policy-resolver)=
 
