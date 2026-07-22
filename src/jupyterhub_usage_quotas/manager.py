@@ -350,6 +350,11 @@ class UsageQuotaManager(LoggingConfigurable):
                     if v["pure_limit"] == combined_value:
                         limit = v["limit"]
                         unit = v["unit"]
+                    else:  # Deal with summed policy limits
+                        unit = v["unit"]
+                        limit = Resource.get_value(
+                            name=resource, value=combined_value, unit=unit
+                        )
                 merged.append(
                     {
                         "resource": resource,
