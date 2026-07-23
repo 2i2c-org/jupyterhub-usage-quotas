@@ -3,19 +3,12 @@
 import asyncio
 import logging
 import random
-import sys
 from datetime import UTC, datetime
 from typing import Any
 
 from kubespawner.slugs import escape_slug, safe_slug
 
 from jupyterhub_usage_quotas.common import PrometheusClient
-
-logger = logging.getLogger(__name__)
-handler = logging.StreamHandler(sys.stdout)
-handler.setLevel(logging.INFO)
-logger.handlers = [handler]
-logger.setLevel(logging.INFO)
 
 
 class QuotaClient(PrometheusClient):
@@ -41,8 +34,8 @@ class QuotaClient(PrometheusClient):
                 "quota": "dirsize_hard_limit_bytes",
             },
             "compute": {
-                "usage": "jupyterhub_memory_usage_gibibyte_hours",
-                "quota": "jupyterhub_memory_limit_gibibyte_hours",
+                "usage": "jupyterhub_memory_usage_byte_hours",
+                "quota": "jupyterhub_memory_limit_byte_hours",
             },
         },
         namespace: str = "",
@@ -51,6 +44,9 @@ class QuotaClient(PrometheusClient):
         **kwargs,
     ):
         super().__init__(prometheus_url, prometheus_auth, **kwargs)
+        parent_log = logging.getLogger("JupyterHub")
+        self.log = logging.getLogger(__name__)
+        self.log.parent = parent_log
         self.namespace = namespace
         self.escape_scheme = escape_scheme
         self.dev_mode = dev_mode
@@ -188,14 +184,14 @@ class QuotaClient(PrometheusClient):
         )
 
         if use_mock_data:
-            logger.warning(
+            self.log.warning(
                 "Development mode is enabled with unconfigured Prometheus settings — returning mock data. "
                 f"(dev_mode={self.dev_mode}, prometheus_url={str(self.prometheus_url)}, "
                 f"namespace={self.namespace or '(empty)'})"
             )
             return self.get_mock_data(username)
 
-        logger.debug(f"Fetching usage data for user: {username}")
+        self.log.debug(f"Fetching usage data for user: {username}")
 
         directory = self.escape_username(username, escape_scheme=self.escape_scheme)
 
@@ -217,7 +213,7 @@ class QuotaClient(PrometheusClient):
                 )
             )
         except Exception as e:
-            logger.error(f"Error fetching usage data for {username}: {e}")
+            self.log.error(f"Error fetching usage data for {username}: {e}")
             return {
                 "username": username,
                 "error": "Unable to query home storage usage. Please try again later.",
@@ -266,7 +262,7 @@ class QuotaClient(PrometheusClient):
                 response = await self.query(promql)
                 if not response["data"]["result"]:
                     # handle case when no data is returned
-                    logger.warning(f"No usage metrics detected for {username}")
+                    self.log.warning(f"No usage metrics detected for {username}")
                     return [
                         {
                             "username": username,
@@ -274,7 +270,7 @@ class QuotaClient(PrometheusClient):
                         }
                     ]
             except Exception as e:
-                logger.error(f"Error fetching usage data for {username}: {e}")
+                self.log.error(f"Error fetching usage data for {username}: {e}")
                 return [
                     {
                         "username": username,
@@ -283,8 +279,10 @@ class QuotaClient(PrometheusClient):
                 ]
             for r in response["data"]["result"]:
                 result: dict[str, Any] = {"username": username}
-                value = float(r["value"][1])
+                value = float(r["metric"]["value"])
                 result.update({key: round(value, 2)})
+                unit = str(r["metric"]["unit"])
+                result.update({"unit": unit})
                 window = int(r["metric"]["window"])
                 result.update({"window": window})
                 last_updated_dt = datetime.fromtimestamp(r["value"][0], tz=UTC)
@@ -306,7 +304,7 @@ class QuotaClient(PrometheusClient):
             quota = item.get("quota", 0)
             item["percentage"] = (usage / quota) * 100 if quota else None
             output.append(item)
-        logger.debug(f"{output=}")
+        self.log.info(f"{output=}")
         ordered = sorted(output, key=lambda d: (-d["percentage"], d["window"]))
 
         return ordered
