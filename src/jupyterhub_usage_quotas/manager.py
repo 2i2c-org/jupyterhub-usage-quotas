@@ -289,7 +289,7 @@ class UsageQuotaManager(LoggingConfigurable):
             resource = Resource(name=policy["resource"], value=policy["limit"])
             policy["pure_limit"] = resource.pure_value
             policy["unit"] = resource.unit
-            policy_empty.append(self.scope_fallback_strategy["empty"])
+            policy_empty.append(policy)
         return policy_empty
 
     def resolve_intersection(self, values: list[dict], operator: str) -> float:
