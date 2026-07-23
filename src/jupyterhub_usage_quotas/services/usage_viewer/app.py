@@ -270,14 +270,14 @@ class UsageViewer(Application):
         help="""
         Prometheus metrics for querying storage and/or compute usage and quotas. Defaults to:
 
-        c.UsageViewerConfig.prometheus_usage_quota_metrics = {
+        c.UsageViewer.prometheus_usage_quota_metrics = {
             "home_storage": {
                 "usage": "dirsize_total_size_bytes",
                 "quota": "dirsize_hard_limit_bytes"
             },
             "compute": {
-                "usage": "jupyterhub_memory_usage_gibibyte_hours",
-                "quota": "jupyterhub_memory_limit_gibibyte_hours"
+                "usage": "jupyterhub_memory_usage_byte_hours",
+                "quota": "jupyterhub_memory_limit_byte_hours"
             }
         }
         """,
@@ -287,8 +287,8 @@ class UsageViewer(Application):
                 "quota": "dirsize_hard_limit_bytes",
             },
             "compute": {
-                "usage": "jupyterhub_memory_usage_gibibyte_hours",
-                "quota": "jupyterhub_memory_limit_gibibyte_hours",
+                "usage": "jupyterhub_memory_usage_byte_hours",
+                "quota": "jupyterhub_memory_limit_byte_hours",
             },
         },
     ).tag(config=True)
