@@ -6,7 +6,7 @@ from tornado.ioloop import PeriodicCallback
 from traitlets.config import Application
 from yarl import URL
 
-from jupyterhub_usage_quotas.common import HubApiClient
+from jupyterhub_usage_quotas.common import HubApiClient, Resource
 from jupyterhub_usage_quotas.manager import UsageQuotaManager
 
 previous_metrics: list = []
@@ -74,13 +74,20 @@ class MetricsExporter(Application):
         output = {}
         metric_unit = self.convert_unit[resource]
         for key in ["limit", "usage"]:
-            metric_name = f"{resource}_{key}_{metric_unit}"
+            metric_name = f"{resource}_{key}_{metric_unit}_total"
             if metric_name not in self.metrics:
                 self.log.info(f"Registering metric {metric_name}")
                 self.metrics[metric_name] = Gauge(
                     metric_name,
                     f"Resource {key} for {resource} from usage quota system.",
-                    ["namespace", "policy_group", "username", "window", "unit"],
+                    [
+                        "namespace",
+                        "policy_group",
+                        "username",
+                        "window",
+                        "value",
+                        "unit",
+                    ],
                     namespace=self.prometheus_namespace,
                     registry=REGISTRY,
                 )
@@ -109,6 +116,11 @@ class MetricsExporter(Application):
                     user_group = str(user_group_set)  # multiple groups
                 else:
                     user_group = user_group_set.pop()  # single group
+            # Add human-readable label values for usage quota dashboard
+            p.update({"limit": Resource.get_limit_without_unit(p["limit"])})
+            p["readable_unit"] = Resource.get_readable_unit(
+                name=p["resource"], unit=p["unit"]
+            )
             # Dynamically define and update metrics based on policy values and set their values
             metric = self.get_usage_quota_metrics(resource=p["resource"])
             usage = await self.quota_manager.get_usage(user_name, p)
@@ -119,14 +131,18 @@ class MetricsExporter(Application):
                 policy_group=user_group,
                 window=str(p["window"]),
                 namespace=self.hub_namespace,
-                unit=p["unit"],
+                value=Resource.get_value(
+                    name=p["resource"], value=value, unit=p["unit"]
+                ),
+                unit=p["readable_unit"],
             ).set(value)
             metric["limit"].labels(
                 username=user_name,
                 policy_group=user_group,
                 window=str(p["window"]),
                 namespace=self.hub_namespace,
-                unit=p["unit"],
+                value=p["limit"],
+                unit=p["readable_unit"],
             ).set(p["pure_limit"])
         return metric
 
