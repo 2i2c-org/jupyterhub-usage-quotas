@@ -34,8 +34,8 @@ class QuotaClient(PrometheusClient):
                 "quota": "dirsize_hard_limit_bytes",
             },
             "compute": {
-                "usage": "jupyterhub_memory_usage_byte_hours",
-                "quota": "jupyterhub_memory_limit_byte_hours",
+                "usage": "jupyterhub_memory_usage_byte_hours_total",
+                "quota": "jupyterhub_memory_limit_byte_hours_total",
             },
         },
         namespace: str = "",
