@@ -279,7 +279,7 @@ class QuotaClient(PrometheusClient):
                 ]
             for r in response["data"]["result"]:
                 result: dict[str, Any] = {"username": username}
-                value = float(r["metric"]["value"])
+                value = float(r["value"][1])
                 result.update({key: round(value, 2)})
                 unit = str(r["metric"]["unit"])
                 result.update({"unit": unit})
