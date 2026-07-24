@@ -1,3 +1,4 @@
+import copy
 import datetime
 import itertools
 import logging
@@ -285,7 +286,7 @@ class UsageQuotaManager(LoggingConfigurable):
             self.log.debug("No fallback policy found.")
             return policy_empty
         if isinstance(self.scope_fallback_strategy["empty"], dict):
-            policy = self.scope_fallback_strategy["empty"]
+            policy = copy.deepcopy(self.scope_fallback_strategy["empty"])
             resource = Resource(name=policy["resource"], value=policy["limit"])
             policy["pure_limit"] = resource.pure_value
             policy["unit"] = resource.unit
@@ -461,7 +462,7 @@ class UsageQuotaManager(LoggingConfigurable):
 
     def aggregate_usage(self, data: list) -> float:
         """
-        Helper function to aggregate usage over time.
+        Helper function to aggregate get_usage over time. The time series returned by get_usage is passed into the retry_time method also, hence why we keep this helper function separate.
         """
         return [sum(x) for x in zip(*data)][1]
 
