@@ -46,7 +46,7 @@ jobs:
     - name: Set up fake k8s cluster
       uses: jupyterhub/action-k3s-helm@v4
       with:
-        k3s-channel: v1.30
+        k3s-version: v1.34.1+k3s1
         metrics-enabled: false
         traefik-enabled: false
         docker-enabled: false

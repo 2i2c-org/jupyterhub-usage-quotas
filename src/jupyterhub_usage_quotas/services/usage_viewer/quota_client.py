@@ -279,8 +279,9 @@ class QuotaClient(PrometheusClient):
                 ]
             for r in response["data"]["result"]:
                 result: dict[str, Any] = {"username": username}
-                value = float(r["value"][1])
-                result.update({key: round(value, 2)})
+                pure_value = float(r["value"][1])
+                result.update({"pure_" + key: round(pure_value, 2)})
+                result.update({key: float(r["metric"]["value"])})
                 unit = str(r["metric"]["unit"])
                 result.update({"unit": unit})
                 window = int(r["metric"]["window"])
@@ -288,6 +289,7 @@ class QuotaClient(PrometheusClient):
                 last_updated_dt = datetime.fromtimestamp(r["value"][0], tz=UTC)
                 result.update({"last_updated": last_updated_dt.isoformat()})
                 results.append(result)
+        # Combine policies with the same rolling window
         combined = {}
         for result in results:
             window = result["window"]
@@ -300,9 +302,9 @@ class QuotaClient(PrometheusClient):
             combined[window].update(result)
         output = []
         for item in combined.values():
-            usage = item.get("usage", 0)
-            quota = item.get("quota", 0)
-            item["percentage"] = (usage / quota) * 100 if quota else None
+            pure_usage = item.get("pure_usage", 0)
+            pure_quota = item.get("pure_quota", 0)
+            item["percentage"] = (pure_usage / pure_quota) * 100 if pure_quota else None
             output.append(item)
         self.log.info(f"{output=}")
         ordered = sorted(output, key=lambda d: (-d["percentage"], d["window"]))
