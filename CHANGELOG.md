@@ -1,5 +1,48 @@
 # Changelog
 
+## v0.1.3 2026-07-24
+
+([full changelog](https://github.com/2i2c-org/jupyterhub-usage-quotas/compare/v0.1.2...e12328cd8b8538a197f4fcc88633de2979f07087))
+
+### Enhancements made
+
+- feat: Update dashboard [#76](https://github.com/2i2c-org/jupyterhub-usage-quotas/pull/76) ([@jnywong](https://github.com/jnywong))
+- feat: Refactor traitlets config [#74](https://github.com/2i2c-org/jupyterhub-usage-quotas/pull/74) ([@jnywong](https://github.com/jnywong))
+- Configurable usage viewer message [#61](https://github.com/2i2c-org/jupyterhub-usage-quotas/pull/61) ([@sunu](https://github.com/sunu), [@jnywong](https://github.com/jnywong))
+- Refactor the iframe UI out [#59](https://github.com/2i2c-org/jupyterhub-usage-quotas/pull/59) ([@sunu](https://github.com/sunu), [@jnywong](https://github.com/jnywong))
+
+### Bugs fixed
+
+- fix: use pure values for percentage but return readable values for dashboard [#77](https://github.com/2i2c-org/jupyterhub-usage-quotas/pull/77) ([@jnywong](https://github.com/jnywong))
+- fix: append policy to list [#75](https://github.com/2i2c-org/jupyterhub-usage-quotas/pull/75) ([@jnywong](https://github.com/jnywong))
+- fix: allow unlimited launches where no policies apply [#71](https://github.com/2i2c-org/jupyterhub-usage-quotas/pull/71) ([@jnywong](https://github.com/jnywong))
+- fix: Clear and repopulate metrics between ioloops [#70](https://github.com/2i2c-org/jupyterhub-usage-quotas/pull/70) ([@jnywong](https://github.com/jnywong))
+- fix: typo in static path [#66](https://github.com/2i2c-org/jupyterhub-usage-quotas/pull/66) ([@jnywong](https://github.com/jnywong))
+- fix: path to static assets [#65](https://github.com/2i2c-org/jupyterhub-usage-quotas/pull/65) ([@jnywong](https://github.com/jnywong))
+- fix: handle unset prespawn hook without crashing [#63](https://github.com/2i2c-org/jupyterhub-usage-quotas/pull/63) ([@sunu](https://github.com/sunu), [@jnywong](https://github.com/jnywong))
+- fix: deal with no next page in paginated hub api response [#62](https://github.com/2i2c-org/jupyterhub-usage-quotas/pull/62) ([@jnywong](https://github.com/jnywong))
+- fix: simplify setup_usage_quotas by removing existing_hook parameter [#60](https://github.com/2i2c-org/jupyterhub-usage-quotas/pull/60) ([@sunu](https://github.com/sunu), [@jnywong](https://github.com/jnywong))
+- fix: deal with paginated response from Hub REST API [#58](https://github.com/2i2c-org/jupyterhub-usage-quotas/pull/58) ([@jnywong](https://github.com/jnywong))
+
+### Maintenance and upkeep improvements
+
+- dependencies: (deps): bump actions/checkout from 6 to 7 in the actions group across 1 directory [#67](https://github.com/2i2c-org/jupyterhub-usage-quotas/pull/67) ([@jnywong](https://github.com/jnywong))
+- ci: use compatible packages [#64](https://github.com/2i2c-org/jupyterhub-usage-quotas/pull/64) ([@jnywong](https://github.com/jnywong))
+
+### Other merged PRs
+
+- Docs: add deployment guide stub [#72](https://github.com/2i2c-org/jupyterhub-usage-quotas/pull/72) ([@jnywong](https://github.com/jnywong))
+- docs: update quickstart and dashboard viewer [#69](https://github.com/2i2c-org/jupyterhub-usage-quotas/pull/69) ([@jnywong](https://github.com/jnywong))
+
+### Contributors to this release
+
+The following people contributed discussions, new ideas, code and documentation contributions, and review.
+See [our definition of contributors](https://github-activity.readthedocs.io/en/latest/use/#how-does-this-tool-define-contributions-in-the-reports).
+
+([GitHub contributors page for this release](https://github.com/2i2c-org/jupyterhub-usage-quotas/graphs/contributors?from=2026-05-21&to=2026-07-24&type=c))
+
+@jnywong ([activity](https://github.com/search?q=repo%3A2i2c-org%2Fjupyterhub-usage-quotas+involves%3Ajnywong+updated%3A2026-05-21..2026-07-24&type=Issues)) | @sunu ([activity](https://github.com/search?q=repo%3A2i2c-org%2Fjupyterhub-usage-quotas+involves%3Asunu+updated%3A2026-05-21..2026-07-24&type=Issues))
+
 ## v0.1.2 2026-05-21
 
 ([full changelog](https://github.com/2i2c-org/jupyterhub-usage-quotas/compare/v0.1.1...59fdd58e0c6d911a99dd8a8daf18f941e8852651))
