@@ -206,8 +206,8 @@
                         <div class="metric-items">
                             {% for result in compute_data %}
                             <div class="metric-item {% if loop.index > 1 %}collapse multi-collapse{% endif %}" id="compute-{{ loop.index }}">
-                                <div class="metric-usage">{{ "%.1f"|format(result.usage) }} GiB-hour used / {{ "%.1f"|format(result.quota) }} GiB-hour quota over the last {{ result.window }} days</div>
-                                <div class="metric-remaining"{% if result.percentage >= 90 %} style="color: #ef4444;"{% endif %}>{% if (result.quota - result.usage) < 0 %}{{ "%.1f"|format(0) }}{% else %}{{ "%.1f"|format(result.quota - result.usage) }}{% endif %} GiB-hour remaining</div>
+                                <div class="metric-usage">{{ "%.1f"|format(result.usage) }} {{ result.unit }} used / {{ "%.1f"|format(result.quota) }} {{ result.unit }} quota over the last {{ result.window }} days</div>
+                                <div class="metric-remaining"{% if result.percentage >= 90 %} style="color: #ef4444;"{% endif %}>{% if (result.quota - result.usage) < 0 %}{{ "%.1f"|format(0) }}{% else %}{{ "%.1f"|format(result.quota - result.usage) }}{% endif %} {{ result.unit }} remaining</div>
                                 <div class="progress-row">
                                     <div class="progress-track">
                                         <div class="progress-fill" style="width: {{ result.percentage }}%;{% if result.percentage >= 90 %} background: #ef4444;{% endif %}"></div>

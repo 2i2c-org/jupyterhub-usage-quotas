@@ -121,23 +121,27 @@ PROMETHEUS_COMPUTE_USAGE_MULTIPLE = {
         "result": [
             {
                 "metric": {
-                    "__name__": "jupyterhub_memory_usage_gibibyte_hours",
+                    "__name__": "jupyterhub_memory_usage_byte_hours",
                     "namespace": "prod",
                     "usergroup": "testgroup",
                     "username": "testuser",
+                    "value": "450",
+                    "unit": "GiB-hour",
                     "window": "1",
                 },
-                "value": [1778586321.778, "450"],
+                "value": [1778586321.778, "483183820800"],
             },
             {
                 "metric": {
-                    "__name__": "jupyterhub_memory_usage_gibibyte_hours",
+                    "__name__": "jupyterhub_memory_usage_byte_hours_total",
                     "namespace": "prod",
                     "usergroup": "testgroup",
                     "username": "testuser",
+                    "value": "550",
+                    "unit": "GiB-hour",
                     "window": "7",
                 },
-                "value": [1778586321.778, "550"],
+                "value": [1778586321.778, "590558003200"],
             },
         ],
         "resultType": "vector",
@@ -150,23 +154,27 @@ PROMETHEUS_COMPUTE_QUOTA_MULTIPLE = {
         "result": [
             {
                 "metric": {
-                    "__name__": "jupyterhub_memory_limit_gibibyte_hours",
+                    "__name__": "jupyterhub_memory_limit_byte_hours_total",
                     "namespace": "prod",
                     "usergroup": "testgroup",
                     "username": "testuser",
+                    "value": "500",
+                    "unit": "GiB-hour",
                     "window": "1",
                 },
-                "value": [1778586321.881, "500"],
+                "value": [1778586321.881, "536870912000"],
             },
             {
                 "metric": {
-                    "__name__": "jupyterhub_memory_limit_gibibyte_hours",
+                    "__name__": "jupyterhub_memory_limit_byte_hours_total",
                     "namespace": "prod",
                     "usergroup": "testgroup",
                     "username": "testuser",
+                    "value": "1000",
+                    "unit": "GiB-hour",
                     "window": "7",
                 },
-                "value": [1778586321.881, "1000"],
+                "value": [1778586321.881, "1073741824000"],
             },
         ],
         "resultType": "vector",
