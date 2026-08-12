@@ -1,5 +1,34 @@
 # Changelog
 
+## v0.1.4 2026-08-12
+
+([full changelog](https://github.com/2i2c-org/jupyterhub-usage-quotas/compare/v0.1.3...777dd1a3ec641c4756de3c57fb624b99eb3f0514))
+
+### Enhancements made
+
+- feat: generate ephemeral session key if not set [#82](https://github.com/2i2c-org/jupyterhub-usage-quotas/pull/82) ([@jnywong](https://github.com/jnywong))
+
+### Bugs fixed
+
+- fix: don't hardcode font colours [#83](https://github.com/2i2c-org/jupyterhub-usage-quotas/pull/83) ([@jnywong](https://github.com/jnywong))
+
+### Maintenance and upkeep improvements
+
+- loosen version reqs for newer versions of kubespawner [#79](https://github.com/2i2c-org/jupyterhub-usage-quotas/pull/79) ([@shaneknapp](https://github.com/shaneknapp), [@jnywong](https://github.com/jnywong))
+
+### Other merged PRs
+
+- dependencies: (deps): bump actions/setup-python from 6 to 7 in the actions group across 1 directory [#80](https://github.com/2i2c-org/jupyterhub-usage-quotas/pull/80) ([@jnywong](https://github.com/jnywong))
+
+### Contributors to this release
+
+The following people contributed discussions, new ideas, code and documentation contributions, and review.
+See [our definition of contributors](https://github-activity.readthedocs.io/en/latest/use/#how-does-this-tool-define-contributions-in-the-reports).
+
+([GitHub contributors page for this release](https://github.com/2i2c-org/jupyterhub-usage-quotas/graphs/contributors?from=2026-07-24&to=2026-08-12&type=c))
+
+@jnywong ([activity](https://github.com/search?q=repo%3A2i2c-org%2Fjupyterhub-usage-quotas+involves%3Ajnywong+updated%3A2026-07-24..2026-08-12&type=Issues)) | @shaneknapp ([activity](https://github.com/search?q=repo%3A2i2c-org%2Fjupyterhub-usage-quotas+involves%3Ashaneknapp+updated%3A2026-07-24..2026-08-12&type=Issues))
+
 ## v0.1.3 2026-07-24
 
 ([full changelog](https://github.com/2i2c-org/jupyterhub-usage-quotas/compare/v0.1.2...e12328cd8b8538a197f4fcc88633de2979f07087))
