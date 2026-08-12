@@ -52,12 +52,10 @@
     .metric-label {
         font-size: 18px;
         font-weight: 600;
-        color: #111827;
         margin: 0 0 6px 0;
     }
     .metric-usage {
         font-size: 15px;
-        color: #6b7280;
         margin: 0 0 4px 0;
     }
     .metric-remaining {
@@ -92,7 +90,6 @@
     }
     .metric-last-updated {
         font-size: 13px;
-        color: #6b7280;
         margin: 8px 0 0 0;
     }
     .error-message {
@@ -101,11 +98,9 @@
         margin: 0;
     }
     .subtitle {
-        color: #6b7280;
         margin-top: 16px;
     }
     .footer-note {
-        color: #374151;
         font-size: 15px;
         margin-top: 20px;
         line-height: 1.6;
@@ -127,7 +122,7 @@
                         <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z"></path>
                     </svg>
                     <div class="metric-content">
-                        <div class="metric-label">Home storage</div>
+                        <div class="metric-label"><h2>Home storage</h2></div>
                         <p class="error-message">{{ storage_data.error }}</p>
                     </div>
                     {% else %}
@@ -145,7 +140,7 @@
                     {% endif %}
                     <div class="metric-content">
                         <div class="metric-header">
-                            <div class="metric-label">Home storage</div>
+                            <div class="metric-label"><h2>Home storage</h2></div>
                         </div>
                         <div class="metric-items">
                             <div class="metric-item">
@@ -173,7 +168,7 @@
                         <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z"></path>
                     </svg>
                     <div class="metric-content">
-                        <div class="metric-label">Compute</div>
+                        <div class="metric-label"><h2>Compute</h2></div>
                         <p class="error-message">{{ compute_data.0.error }}</p>
                     </div>
                     {% else %}
@@ -195,7 +190,7 @@
                     </svg>
                     <div class="metric-content">
                         <div class="metric-header" data-bs-toggle="collapse" data-bs-target=".multi-collapse">
-                            <div class="metric-label">Compute</div>
+                            <div class="metric-label"><h2>Compute</h2></div>
                             {% if compute_data | length > 1 %}
                             <svg class="icon-dropdown" fill="none" stroke="gray" stroke-width="0.5" stroke-linecap="round" viewBox="0 0 5 5" xmlns="http://www.w3.org/2000/svg">
                                 <line x1="0.5" y1="0.5" x2="2.5" y2="2.5"/>
