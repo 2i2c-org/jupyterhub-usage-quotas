@@ -2,6 +2,7 @@
 
 import logging
 import os
+import secrets
 import sys
 
 import jsonschema
@@ -364,12 +365,14 @@ class UsageViewer(Application):
         return url.rstrip("/")
 
     session_secret_key = Unicode(
-        help="Secret key for session cookie encryption. Required for secure sessions. Set via config or JUPYTERHUB_USAGE_QUOTAS_SESSION_SECRET_KEY environment variable.",
+        help="Secret key to sign browser cookies. Required to maintain secure authenticated sessions. Set via config or JUPYTERHUB_USAGE_QUOTAS_SESSION_SECRET_KEY environment variable. If not set, an ephemeral key is generated whenever the application restarts, so stale sessions require users to authenticate again.",
     ).tag(config=True)
 
     @default("session_secret_key")
     def _session_secret_key_default(self):
-        key = os.environ.get("JUPYTERHUB_USAGE_QUOTAS_SESSION_SECRET_KEY", "")
+        key = os.environ.get(
+            "JUPYTERHUB_USAGE_QUOTAS_SESSION_SECRET_KEY", secrets.token_hex(32)
+        )
         if not key:
             raise TraitError(
                 "session_secret_key is required but not set. "

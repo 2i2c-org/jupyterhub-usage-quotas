@@ -162,6 +162,10 @@ class UsageQuotaManager(LoggingConfigurable):
         help="API token to authenticate requests from metrics exporter."
     ).tag(config=True)
 
+    @default("metrics_exporter_token")
+    def _metrics_exporter_default(self):
+        return os.environ.get("JUPYTERHUB_USAGE_QUOTAS_METRICS_TOKEN")
+
     scope_fallback_strategy = Dict(
         per_key_traits={
             "empty": Dict(),
