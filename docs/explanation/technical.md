@@ -11,7 +11,9 @@ The configuration for `jupyterhub-usage-quotas` include the following requiremen
 
 We apply the design principle of [separating mechanism from policy](https://en.wikipedia.org/wiki/Separation_of_mechanism_and_policy). We avoid mixing *how* the system may apply quotas (mechanism) with *who* and *what* quotas may apply to (policy).
 
-See [UsageQuotaConfig](configuration.md#usagequotaconfig) for all possible configuration options.
+See [Configuration](configuration.md) for all possible configuration options.
+
+(policy-configuration)=
 
 ### Policy configuration
 
