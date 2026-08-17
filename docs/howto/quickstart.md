@@ -296,3 +296,7 @@ hub:
 ```
 
 See [Configuration](../reference/configuration.md) for a full list of configuration options.
+
+### Multi-cluster setups
+
+If you operate multiple clusters and want to deploy `jupyterhub-usage-quotas`, then rather than individually generating and [mounting configuration](#mounting-configuration-files) with `extraFiles`, you may want to programmatically pass config to each cluster. We recommend following the [Multi-cluster setups](./deploy.md#multi-cluster-setups) guide to take advantage of jsonnet, Kubernetes config maps and mirroring secrets across namespaces instead.
