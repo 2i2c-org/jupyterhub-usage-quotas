@@ -18,6 +18,7 @@ project:
       - file: howto/quickstart.md
       - file: howto/usage-quota-dashboard.md
       - file: howto/user-group-management.md
+      - file: howto/quota-limits.md
       - file: howto/deploy.md
     - title: Explanation
       children:
