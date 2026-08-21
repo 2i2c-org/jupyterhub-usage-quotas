@@ -237,6 +237,12 @@ The [Usage Quota Dashboard](./usage-quota-dashboard.md) makes use of Prometheus 
   changes((max by (namespace) (jupyterhub_request_duration_seconds_count{code="422",handler="jupyterhub.handlers.pages.SpawnPendingHandler"} or 0 * jupyterhub_request_duration_seconds_count))[30m:1m])
   ```
 
+### Grafana dashboards
+
+In the `dashboards/` folder of this repository, there is a jsonnet file that defines a basic Grafana dashboard for the usage quotas system for you to use. See the `README.md` file in the same folder for how to deploy.
+
+See [Grafana Dashboard](./grafana-dashboard.md) for an overview of the Grafana Dashboard layout.
+
 ## Tips
 
 - The `jupyterhub-usage-quotas` library is installed within the hub image, so make sure that you give enough memory and compute [requests and limits](https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/) for the kubernetes pod to work
