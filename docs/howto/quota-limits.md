@@ -53,7 +53,7 @@ sum(
       pod=~"jupyter.*",
       }[30d]
     )
-  ) * 60 / 60^2 / 1024^3
+  ) by (namespace, pod) * 60 / 60^2 / 1024^3
 ```
 
 where
@@ -62,6 +62,7 @@ where
 - `namespace="prod"` is the k8s namespace your hub is deployed
 - `pod=~"jupyter.*"` filters for all user pods
 - `[30d]` is the time window of interest
+- `sum(...) by (namespace, pod)` aggregates over `namespace` and `pod` labels
 - `* 60` is to convert from samples to seconds using the default Prometheus scrape interval
 - `/ 60^2` converts from seconds to hours
 - `/ 1024^3` converts from bytes to GiB.
@@ -80,7 +81,7 @@ sum(
   label_replace(jupyterhub_user_group_info{namespace=~"prod", username=~".*", usergroup=~".*"},
       "annotation_hub_jupyter_org_username", "$1", "username", "(.+)")
   ) by (annotation_hub_jupyter_org_username, usergroup, namespace)
-) by (usergroup, namespace)
+) by (usergroup, namespace) * 60 / 60^2 / 1024^3
 ```
 
 ````{note}
