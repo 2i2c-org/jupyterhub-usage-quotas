@@ -9,7 +9,6 @@ from collections import defaultdict
 
 import jsonschema
 from kubespawner.slugs import escape_slug, safe_slug
-from tornado import web
 from traitlets import Bool, Dict, Integer, List, TraitError, Unicode, default, validate
 from traitlets.config import LoggingConfigurable
 
@@ -528,18 +527,3 @@ class UsageQuotaManager(LoggingConfigurable):
                 self.log.warning(f"{output['error']['code']}: {user_name}")
                 break
         return output
-
-
-class SpawnException(web.HTTPError):
-    """Custom exception that sets attributes for error page template."""
-
-    def __init__(
-        self,
-        status_code: int,
-        log_message: typing.Optional[str] = None,
-        html_message: typing.Optional[str] = None,
-        *args: typing.Any,
-        **kwargs: typing.Any,
-    ) -> None:
-        super().__init__(status_code, log_message, *args, **kwargs)
-        self.jupyterhub_html_message = html_message
