@@ -1,5 +1,28 @@
 # Changelog
 
+## v0.2.0 2026-09-07
+
+([full changelog](https://github.com/2i2c-org/jupyterhub-usage-quotas/compare/v0.1.4...38683698f31ca29327d1c9ab0aa0f0a9974b8e69))
+
+### API and Breaking Changes
+
+- Try with latest jupyterhub version [#94](https://github.com/2i2c-org/jupyterhub-usage-quotas/pull/94) ([@GeorgianaElena](https://github.com/GeorgianaElena), [@jnywong](https://github.com/jnywong))
+
+### Other merged PRs
+
+- docs: minor corrections [#93](https://github.com/2i2c-org/jupyterhub-usage-quotas/pull/93) ([@jnywong](https://github.com/jnywong))
+- docs: guide to choosing quota limits and grafana dashboards [#92](https://github.com/2i2c-org/jupyterhub-usage-quotas/pull/92) ([@jnywong](https://github.com/jnywong))
+- feat: add docs for multi-cluster setups [#89](https://github.com/2i2c-org/jupyterhub-usage-quotas/pull/89) ([@jnywong](https://github.com/jnywong))
+
+### Contributors to this release
+
+The following people contributed discussions, new ideas, code and documentation contributions, and review.
+See [our definition of contributors](https://github-activity.readthedocs.io/en/latest/use/#how-does-this-tool-define-contributions-in-the-reports).
+
+([GitHub contributors page for this release](https://github.com/2i2c-org/jupyterhub-usage-quotas/graphs/contributors?from=2026-08-12&to=2026-09-07&type=c))
+
+@GeorgianaElena ([activity](https://github.com/search?q=repo%3A2i2c-org%2Fjupyterhub-usage-quotas+involves%3AGeorgianaElena+updated%3A2026-08-12..2026-09-07&type=Issues)) | @jnywong ([activity](https://github.com/search?q=repo%3A2i2c-org%2Fjupyterhub-usage-quotas+involves%3Ajnywong+updated%3A2026-08-12..2026-09-07&type=Issues))
+
 ## v0.1.4 2026-08-12
 
 ([full changelog](https://github.com/2i2c-org/jupyterhub-usage-quotas/compare/v0.1.3...777dd1a3ec641c4756de3c57fb624b99eb3f0514))
