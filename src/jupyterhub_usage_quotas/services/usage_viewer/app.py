@@ -420,7 +420,6 @@ class UsageViewer(Application):
             if urlparse(self.public_hub_url).path
             else self.public_hub_url + "/"
         )
-        print(f"{public_hub_url=}")
         self.hub_template_paths.append(
             get_template_path()
         )  # append usage-quota templates to default hub templates list
