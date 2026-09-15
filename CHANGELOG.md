@@ -1,5 +1,22 @@
 # Changelog
 
+## v0.2.1
+
+([full changelog](https://github.com/2i2c-org/jupyterhub-usage-quotas/compare/v0.2.0...5d200c071f1f3c64f2f5d3aa87677919f90e7fc2))
+
+### Bugs fixed
+
+- fix: trailing slash [#97](https://github.com/2i2c-org/jupyterhub-usage-quotas/pull/97) ([@jnywong](https://github.com/jnywong))
+
+### Contributors to this release
+
+The following people contributed discussions, new ideas, code and documentation contributions, and review.
+See [our definition of contributors](https://github-activity.readthedocs.io/en/latest/use/#how-does-this-tool-define-contributions-in-the-reports).
+
+([GitHub contributors page for this release](https://github.com/2i2c-org/jupyterhub-usage-quotas/graphs/contributors?from=2026-09-07&to=2026-09-15&type=c))
+
+@jnywong ([activity](https://github.com/search?q=repo%3A2i2c-org%2Fjupyterhub-usage-quotas+involves%3Ajnywong+updated%3A2026-09-07..2026-09-15&type=Issues))
+
 ## v0.2.0 2026-09-07
 
 ([full changelog](https://github.com/2i2c-org/jupyterhub-usage-quotas/compare/v0.1.4...38683698f31ca29327d1c9ab0aa0f0a9974b8e69))
