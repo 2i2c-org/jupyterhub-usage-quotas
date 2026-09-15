@@ -4,6 +4,7 @@ import logging
 import os
 import secrets
 import sys
+from urllib.parse import urljoin, urlparse
 
 import jsonschema
 from jinja2 import Environment, FileSystemLoader
@@ -362,7 +363,7 @@ class UsageViewer(Application):
                 "Set it via config (c.UsageViewer.public_hub_url) or "
                 "JUPYTERHUB_PUBLIC_HUB_URL environment variable."
             )
-        return url.rstrip("/")
+        return url
 
     session_secret_key = Unicode(
         help="Secret key to sign browser cookies. Required to maintain secure authenticated sessions. Set via config or JUPYTERHUB_USAGE_QUOTAS_SESSION_SECRET_KEY environment variable. If not set, an ephemeral key is generated whenever the application restarts, so stale sessions require users to authenticate again.",
@@ -413,7 +414,13 @@ class UsageViewer(Application):
             Configured Tornado application
         """
         prefix = self.service_prefix.rstrip("/")
-        public_hub_url = self.public_hub_url  # already rstripped of trailing /
+        # Add trailing slash if needed, since this is also passed as base_url in UsageHandler
+        public_hub_url = (
+            self.public_hub_url
+            if urlparse(self.public_hub_url).path
+            else self.public_hub_url + "/"
+        )
+        print(f"{public_hub_url=}")
         self.hub_template_paths.append(
             get_template_path()
         )  # append usage-quota templates to default hub templates list
@@ -421,8 +428,8 @@ class UsageViewer(Application):
             loader=FileSystemLoader(self.hub_template_paths),
             autoescape=True,
         )
-        jinja_env.globals["static_url"] = (
-            lambda path, **_: f"{public_hub_url}/static/{path}"
+        jinja_env.globals["static_url"] = lambda path, **_: urljoin(
+            public_hub_url, f"static/{path}"
         )
 
         HubOAuth.instance(cache_max_age=60)
