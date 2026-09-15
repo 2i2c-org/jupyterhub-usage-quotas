@@ -1,5 +1,20 @@
 # Changelog
 
+## v0.1.5 2026-09-15
+
+### Bugs fixed
+
+- Backport PR fix: trailing slash [#97](https://github.com/2i2c-org/jupyterhub-usage-quotas/pull/97) ([@jnywong](https://github.com/jnywong))
+
+### Contributors to this release
+
+The following people contributed discussions, new ideas, code and documentation contributions, and review.
+See [our definition of contributors](https://github-activity.readthedocs.io/en/latest/use/#how-does-this-tool-define-contributions-in-the-reports).
+
+([GitHub contributors page for this release](https://github.com/2i2c-org/jupyterhub-usage-quotas/graphs/contributors?from=2026-09-07&to=2026-09-15&type=c))
+
+@jnywong ([activity](https://github.com/search?q=repo%3A2i2c-org%2Fjupyterhub-usage-quotas+involves%3Ajnywong+updated%3A2026-09-07..2026-09-15&type=Issues))
+
 ## v0.1.4 2026-08-12
 
 ([full changelog](https://github.com/2i2c-org/jupyterhub-usage-quotas/compare/v0.1.3...777dd1a3ec641c4756de3c57fb624b99eb3f0514))
