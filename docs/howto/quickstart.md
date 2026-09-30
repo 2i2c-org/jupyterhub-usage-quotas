@@ -99,8 +99,10 @@ A helper function to setup the system for JupyterHub should be set with:
 hub:
   extraConfig:
     01-setup-usage-quotas: |
-        from jupyterhub_usage_quotas import setup_usage_quotas
+        from jupyterhub_usage_quotas import setup_usage_quotas, get_template_path
         setup_usage_quotas(c)
+        template_path = get_template_path()
+        c.JupyterHub.template_pathsinsert(0, template_path)
 ```
 
 #### Required configuration
@@ -183,8 +185,10 @@ hub:
       failover_open: false
     extraConfig:
       01-setup-usage-quotas: |
-        from jupyterhub_usage_quotas import setup_usage_quotas
+        from jupyterhub_usage_quotas import setup_usage_quotas, get_template_path
         setup_usage_quotas(c)
+        template_path = get_template_path()
+        c.JupyterHub.template_pathsinsert(0, template_path)
     extraFiles:
       usage_quota_config:
         mountPath: /usr/local/etc/jupyterhub/jupyterhub_config.d/jupyterhub_usage_quota_config.py
@@ -220,6 +224,8 @@ hub:
     usage-quota-service:
       scopes:
         - read:users
+        - list:services
+        - read:services
       services:
         - usage-quota
     user:
