@@ -1,9 +1,11 @@
 # Grafana Dashboard
 
-:::\{figure} /img/grafana-usage-quotas.png
-:alt: Screenshot of a Usage Quotas Grafana dashboard
+```{figure} /img/grafana-usage-quotas.png
+---
+alt: Screenshot of a Usage Quotas Grafana dashboard
+---
 The "Usage Quotas" Grafana dashboard.
-:::
+```
 
 This dashboard consists of the following panels:
 
