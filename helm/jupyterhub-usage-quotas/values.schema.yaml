@@ -1,0 +1,217 @@
+# This schema (a JSONSchema in YAML format) is used to generate
+# values.schema.json to be packaged with the Helm chart.
+#
+# ref: https://helm.sh/docs/topics/charts/#schema-files
+# ref: https://json-schema.org/learn/getting-started-step-by-step.html
+#
+$schema: http://json-schema.org/draft-07/schema#
+type: object
+additionalProperties: false
+required:
+  - jupyterhub
+  - config
+  - image
+  - serviceAccount
+  - service
+  - networkPolicy
+properties:
+  enabled:
+    type: boolean
+    description: |
+      Configuration flag for charts that depend on this chart, to toggle the
+      installation of this chart.
+
+  # General configuration
+  # ---------------------------------------------------------------------------
+  #
+  nameOverride:
+    type: [string, "null"]
+    description: |
+      See the z2jh documentation for
+      [`fullnameOverride`](https://z2jh.jupyter.org/en/stable/resources/reference.html#fullnameoverride).
+  fullnameOverride:
+    type: [string, "null"]
+    description: |
+      Adjusts the names of the chart resources. If `""` (the default), the
+      resources are named after the component, e.g. `usage-viewer`. If `null`,
+      the names start with the release name. Do not change this value after
+      the first installation.
+
+      See the z2jh documentation for
+      [`fullnameOverride`](https://z2jh.jupyter.org/en/stable/resources/reference.html#fullnameoverride).
+  global:
+    type: object
+    additionalProperties: true
+
+  # JupyterHub integration
+  # ---------------------------------------------------------------------------
+  #
+  jupyterhub:
+    type: object
+    additionalProperties: false
+    required: [serviceName, apiUrl, publicUrl, apiToken]
+    description: |
+      How the service connects to JupyterHub.
+    properties:
+      serviceName:
+        type: string
+        description: |
+          The name of the JupyterHub service. It must be the same as the key
+          under the z2jh `hub.services` config. The service is available at
+          `/services/<serviceName>/`.
+      apiUrl:
+        type: string
+        description: |
+          The JupyterHub API URL, as seen from inside the cluster.
+      publicUrl:
+        type: string
+        description: |
+          The public URL of JupyterHub, e.g. `https://hub.example.org/`.
+          The service uses it for links and static files. Required.
+      apiToken:
+        type: object
+        additionalProperties: false
+        description: |
+          The API token that the service uses to talk to JupyterHub.
+        properties:
+          value:
+            type: string
+            description: |
+              The token. If empty, the token is read from `existingSecret`.
+          existingSecret:
+            type: object
+            additionalProperties: false
+            description: |
+              A Secret that contains the token. By default, this is the
+              token that z2jh makes for the `hub.services.<serviceName>`
+              entry. The Secret must be in the same namespace as this chart.
+            properties:
+              name:
+                type: string
+              key:
+                type: string
+                description: |
+                  If empty, the key is `hub.services.<serviceName>.apiToken`.
+
+  # UsageViewer configuration
+  # ---------------------------------------------------------------------------
+  #
+  config:
+    type: object
+    additionalProperties: false
+    description: |
+      Configuration for the service traitlets. It is stored in a Secret, so it
+      can contain credentials such as `prometheus_auth`.
+
+      ```yaml
+      config:
+        UsageViewer:
+          prometheus_url: http://prometheus-server.support.svc.cluster.local
+          enable_compute: true
+      ```
+    properties:
+      UsageViewer:
+        type: object
+        additionalProperties: true
+        description: |
+          See the [UsageViewer reference](https://jupyterhub-usage-quotas.readthedocs.io/en/latest/reference/usageviewer/).
+  sessionSecretKey:
+    type: string
+    description: |
+      The key that signs the session cookies. If empty, a random key is
+      generated on install and kept on upgrade.
+
+  # Deployment resource
+  # ---------------------------------------------------------------------------
+  #
+  replicas:
+    type: integer
+  image:
+    type: object
+    additionalProperties: false
+    required: [repository, tag]
+    properties:
+      repository:
+        type: string
+      tag:
+        type: string
+      pullPolicy:
+        enum: [null, "", IfNotPresent, Always, Never]
+      pullSecrets:
+        type: array
+  extraEnv:
+    type: array
+    description: |
+      More environment variables for the container, in the Kubernetes
+      `EnvVar` format. The values are rendered with `tpl`.
+  extraVolumes:
+    type: array
+  extraVolumeMounts:
+    type: array
+  resources:
+    type: object
+    additionalProperties: true
+  securityContext:
+    type: object
+    additionalProperties: true
+  podSecurityContext:
+    type: object
+    additionalProperties: true
+  podAnnotations: &labels-and-annotations
+    type: object
+    additionalProperties: false
+    patternProperties:
+      ".*":
+        type: string
+  nodeSelector:
+    type: object
+    additionalProperties: true
+  affinity:
+    type: object
+    additionalProperties: true
+  tolerations:
+    type: array
+
+  # ServiceAccount resource
+  # ---------------------------------------------------------------------------
+  #
+  serviceAccount:
+    type: object
+    additionalProperties: false
+    required: [create, name]
+    properties:
+      create:
+        type: boolean
+      name:
+        type: string
+      annotations: *labels-and-annotations
+
+  # Service resource
+  # ---------------------------------------------------------------------------
+  #
+  service:
+    type: object
+    additionalProperties: false
+    required: [type, port]
+    properties:
+      type:
+        type: string
+      port:
+        type: integer
+      annotations: *labels-and-annotations
+
+  # NetworkPolicy resource
+  # ---------------------------------------------------------------------------
+  #
+  networkPolicy:
+    type: object
+    additionalProperties: false
+    required: [enabled]
+    properties:
+      enabled:
+        type: boolean
+      ingress:
+        type: array
+        description: |
+          More ingress rules, in the Kubernetes `NetworkPolicyIngressRule`
+          format.

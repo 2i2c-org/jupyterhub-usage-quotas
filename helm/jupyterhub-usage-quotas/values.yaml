@@ -1,0 +1,85 @@
+# General configuration
+# -----------------------------------------------------------------------------
+#
+nameOverride:
+fullnameOverride: ""
+global: {}
+
+# JupyterHub integration
+# -----------------------------------------------------------------------------
+#
+jupyterhub:
+  # Must be the same as the key under the z2jh `hub.services` config.
+  serviceName: usage-quota
+  # The JupyterHub API URL, as seen from inside the cluster.
+  apiUrl: http://hub:8081/hub/api
+  # The public URL of JupyterHub, e.g. https://hub.example.org/. Required.
+  publicUrl: ""
+  apiToken:
+    # If empty, the token is read from existingSecret.
+    value: ""
+    existingSecret:
+      # The z2jh hub Secret.
+      name: hub
+      # If empty, defaults to hub.services.<serviceName>.apiToken.
+      key: ""
+
+# UsageViewer configuration
+# -----------------------------------------------------------------------------
+#
+config:
+  UsageViewer: {}
+
+# If empty, a random key is generated on install and kept on upgrade.
+sessionSecretKey: ""
+
+# Deployment resource
+# -----------------------------------------------------------------------------
+#
+replicas: 1
+image:
+  repository: ghcr.io/2i2c-org/jupyterhub-usage-quotas
+  tag: set-by-chartpress
+  pullPolicy: ""
+  pullSecrets: []
+extraEnv: []
+extraVolumes: []
+extraVolumeMounts: []
+resources: {}
+securityContext:
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+      - ALL
+  readOnlyRootFilesystem: true
+  runAsNonRoot: true
+  runAsUser: 65534 # nobody user
+  runAsGroup: 65534 # nobody group
+podSecurityContext: {}
+podAnnotations: {}
+nodeSelector: {}
+affinity: {}
+tolerations: []
+
+# ServiceAccount resource
+# -----------------------------------------------------------------------------
+#
+serviceAccount:
+  create: true
+  name: ""
+  annotations: {}
+
+# Service resource
+# -----------------------------------------------------------------------------
+#
+service:
+  type: ClusterIP
+  port: 9000
+  annotations: {}
+
+# NetworkPolicy resource
+# -----------------------------------------------------------------------------
+#
+networkPolicy:
+  enabled: true
+  ingress: []
