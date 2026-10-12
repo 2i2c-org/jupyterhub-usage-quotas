@@ -134,6 +134,13 @@ class MetricsHandler(BaseHandler):
             self.write(generate_latest(service_registry))
 
 
+class HealthHandler(web.RequestHandler):
+    """Unauthenticated handler for Kubernetes readiness and liveness probes."""
+
+    def get(self):
+        self.write({"status": "ok"})
+
+
 class UsageViewer(Application):
     """Application for running the usage quota viewer service."""
 
@@ -437,6 +444,7 @@ class UsageViewer(Application):
                 (prefix + r"/?", UsageHandler),
                 (prefix + r"/oauth_callback", HubOAuthCallbackHandler),
                 (prefix + r"/metrics", MetricsHandler),
+                (prefix + r"/health", HealthHandler),
             ],
             cookie_secret=self.session_secret_key,
             enable_home_storage=self.enable_home_storage,
