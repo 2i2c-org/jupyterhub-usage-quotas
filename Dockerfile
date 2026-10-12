@@ -2,7 +2,7 @@
 
 # The package version comes from git (through hatch-vcs),
 # so build the wheel in a separate stage that has access to .git.
-FROM python:3.14-slim-trixie AS builder
+FROM --platform=$BUILDPLATFORM python:3.14-slim-trixie AS builder
 
 RUN apt-get update \
  && apt-get install -y --no-install-recommends git \

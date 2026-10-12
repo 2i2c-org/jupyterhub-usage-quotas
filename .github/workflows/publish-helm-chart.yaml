@@ -1,0 +1,74 @@
+name: Publish image and Helm chart
+
+# Build and push the usage viewer image to ghcr.io, and publish the Helm chart
+# to the OCI registry at
+# oci://ghcr.io/2i2c-org/jupyterhub-usage-quotas/jupyterhub-usage-quotas
+#
+# Commits to main publish development versions, e.g. 0.2.2-0.dev.git.5.habcdef.
+# Tags publish release versions, e.g. v0.3.0 publishes 0.3.0.
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    tags:
+      - "v?[0-9]+.[0-9]+.[0-9]+"
+      - "v?[0-9]+.[0-9]+.[0-9]+(a|b|rc|post|dev)[0-9]+"
+    paths-ignore:
+      - "docs/**"
+      - "dashboards/**"
+      - "**.md"
+      - ".github/workflows/*"
+      - "!.github/workflows/publish-helm-chart.yaml"
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+
+    # Push the image and the chart to ghcr.io with the GITHUB_TOKEN
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          # chartpress needs the git history and tags to compute versions
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.14"
+
+      - name: Set up QEMU (for docker buildx)
+        uses: docker/setup-qemu-action@v4
+
+      - name: Set up Docker Buildx (for chartpress multi-arch builds)
+        uses: docker/setup-buildx-action@v4
+
+      - name: Install chart publishing dependencies (chartpress, helm)
+        run: |
+          pip install chartpress
+          pip list
+          helm version
+
+      - name: Log in to ghcr.io (docker and helm)
+        run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+          echo "${{ secrets.GITHUB_TOKEN }}" | helm registry login ghcr.io -u "${{ github.actor }}" --password-stdin
+
+      - name: Generate values.schema.json
+        run: yq -o json values.schema.yaml > values.schema.json
+        working-directory: helm/jupyterhub-usage-quotas
+
+      - name: Lint the Helm chart
+        run: helm lint helm/jupyterhub-usage-quotas --set jupyterhub.publicUrl=https://hub.example.org/
+
+      - name: Build and push the image, and publish the chart
+        run: |
+          chartpress \
+            --builder docker-buildx \
+            --platform linux/amd64 \
+            --platform linux/arm64 \
+            --push \
+            --publish-chart
