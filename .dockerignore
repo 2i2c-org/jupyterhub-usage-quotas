@@ -1,0 +1,17 @@
+# .git is not ignored: hatch-vcs needs it to compute the package version.
+.github
+.venv
+**/__pycache__
+**/*.pyc
+.pytest_cache
+.mypy_cache
+.coverage*
+dist
+build
+dashboards
+docs
+helm
+tests
+*.mp4
+*.png
+jupyterhub_config*.py
