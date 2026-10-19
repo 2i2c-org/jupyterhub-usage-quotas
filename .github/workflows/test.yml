@@ -142,6 +142,11 @@ jobs:
           # that the next step builds.
           docker-enabled: true
 
+      # With docker as the container runtime (cri-dockerd), kubectl
+      # port-forward needs socat on the node, which is the runner.
+      - name: Install socat (for kubectl port-forward)
+        run: sudo apt-get update && sudo apt-get install -y socat
+
       - name: Build the image
         run: docker build -t $IMAGE:ci .
 
