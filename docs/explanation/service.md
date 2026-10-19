@@ -41,7 +41,7 @@ The service still has access to the Prometheus metrics of all users. So we shoul
 
 ## Configuration
 
-You can configure the service in three ways:
+We can configure the service in three ways:
 
 - A configuration file, with the `--config-files` flag. The file can be a Python file (`c.UsageViewer.<option> = ...`) or a JSON file (`{"UsageViewer": {...}}`).
 - Command line flags.
@@ -51,7 +51,7 @@ For all options, see the [UsageViewer reference](../reference/configuration.md).
 
 ### Environment variables from JupyterHub
 
-JupyterHub sets these environment variables for the services that it starts. An external service must set them itself. The Helm chart sets them for you.
+JupyterHub sets these environment variables for the services that it starts. An external service must set them itself. The Helm chart sets them.
 
 | Variable                        | Example                                         | Description                                                                                            |
 | ------------------------------- | ----------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
@@ -66,19 +66,19 @@ JupyterHub sets these environment variables for the services that it starts. An 
 
 ### Environment variables for the usage viewer
 
-| Variable                                      | Description                                                                                                                                                    |
-| --------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `JUPYTERHUB_USAGE_QUOTAS_SESSION_SECRET_KEY`  | The key that signs the session cookies. If you do not set it, the service makes a random key each time it starts, and users must log in again after a restart. |
-| `JUPYTERHUB_USAGE_QUOTAS_PROMETHEUS_URL`      | The Prometheus server URL. The default is `http://127.0.0.1:9090`.                                                                                             |
-| `JUPYTERHUB_USAGE_QUOTAS_PROMETHEUS_USERNAME` | (Optional) The Prometheus username                                                                                                                             |
-| `JUPYTERHUB_USAGE_QUOTAS_PROMETHEUS_PASSWORD` | (Optional) The Prometheus password                                                                                                                             |
-| `JUPYTERHUB_USAGE_QUOTAS_HUB_NAMESPACE`       | The Kubernetes namespace of the JupyterHub deployment. The service uses it to filter the metrics. The default is empty.                                        |
+| Variable                                      | Description                                                                                                                                                |
+| --------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `JUPYTERHUB_USAGE_QUOTAS_SESSION_SECRET_KEY`  | The key that signs the session cookies. If it is not set, the service makes a random key each time it starts, and users must log in again after a restart. |
+| `JUPYTERHUB_USAGE_QUOTAS_PROMETHEUS_URL`      | The Prometheus server URL. The default is `http://127.0.0.1:9090`.                                                                                         |
+| `JUPYTERHUB_USAGE_QUOTAS_PROMETHEUS_USERNAME` | (Optional) The Prometheus username                                                                                                                         |
+| `JUPYTERHUB_USAGE_QUOTAS_PROMETHEUS_PASSWORD` | (Optional) The Prometheus password                                                                                                                         |
+| `JUPYTERHUB_USAGE_QUOTAS_HUB_NAMESPACE`       | The Kubernetes namespace of the JupyterHub deployment. The service uses it to filter the metrics. The default is empty.                                    |
 
 ### Command line flags
 
 | Flag                   | Option               | Default                    | Description                                                            |
 | ---------------------- | -------------------- | -------------------------- | ---------------------------------------------------------------------- |
-| `--config-files`       | `config_files`       | `[]`                       | A configuration file to load. You can use the flag more than one time. |
+| `--config-files`       | `config_files`       | `[]`                       | A configuration file to load. The flag can be used more than one time. |
 | `--prometheus-url`     | `prometheus_url`     | `http://127.0.0.1:9090`    | The Prometheus server URL                                              |
 | `--hub-namespace`      | `hub_namespace`      | `""`                       | The Kubernetes namespace of the JupyterHub deployment                  |
 | `--public-hub-url`     | `public_hub_url`     | **(required)**             | The public URL of the hub                                              |
@@ -92,11 +92,11 @@ JupyterHub sets these environment variables for the services that it starts. An 
 
 For Kubernetes, use the Helm chart in this repository. It installs the service next to a [Zero to JupyterHub](https://z2jh.jupyter.org/en/stable/) deployment, and sets the environment variables above. See the [Deployment guide](../howto/deploy.md).
 
-To run the service on your computer for development, see the [Development guide](../contributing/DEVELOPMENT.md).
+To run the service on a local computer for development, see the [Development guide](../contributing/DEVELOPMENT.md).
 
 ## Development mode
 
-When you start the service with the `--dev-mode` flag, the service can return randomly generated mock data. This is useful for development without a Prometheus instance.
+When we start the service with the `--dev-mode` flag, the service can return randomly generated mock data. This is useful for development without a Prometheus instance.
 
 The service uses mock data only when all of these conditions are true:
 
@@ -104,4 +104,4 @@ The service uses mock data only when all of these conditions are true:
 1. `prometheus_url` has the default value (`http://127.0.0.1:9090`).
 1. `hub_namespace` is empty.
 
-If you set `prometheus_url` or `hub_namespace`, the service queries Prometheus, also when `dev_mode` is `True`.
+If `prometheus_url` or `hub_namespace` is set, the service queries Prometheus, also when `dev_mode` is `True`.
