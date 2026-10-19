@@ -93,3 +93,99 @@ jobs:
       # checks the names, selectors, ports, URLs, secrets and config.
       - name: Check rendered manifests
         run: tests/helm/test-rendered-manifests.sh
+
+  # Installs z2jh and this chart in k3s, which enforces NetworkPolicies, and
+  # checks the service through the z2jh proxy.
+  chart-install:
+    runs-on: ubuntu-latest
+    env:
+      CHART: helm/jupyterhub-usage-quotas
+      IMAGE: ghcr.io/2i2c-org/jupyterhub-usage-quotas
+      Z2JH_VERSION: "4.4.2"
+      HEALTH_CHECK: "import urllib.request; print(urllib.request.urlopen('http://usage-viewer:9000/services/usage-quota/health', timeout=5).status)"
+
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          # hatch-vcs needs the git history and tags to compute the version
+          fetch-depth: 0
+
+      - name: Set up k3s
+        uses: jupyterhub/action-k3s-helm@v4
+        with:
+          k3s-version: v1.34.1+k3s1
+          metrics-enabled: false
+          traefik-enabled: false
+          # Use docker as the container runtime, so k3s can use the image
+          # that the next step builds.
+          docker-enabled: true
+
+      - name: Build the image
+        run: docker build -t $IMAGE:ci .
+
+      - name: Generate values.schema.json
+        run: yq -o json $CHART/values.schema.yaml > $CHART/values.schema.json
+
+      # helm template --validate does not catch invalid manifests with Helm 4,
+      # so use the API server.
+      - name: Validate the rendered manifests with the API server
+        run: |
+          helm template usage-quotas $CHART --set jupyterhub.publicUrl=https://hub.example.org/ \
+            | kubectl apply --dry-run=server -f -
+          helm template usage-quotas $CHART --values tests/helm/lint-and-validate-values.yaml \
+            | kubectl apply --dry-run=server -f -
+
+      # z2jh creates the API token for the service, which this chart reads.
+      - name: Install z2jh
+        run: |
+          helm upgrade --install jupyterhub jupyterhub \
+            --repo https://hub.jupyter.org/helm-chart/ \
+            --version $Z2JH_VERSION \
+            --values tests/helm/z2jh-values.yaml \
+            --wait --timeout 5m
+
+      - name: Install the chart
+        run: |
+          helm upgrade --install usage-quotas $CHART \
+            --set image.tag=ci \
+            --set jupyterhub.publicUrl=http://localhost:8080/ \
+            --wait --timeout 3m
+
+      - name: Check the service through the z2jh proxy
+        run: |
+          kubectl port-forward service/proxy-public 8080:80 &
+          for i in $(seq 1 30); do curl -s -o /dev/null http://localhost:8080 && break; sleep 1; done
+          tests/helm/test-install.py http://localhost:8080
+
+      - name: Check the NetworkPolicy
+        run: |
+          echo "The z2jh hub can access the service"
+          kubectl exec deploy/hub -- python3 -c "$HEALTH_CHECK"
+
+          echo "Other pods cannot access the service"
+          kubectl run netpol-test --image=$IMAGE:ci --restart=Never --command -- sleep 300
+          kubectl wait --for=condition=Ready pod/netpol-test --timeout=60s
+          if kubectl exec netpol-test -- python3 -c "$HEALTH_CHECK" 2>/dev/null; then
+            echo "::error::a pod without the allowed labels can access the service"
+            exit 1
+          fi
+
+      - name: Check that an upgrade keeps the session secret key and the pod
+        run: |
+          key() { kubectl get secret usage-viewer -o jsonpath='{.data.session-secret-key}'; }
+          pod() { kubectl get pod -l app.kubernetes.io/component=usage-viewer -o name; }
+          key_before=$(key)
+          pod_before=$(pod)
+          helm upgrade usage-quotas $CHART --reuse-values --wait --timeout 3m
+          if [[ -z "$key_before" || "$(key)" != "$key_before" ]]; then
+            echo "::error::helm upgrade changed the session secret key"
+            exit 1
+          fi
+          if [[ "$(pod)" != "$pod_before" ]]; then
+            echo "::error::helm upgrade without changes restarted the pod"
+            exit 1
+          fi
+
+      - name: Kubernetes namespace report
+        uses: jupyterhub/action-k8s-namespace-report@v1
+        if: failure()

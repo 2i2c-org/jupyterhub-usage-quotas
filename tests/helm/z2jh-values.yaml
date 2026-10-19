@@ -1,0 +1,43 @@
+# Values for the jupyterhub chart (z2jh) in the CI install test of the
+# jupyterhub-usage-quotas chart. It registers the usage viewer as an external
+# service, with the config that the jupyterhub-usage-quotas NOTES.txt shows.
+hub:
+  config:
+    JupyterHub:
+      authenticator_class: dummy
+    Authenticator:
+      allow_all: true
+    DummyAuthenticator:
+      password: test-password
+  services:
+    usage-quota:
+      url: http://usage-viewer:9000
+      display: true
+      oauth_no_confirm: true
+  loadRoles:
+    usage-quota-service:
+      scopes:
+        - read:users
+        - list:services
+        - read:services
+      services:
+        - usage-quota
+    user:
+      scopes:
+        - self
+        - access:services!service=usage-quota
+
+# The test does not start user servers, so turn off what is not needed.
+proxy:
+  service:
+    type: ClusterIP
+prePuller:
+  hook:
+    enabled: false
+  continuous:
+    enabled: false
+scheduling:
+  userScheduler:
+    enabled: false
+cull:
+  enabled: false

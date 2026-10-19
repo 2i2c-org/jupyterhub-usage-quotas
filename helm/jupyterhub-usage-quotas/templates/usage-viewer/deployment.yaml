@@ -19,8 +19,8 @@ spec:
   template:
     metadata:
       annotations:
-        # Restart the pod when the config or the secrets change
-        checksum/secret: {{ include (print .Template.BasePath "/usage-viewer/secret.yaml") . | sha256sum }}
+        # Restart the pod when the content of the Secret changes.
+        checksum/secret: {{ list .Values.config .Values.sessionSecretKey .Values.jupyterhub.apiToken.value | toJson | sha256sum }}
         {{- with .Values.podAnnotations }}
         {{- . | toYaml | nindent 8 }}
         {{- end }}
