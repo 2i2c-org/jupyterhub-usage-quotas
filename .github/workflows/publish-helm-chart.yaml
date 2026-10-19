@@ -6,6 +6,9 @@ name: Publish image and Helm chart
 #
 # Commits to main publish development versions, e.g. 0.2.2-0.dev.git.5.habcdef.
 # Tags publish release versions, e.g. v0.3.0 publishes 0.3.0.
+#
+# Prerelease tags (e.g. v0.3.0rc1) do not publish: chartpress requires a
+# semantic version for a published chart, and 0.3.0rc1 is not one.
 on:
   workflow_dispatch:
   push:
@@ -13,13 +16,15 @@ on:
       - main
     tags:
       - "v?[0-9]+.[0-9]+.[0-9]+"
-      - "v?[0-9]+.[0-9]+.[0-9]+(a|b|rc|post|dev)[0-9]+"
-    paths-ignore:
-      - "docs/**"
-      - "dashboards/**"
-      - "**.md"
-      - ".github/workflows/*"
-      - "!.github/workflows/publish-helm-chart.yaml"
+    # Note: The order of the patterns matters: a later pattern overrides an earlier
+    # one.
+    paths:
+      - "**"
+      - "!docs/**"
+      - "!dashboards/**"
+      - "!**.md"
+      - "!.github/workflows/*"
+      - ".github/workflows/publish-helm-chart.yaml"
 
 jobs:
   publish:
