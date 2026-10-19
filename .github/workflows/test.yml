@@ -70,3 +70,26 @@ jobs:
 
     - name: Check types
       run: hatch run types:check
+
+  chart:
+    runs-on: ubuntu-latest
+    env:
+      CHART: helm/jupyterhub-usage-quotas
+      LINT_VALUES: tests/helm/lint-and-validate-values.yaml
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Generate values.schema.json
+        run: yq -o json $CHART/values.schema.yaml > $CHART/values.schema.json
+
+      - name: Helm lint (values.yaml)
+        run: helm lint --strict $CHART
+
+      - name: Helm lint (lint-and-validate-values.yaml)
+        run: helm lint --strict $CHART --values $LINT_VALUES
+
+      # Renders the default values and lint-and-validate-values.yaml, and
+      # checks the names, selectors, ports, URLs, secrets and config.
+      - name: Check rendered manifests
+        run: tests/helm/test-rendered-manifests.sh

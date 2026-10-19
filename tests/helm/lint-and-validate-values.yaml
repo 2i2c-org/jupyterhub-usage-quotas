@@ -1,0 +1,107 @@
+# Values for the jupyterhub-usage-quotas chart that render the template
+# branches that the default values do not render. They are not a working
+# config. CI also renders the default values (with only jupyterhub.publicUrl
+# set), so this file does not repeat default values.
+#
+# This follows the tools/templates/lint-and-validate-values.yaml pattern in
+# the jupyterhub chart (z2jh).
+
+# Names: "<release>-<nameOverride>-usage-viewer" and the name label, which the
+# Deployment, Service and NetworkPolicy selectors must all use.
+nameOverride: name-override
+fullnameOverride: null
+
+jupyterhub:
+  # The derived URLs (service prefix, public URLs, probe paths, OAuth
+  # callback) with a non-default service name and a JupyterHub base URL.
+  serviceName: quota
+  apiUrl: http://hub:8081/jhub/hub/api
+  publicUrl: https://hub.example.org/jhub/
+  # The api-token key in the chart Secret, and the secretKeyRef to it.
+  apiToken:
+    value: api-token-value
+
+# values.json in the Secret: nested values, and a string that must be
+# escaped in JSON.
+config:
+  UsageViewer:
+    prometheus_url: http://prometheus-server.support.svc.cluster.local
+    prometheus_auth:
+      username: username
+      password: password
+    hub_template_paths:
+      - /usr/local/share/jupyterhub-usage-quotas/custom-templates
+    footer_note: Contact <a href="mailto:admin@example.org">the hub admin</a>.
+
+# The explicit session secret key, which skips the lookup.
+sessionSecretKey: session-secret-key
+
+# The optional fields of the Deployment, which render only when set.
+image:
+  pullPolicy: IfNotPresent
+  pullSecrets:
+    - name: registry-credentials
+extraEnv:
+  # tpl is applied to extraEnv
+  - name: EXAMPLE_RELEASE_NAMESPACE
+    value: "{{ .Release.Namespace }}"
+  - name: JUPYTERHUB_USAGE_QUOTAS_PROMETHEUS_USERNAME
+    valueFrom:
+      secretKeyRef:
+        name: prometheus-auth
+        key: username
+extraVolumes:
+  - name: custom-templates
+    configMap:
+      name: custom-templates
+extraVolumeMounts:
+  - name: custom-templates
+    mountPath: /usr/local/share/jupyterhub-usage-quotas/custom-templates
+resources:
+  requests:
+    cpu: 10m
+    memory: 128Mi
+  limits:
+    memory: 256Mi
+podSecurityContext:
+  fsGroup: 65534
+podAnnotations:
+  example.org/annotation: "true"
+nodeSelector:
+  hub.jupyter.org/node-purpose: core
+affinity:
+  nodeAffinity:
+    requiredDuringSchedulingIgnoredDuringExecution:
+      nodeSelectorTerms:
+        - matchExpressions:
+            - key: kubernetes.io/os
+              operator: In
+              values: [linux]
+tolerations:
+  - key: hub.jupyter.org/dedicated
+    operator: Equal
+    value: core
+    effect: NoSchedule
+
+# An explicit ServiceAccount name, which the Deployment must refer to.
+serviceAccount:
+  name: custom-sa
+  annotations:
+    example.org/annotation: "true"
+
+# A non-default port, which the container port, the --port argument and the
+# Service must all use.
+service:
+  port: 8080
+  annotations:
+    example.org/annotation: "true"
+
+# An extra NetworkPolicy ingress rule, after the built-in one.
+networkPolicy:
+  ingress:
+    - ports:
+        - port: http
+      from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: grafana
