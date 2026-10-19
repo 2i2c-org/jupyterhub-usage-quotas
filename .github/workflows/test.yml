@@ -71,6 +71,28 @@ jobs:
     - name: Check types
       run: hatch run types:check
 
+  # The configuration reference pages in docs/reference are generated from the
+  # package and the Helm chart and committed. Check that they are up to date.
+  docs-reference:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install hatch
+        uses: pypa/hatch@install
+
+      - name: Generate the configuration reference
+        run: hatch run docs:python docs/scripts/update_configuration_reference.py
+
+      - name: Check that the committed configuration reference is up to date
+        run: |
+          if [[ -n "$(git status --porcelain docs/reference/)" ]]; then
+            git status docs/reference/
+            git diff docs/reference/
+            echo "::error::The configuration reference is not up to date. Run 'hatch run docs:python docs/scripts/update_configuration_reference.py' and commit the changes."
+            exit 1
+          fi
+
   chart:
     runs-on: ubuntu-latest
     env:

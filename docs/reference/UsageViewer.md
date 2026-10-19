@@ -1,6 +1,6 @@
 # UsageViewer
 
-(usageviewer-config)=
+(usageviewer)=
 
 ```
 # Configuration file for jupyterhub-usage-viewer.
@@ -161,7 +161,7 @@ c = get_config()  #noqa
 #  Can be set via JUPYTERHUB_USAGE_QUOTAS_PROMETHEUS_USERNAME and
 #  JUPYTERHUB_USAGE_QUOTAS_PROMETHEUS_PASSWORD environment variables.
 #  For example:
-#      c.UsageConfig.prometheus_auth = {
+#      c.UsageViewer.prometheus_auth = {
 #          "username": "username",
 #          "password": "password",
 #      }
@@ -177,18 +177,18 @@ c = get_config()  #noqa
 ## Prometheus metrics for querying storage and/or compute usage and quotas.
 #  Defaults to:
 #
-#  c.UsageViewerConfig.prometheus_usage_quota_metrics = {
+#  c.UsageViewer.prometheus_usage_quota_metrics = {
 #      "home_storage": {
 #          "usage": "dirsize_total_size_bytes",
 #          "quota": "dirsize_hard_limit_bytes"
 #      },
 #      "compute": {
-#          "usage": "jupyterhub_memory_usage_gibibyte_hours",
-#          "quota": "jupyterhub_memory_limit_gibibyte_hours"
+#          "usage": "jupyterhub_memory_usage_byte_hours_total",
+#          "quota": "jupyterhub_memory_limit_byte_hours_total"
 #      }
 #  }
-#  Default: {'home_storage': {'usage': 'dirsize_total_size_bytes', 'quota': 'dirsize_hard_limit_bytes'}, 'compute': {'usage': 'jupyterhub_memory_usage_gibibyte_hours', 'quota': 'jupyterhub_memory_limit_gibibyte_hours'}}
-# c.UsageViewer.prometheus_usage_quota_metrics = {'home_storage': {'usage': 'dirsize_total_size_bytes', 'quota': 'dirsize_hard_limit_bytes'}, 'compute': {'usage': 'jupyterhub_memory_usage_gibibyte_hours', 'quota': 'jupyterhub_memory_limit_gibibyte_hours'}}
+#  Default: {'home_storage': {'usage': 'dirsize_total_size_bytes', 'quota': 'dirsize_hard_limit_bytes'}, 'compute': {'usage': 'jupyterhub_memory_usage_byte_hours_total', 'quota': 'jupyterhub_memory_limit_byte_hours_total'}}
+# c.UsageViewer.prometheus_usage_quota_metrics = {'home_storage': {'usage': 'dirsize_total_size_bytes', 'quota': 'dirsize_hard_limit_bytes'}, 'compute': {'usage': 'jupyterhub_memory_usage_byte_hours_total', 'quota': 'jupyterhub_memory_limit_byte_hours_total'}}
 
 ## Public URL of the JupyterHub instance. Required. Automatically set by
 #  JupyterHub via JUPYTERHUB_PUBLIC_HUB_URL environment variable.
@@ -208,8 +208,10 @@ c = get_config()  #noqa
 #  Default: ''
 # c.UsageViewer.service_prefix = ''
 
-## Secret key for session cookie encryption. Required for secure sessions. Set
-#  via config or JUPYTERHUB_USAGE_QUOTAS_SESSION_SECRET_KEY environment variable.
+## Secret key to sign browser cookies. Required to maintain secure authenticated
+#  sessions. Set via config or JUPYTERHUB_USAGE_QUOTAS_SESSION_SECRET_KEY
+#  environment variable. If not set, an ephemeral key is generated whenever the
+#  application restarts, so stale sessions require users to authenticate again.
 #  Default: ''
 # c.UsageViewer.session_secret_key = ''
 

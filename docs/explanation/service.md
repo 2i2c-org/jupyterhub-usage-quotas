@@ -90,7 +90,7 @@ JupyterHub sets these environment variables for the services that it starts. An 
 
 ## Deployment
 
-For Kubernetes, use the Helm chart in this repository. It installs the service next to a [Zero to JupyterHub](https://z2jh.jupyter.org/en/stable/) deployment, and sets the environment variables above. See the [Deployment guide](../howto/deploy.md).
+For Kubernetes, use the [Helm chart](../reference/helm-chart.md) in this repository. It installs the service next to a [Zero to JupyterHub](https://z2jh.jupyter.org/en/stable/) deployment, and sets the environment variables above. See the [Deployment guide](../howto/deploy.md).
 
 To run the service on a local computer for development, see the [Development guide](../contributing/DEVELOPMENT.md).
 

@@ -285,7 +285,7 @@ The chart does these things:
 
 Install or upgrade z2jh with the configuration from the previous section. Then go to `https://<public-hub-url>/hub/home` and click **Services > usage-quota** in the navbar.
 
-See [Configuration](../reference/configuration.md) for a full list of the `UsageQuotaManager` and `UsageViewer` options. We set the `UsageViewer` options in `config.UsageViewer` in the chart values.
+See [Configuration](../reference/configuration.md) for a full list of the `UsageQuotaManager` and `UsageViewer` options. We set the `UsageViewer` options in `config.UsageViewer` in the chart values. See [Helm chart](../reference/helm-chart.md) for all the chart values.
 
 ### Multi-cluster setups
 

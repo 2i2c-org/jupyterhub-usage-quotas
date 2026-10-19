@@ -76,7 +76,7 @@ local hub_domain = std.extVar('VARS_HUB_DOMAIN');
 
 The chart sets `hub_namespace` of the usage viewer to the namespace of the Helm release, so we do not have to set it for each cluster.
 
-For all the chart values, see the [values.yaml](https://github.com/2i2c-org/jupyterhub-usage-quotas/blob/main/helm/jupyterhub-usage-quotas/values.yaml) file of the chart.
+For all the chart values, see the [Helm chart reference](../reference/helm-chart.md).
 
 #### Secrets management
 
