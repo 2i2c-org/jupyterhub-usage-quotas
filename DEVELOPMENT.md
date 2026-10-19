@@ -159,6 +159,16 @@ To build html:
 hatch run docs:build
 ```
 
+### Update the configuration reference
+
+The pages `UsageQuotaManager.md`, `UsageViewer.md` and `helm-chart.md` in `docs/reference` are generated from the traitlets configuration and from the Helm chart's `values.schema.yaml` and `values.yaml`. When we change a configuration option or a chart value, we regenerate the pages and commit them with the change:
+
+```bash
+hatch run docs:python docs/scripts/update_configuration_reference.py
+```
+
+The docs build also runs this script. CI fails if the committed pages are not up to date.
+
 ### Run tests
 
 To run all tests on all python versions use:
