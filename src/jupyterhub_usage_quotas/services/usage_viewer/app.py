@@ -162,6 +162,15 @@ class UsageViewer(Application):
         "config-files": "UsageViewer.config_files",
     }
 
+    # Lets --dev-mode work without a value. The alias above handles
+    # --dev-mode=true and --dev-mode=false.
+    flags = {
+        "dev-mode": (
+            {"UsageViewer": {"dev_mode": True}},
+            "Enable development mode with mock data",
+        ),
+    }
+
     config_files = List(
         Unicode(),
         default_value=[],
@@ -438,7 +447,11 @@ class UsageViewer(Application):
             public_hub_url, f"static/{path}"
         )
 
-        HubOAuth.instance(cache_max_age=60)
+        # HubOAuth reads JUPYTERHUB_SERVICE_PREFIX for its base_url default at
+        # import time, so a prefix set after import (e.g. in a config file) is
+        # ignored. Pass it explicitly so the OAuth redirect URI and cookie path
+        # match service_prefix.
+        HubOAuth.instance(cache_max_age=60, base_url=self.service_prefix)
         return web.Application(
             [
                 (prefix + r"/?", UsageHandler),

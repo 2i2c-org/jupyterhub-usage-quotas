@@ -92,48 +92,46 @@ You can run JupyterHub on your local machine that can communicate with pods in a
    jupyterhub
    ```
 
-## Running the usage quota service locally
+## Running the usage viewer service locally
 
-The service is managed as a JupyterHub subprocess. Install the package in editable mode:
+The usage viewer (the usage quota dashboard) runs as an [external JupyterHub service](https://jupyterhub.readthedocs.io/en/stable/reference/services.html#externally-managed-services), in a separate process. `jupyterhub_config_secret.py` registers it at `http://localhost:9000`.
 
-```bash
-pip install -e .
-```
+1. In a terminal, start JupyterHub as described in the previous section.
 
-Then start JupyterHub as normal:
+1. In a second terminal, spawn a shell in the local development environment
 
-```bash
-jupyterhub
-```
+   ```bash
+   hatch shell dev
+   ```
 
-JupyterHub will launch the service automatically using the `command` configured in `jupyterhub_config.py` and inject the required `JUPYTERHUB_*` environment variables. Navigate to http://localhost:8000, log in, and click **Usage** in the navbar.
+1. Start the usage viewer service
+
+   ```bash
+   python -m jupyterhub_usage_quotas.services.usage_viewer \
+     --config-files=usage_viewer_config.py \
+     --config-files=jupyterhub_config_secret.py
+   ```
+
+   JupyterHub sets the `JUPYTERHUB_*` environment variables for the services that it starts. An external service must set them itself. `usage_viewer_config.py` sets these variables. If you change the `api_token` of the `usage-quota` service in `jupyterhub_config_secret.py`, change `JUPYTERHUB_API_TOKEN` in `usage_viewer_config.py` to the same value.
+
+1. Go to http://localhost:8000, log in, and click **Services > usage-quota** in the navbar.
+
+The usage viewer configuration is in `usage_viewer_config.py`. The secrets for both JupyterHub and the usage viewer are in `jupyterhub_config_secret.py`.
 
 ### Using mock data for local development
 
-To enable mock data for local development without a real Prometheus instance, use the `--dev-mode` flag when starting the service via the JupyterHub configuration:
+To use mock data without a real Prometheus instance, add the `--dev-mode` flag to the command that starts the usage viewer service:
 
-```python
-c.JupyterHub.services = [
-    {
-        "name": "usage-quota",
-        "command": [
-            "python",
-            "-m",
-            "jupyterhub_usage_quotas.services.usage_viewer",
-            "--port=9000",
-            "--dev-mode",  # Enables mock data for development
-        ],
-    }
-]
+```bash
+python -m jupyterhub_usage_quotas.services.usage_viewer \
+  --config-files=usage_viewer_config.py \
+  --config-files=jupyterhub_config_secret.py \
+  --dev-mode
 ```
 
-Alternatively, you can enable dev mode by setting the configuration directly:
+Alternatively, set `c.UsageViewer.dev_mode = True` in `usage_viewer_config.py`.
 
-```python
-c.UsageViewer.dev_mode = True
-```
-
-When `dev_mode` is enabled and both `hub_namespace` and `prometheus_url` are unconfigured (defaults), the service will return randomly generated mock data.
+The service returns randomly generated mock data only when `dev_mode` is enabled and both `hub_namespace` and `prometheus_url` have their default values. `usage_viewer_config.py` sets `hub_namespace`, so remove that line to use mock data.
 
 ## Running hatch scripts
 

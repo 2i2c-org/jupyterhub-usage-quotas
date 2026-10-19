@@ -15,3 +15,4 @@ tests
 *.mp4
 *.png
 jupyterhub_config*.py
+usage_viewer_config.py
