@@ -19,4 +19,14 @@ c.JupyterHub.services = [
         "name": "metrics-exporter",
         "api_token": c.UsageQuotaManager.metrics_exporter_token,
     },
+    {
+        # The usage viewer, run as an external service. Its process must use
+        # the same API token, in the JUPYTERHUB_API_TOKEN environment variable.
+        # The token must be different from the metrics-exporter token.
+        "name": "usage-quota",
+        "url": "http://localhost:9000",
+        "api_token": "use-another-secure-random-key-in-production",
+        "display": True,
+        "oauth_no_confirm": True,
+    },
 ]

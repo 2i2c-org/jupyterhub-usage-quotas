@@ -34,6 +34,7 @@ project:
         hidden: true
       - file: reference/UsageViewer.md
         hidden: true
+      - file: reference/helm-chart.md
       - file: reference/CHANGELOG.md
       - file: reference/glossary.md
     - title: Contributing

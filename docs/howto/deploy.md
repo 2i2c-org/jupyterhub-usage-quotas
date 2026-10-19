@@ -52,79 +52,35 @@ emitConfig(
 
 You can programmatically render the jsonnet as yaml with `jsonnet --ext-str VARS_HUB_NAME=<hub_name>` and then pass the output into the `helm upgrade --values` flag.
 
-#### Kubernetes configuration maps
+#### Usage viewer chart values
 
-Normally, we can configure application settings with Helm chart values, e.g.
-
-```{code} yaml
----
-filename: values.yaml
----
-hub:
-  config:
-    UsageViewer:
-      enable_compute: true
-```
-
-However, the `UsageViewer` is a [hub-managed service](https://jupyterhub.readthedocs.io/en/stable/reference/services.html#hub-managed-services) that is a child process of the hub process. For a single-cluster setup we can pass configuration to the `UsageViewer` service at runtime via a k8s-mounted configuration file. For a multi-cluster setup, we can instead dynamically populate the contents of the configuration file rather than hard-coding the file contents for each cluster.
-
-With a [k8s ConfigMap](https://kubernetes.io/docs/concepts/configuration/configmap/) and helper template partials, we can pass `UsageViewer` config defined in a `values.yaml` file into a configuration file `jupyterhub_usage_quotas_config.py` mounted to the path `/usr/local/etc/jupyterhub/jupyterhub_config.d/jupyterhub_usage_quotas_config.py`.
-
-```{code} yaml
----
-filename: templates/configmap-usage-quotas.yaml
----
-kind: ConfigMap
-apiVersion: v1
-metadata:
-  name: usage-quotas-config
-  labels:
-    app: jupyterhub
-data:
-  jupyterhub_usage_quotas_config.py: |
-    {{- range $name, $value := .Values.jupyterhub.hub.config.UsageViewer }}
-    {{- if ne $value nil }}
-    c.UsageViewer.{{ $name }} = {{ include "python.literal" $value }}
-    {{- end }}
-    {{- end }}
-```
+The usage viewer runs in its own pod, and we configure it with the values of the `jupyterhub-usage-quotas` Helm chart. We put the `UsageViewer` options in `config.UsageViewer`. We can make these values with jsonnet in the same way, e.g.
 
 ```{code} javascript
 ---
-filename: templates/_helpers.tpl
+filename: usage-quotas-values.jsonnet
 ---
-# Helper template partials
+local hub_domain = std.extVar('VARS_HUB_DOMAIN');
 
-# Converts helm values to python literals
-{{- define "python.literal" -}}
-{{- if kindIs "bool" . -}}
-{{ ternary "True" "False" . }}
-{{- else if kindIs "string" . -}}
-{{ printf "%q" . }}
-{{- else -}}
-{{ . }}
-{{- end -}}
-{{- end -}}
+{
+  jupyterhub: {
+    publicUrl: 'https://%s/' % hub_domain,
+  },
+  config: {
+    UsageViewer: {
+      prometheus_url: 'http://<prometheus-service-name>.<k8s-prometheus-namespace>.svc.cluster.local',
+    },
+  },
+}
 ```
 
-```{code} yaml
----
-filename: values.yaml
----
-hub:
-  extraVolumeMounts:
-    - mountPath: /usr/local/etc/jupyterhub/jupyterhub_config.d/jupyterhub_usage_quotas_config.py
-      name: usage-quotas
-      subPath: jupyterhub_usage_quotas_config.py
-```
+The chart sets `hub_namespace` of the usage viewer to the namespace of the Helm release, so we do not have to set it for each cluster.
 
-```{warning}
-Defining `jupyterhub_usage_quotas_config.py` with both `extraFiles` and `extraVolumeMounts` will lead to a conflict. Move all required config from `extraFiles` into a ConfigMap and use only `extraVolumeMounts` instead.
-```
+For all the chart values, see the [Helm chart reference](../reference/helm-chart.md).
 
 #### Secrets management
 
-The `jupyterhub-usage-quotas` application relies on Prometheus for both quota enforcement at server-launch-time and the usage quota dashboard at service run-tume. In a multi-cluster setup, the secrets for Prometheus authorisation may need to be passed between multiple k8s namespaces.
+The `jupyterhub-usage-quotas` application relies on Prometheus for both quota enforcement at server-launch-time and the usage quota dashboard at service run-time. In a multi-cluster setup, the secrets for Prometheus authorisation may need to be passed between multiple k8s namespaces.
 
 We can mirror secrets between k8s namespaces with a reflector using [emberstack](https://github.com/emberstack/kubernetes-reflector) and pass them to the application with environment variables using `extraEnv`.
 
@@ -208,6 +164,25 @@ hub:
           optional: false
 ```
 
+The usage viewer reads the same environment variables. Give them to the usage viewer pod with `extraEnv` in the chart values. In the chart, `extraEnv` is a list.
+
+```{code} yaml
+---
+filename: usage-quotas-values.yaml
+---
+extraEnv:
+  - name: JUPYTERHUB_USAGE_QUOTAS_PROMETHEUS_USERNAME
+    valueFrom:
+      secretKeyRef:
+        name: prometheus-auth
+        key: username
+  - name: JUPYTERHUB_USAGE_QUOTAS_PROMETHEUS_PASSWORD
+    valueFrom:
+      secretKeyRef:
+        name: prometheus-auth
+        key: password
+```
+
 ```{tip}
 Remember to encrypt secrets with a tool such as [sops](https://github.com/getsops/sops).
 ```
@@ -247,3 +222,4 @@ See [Grafana Dashboard](./grafana-dashboard.md) for an overview of the Grafana D
 
 - The `jupyterhub-usage-quotas` library is installed within the hub image, so make sure that you give enough memory and compute [requests and limits](https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/) for the kubernetes pod to work
   - You may have to fine-tune this over time, since the memory used by the usage quota system scales weakly with the number of hub users
+- The usage viewer runs in its own pod. Set its requests and limits with `resources` in the chart values.

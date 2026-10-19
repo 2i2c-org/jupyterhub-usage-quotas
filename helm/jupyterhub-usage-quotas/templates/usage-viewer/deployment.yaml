@@ -1,0 +1,147 @@
+{{- $fullname := include "jupyterhub-usage-quotas.usage-viewer.fullname" . }}
+{{- $origin := include "jupyterhub-usage-quotas.publicOrigin" . }}
+{{- $baseUrl := include "jupyterhub-usage-quotas.baseUrl" . }}
+{{- $prefix := include "jupyterhub-usage-quotas.servicePrefix" . }}
+{{- $serviceName := .Values.jupyterhub.serviceName }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $fullname }}
+  labels:
+    {{- include "jupyterhub-usage-quotas.labels" . | nindent 4 }}
+    app.kubernetes.io/component: usage-viewer
+spec:
+  replicas: {{ .Values.replicas }}
+  selector:
+    matchLabels:
+      {{- include "jupyterhub-usage-quotas.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: usage-viewer
+  template:
+    metadata:
+      annotations:
+        # Restart the pod when the content of the Secret changes.
+        checksum/secret: {{ list .Values.config .Values.sessionSecretKey .Values.jupyterhub.apiToken.value | toJson | sha256sum }}
+        {{- with .Values.podAnnotations }}
+        {{- . | toYaml | nindent 8 }}
+        {{- end }}
+      labels:
+        {{- include "jupyterhub-usage-quotas.labels" . | nindent 8 }}
+        app.kubernetes.io/component: usage-viewer
+        # Lets the z2jh hub NetworkPolicy accept traffic from this pod
+        hub.jupyter.org/network-access-hub: "true"
+    spec:
+      {{- with include "jupyterhub-usage-quotas.usage-viewer.serviceaccount.fullname" . }}
+      serviceAccountName: {{ . }}
+      {{- end }}
+      # The service does not use the Kubernetes API
+      automountServiceAccountToken: false
+      {{- with .Values.image.pullSecrets }}
+      imagePullSecrets:
+        {{- . | toYaml | nindent 8 }}
+      {{- end }}
+      {{- with .Values.podSecurityContext }}
+      securityContext:
+        {{- . | toYaml | nindent 8 }}
+      {{- end }}
+      volumes:
+        - name: config
+          secret:
+            secretName: {{ $fullname }}
+            items:
+              - key: values.json
+                path: values.json
+        {{- with .Values.extraVolumes }}
+        {{- tpl (. | toYaml) $ | nindent 8 }}
+        {{- end }}
+      containers:
+        - name: usage-viewer
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          {{- with .Values.image.pullPolicy }}
+          imagePullPolicy: {{ . }}
+          {{- end }}
+          args:
+            - python
+            - -m
+            - jupyterhub_usage_quotas.services.usage_viewer
+            - --port={{ .Values.service.port }}
+            - --config-files=/etc/jupyterhub-usage-quotas/values.json
+          ports:
+            - name: http
+              containerPort: {{ .Values.service.port }}
+          env:
+            # Environment that JupyterHub sets for the services that it manages
+            - name: JUPYTERHUB_SERVICE_NAME
+              value: {{ $serviceName | quote }}
+            - name: JUPYTERHUB_CLIENT_ID
+              value: {{ printf "service-%s" $serviceName | quote }}
+            - name: JUPYTERHUB_API_URL
+              value: {{ .Values.jupyterhub.apiUrl | quote }}
+            - name: JUPYTERHUB_API_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  {{- if .Values.jupyterhub.apiToken.value }}
+                  name: {{ $fullname }}
+                  key: api-token
+                  {{- else }}
+                  name: {{ .Values.jupyterhub.apiToken.existingSecret.name }}
+                  key: {{ .Values.jupyterhub.apiToken.existingSecret.key | default (printf "hub.services.%s.apiToken" $serviceName) }}
+                  {{- end }}
+            - name: JUPYTERHUB_BASE_URL
+              value: {{ $baseUrl | quote }}
+            - name: JUPYTERHUB_SERVICE_PREFIX
+              value: {{ $prefix | quote }}
+            - name: JUPYTERHUB_OAUTH_CALLBACK_URL
+              value: {{ printf "%soauth_callback" $prefix | quote }}
+            - name: JUPYTERHUB_PUBLIC_URL
+              value: {{ printf "%s%s" $origin $prefix | quote }}
+            - name: JUPYTERHUB_PUBLIC_HUB_URL
+              value: {{ printf "%s%shub/" $origin $baseUrl | quote }}
+            # Environment for the UsageViewer traitlets defaults
+            - name: JUPYTERHUB_USAGE_QUOTAS_HUB_NAMESPACE
+              value: {{ .Release.Namespace | quote }}
+            - name: JUPYTERHUB_USAGE_QUOTAS_SESSION_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $fullname }}
+                  key: session-secret-key
+            {{- with .Values.extraEnv }}
+            {{- tpl (. | toYaml) $ | nindent 12 }}
+            {{- end }}
+          volumeMounts:
+            - name: config
+              mountPath: /etc/jupyterhub-usage-quotas
+              readOnly: true
+            {{- with .Values.extraVolumeMounts }}
+            {{- tpl (. | toYaml) $ | nindent 12 }}
+            {{- end }}
+          readinessProbe:
+            periodSeconds: 5
+            httpGet:
+              path: {{ $prefix }}health
+              port: http
+          livenessProbe:
+            periodSeconds: 10
+            failureThreshold: 5
+            httpGet:
+              path: {{ $prefix }}health
+              port: http
+          {{- with .Values.resources }}
+          resources:
+            {{- . | toYaml | nindent 12 }}
+          {{- end }}
+          {{- with .Values.securityContext }}
+          securityContext:
+            {{- . | toYaml | nindent 12 }}
+          {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- . | toYaml | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- . | toYaml | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- . | toYaml | nindent 8 }}
+      {{- end }}

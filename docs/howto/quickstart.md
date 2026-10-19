@@ -19,7 +19,7 @@ Usage quotas are an effective safeguard against excessive resource consumption a
 
 ### Usage Quota Dashboard
 
-You can view any usage quotas applied to your account with the [Usage Quota Dashboard](../tutorial/usage-quota-dashboard.md).
+You can view any usage quotas applied to your account with the [Usage Quota Dashboard](./usage-quota-dashboard.md).
 
 ```{embed} #dashboard
 ```
@@ -49,18 +49,25 @@ This quickstart guide assumes that the reader is running a [Zero to JupyterHub](
 - [Helm](https://helm.sh/)
 - Building images
 
-### Installing JupyterHub with `jupyterhub-usage-quotas`
+### Components
 
-1. Create custom Hub image with [jupyterhub-usage-quotas](https://github.com/2i2c-org/jupyterhub-usage-quotas) installed. See [Services — Zero to JupyterHub with Kubernetes documentation](https://z2jh.jupyter.org/en/stable/administrator/services.html#example-service) for details on how to do this.
+The `jupyterhub-usage-quotas` system has two components:
 
-   - Make sure you list all of the dependencies you require for the Hub image, e.g. in a `requirements.txt` file
+1. The *manager*. It enforces compute quotas when a user starts a server. It runs in the hub process, so we must install it in the hub image.
+1. The *usage viewer* service. It shows the [usage quota dashboard](./usage-quota-dashboard.md) to users. It runs as an [external JupyterHub service](../explanation/service.md) in its own pod. We install it with the `jupyterhub-usage-quotas` Helm chart.
+
+### Install the manager in the hub image
+
+1. Create a custom hub image with [jupyterhub-usage-quotas](https://github.com/2i2c-org/jupyterhub-usage-quotas) installed. See [Services — Zero to JupyterHub with Kubernetes documentation](https://z2jh.jupyter.org/en/stable/administrator/services.html#example-service) for details on how to do this.
+
+   - Make sure we list all of the dependencies we require for the hub image, e.g. in a `requirements.txt` file
    - See the example below
 
    ````{tip} Example
    ```{code} bash
    # requirements.txt
 
-   jupyterhub-usage-quotas ~= 0.1.0
+   jupyterhub-usage-quotas ~= 0.2.0
    other-hub-dependencies <= 1.0.0
    ```
    ```{code} dockerfile
@@ -74,82 +81,69 @@ This quickstart guide assumes that the reader is running a [Zero to JupyterHub](
    ```
    ````
 
-1. Build and push your custom Hub image to a registry and make a note of the image tag.
+1. Build and push the custom hub image to a registry and make a note of the image tag.
 
-### Minimal z2jh configuration example
+### Configure z2jh
 
 #### Authentication
 
-Usage quota policies are applied to user groups, therefore this information needs to be available in a user's [`auth_state`](https://jupyterhub.readthedocs.io/en/stable/reference/authenticators.html#authentication-state). This minimal working example assumes a z2jh deployment that uses [OAuthenticator](https://oauthenticator.readthedocs.io/en/latest/) to handle authentication, specifically the [Generic OAuthenticator](https://oauthenticator.readthedocs.io/en/latest/tutorials/provider-specific-setup/providers/generic.html). Make sure that you set the appropriate configuration for your authenticator in addition to the minimal example below. See [User Group Management](../tutorial/user-group-management.md) for more details.
+Usage quota policies are applied to user groups, therefore this information needs to be available in a user's [`auth_state`](https://jupyterhub.readthedocs.io/en/stable/reference/authenticators.html#authentication-state). This minimal working example assumes a z2jh deployment that uses [OAuthenticator](https://oauthenticator.readthedocs.io/en/latest/) to handle authentication, specifically the [Generic OAuthenticator](https://oauthenticator.readthedocs.io/en/latest/tutorials/provider-specific-setup/providers/generic.html). Make sure that we set the appropriate configuration for our authenticator in addition to the minimal example below. See [User Group Management](./user-group-management.md) for more details.
 
 #### Home Storage Quotas
 
-If you are using home storage quotas, then make sure that you set the appropriate configuration for [jupyterhub-home-nfs](https://github.com/2i2c-org/jupyterhub-home-nfs) in addition to the minimal example below.
+If we are using home storage quotas, then make sure that we set the appropriate configuration for [jupyterhub-home-nfs](https://github.com/2i2c-org/jupyterhub-home-nfs) in addition to the minimal example below.
 
-#### Configuration setup helper function
+#### Set up the manager
 
-The `jupyterhub-usage-quotas` library is composed of two main modules:
-
-1. The *manager* that enforces compute quotas at server launch time
-1. The *service* that runs the user-facing [usage quota dashboard](./usage-quota-dashboard.md).
-
-A helper function to setup the system for JupyterHub should be set with:
+Add this to `hub.extraConfig`. It sets up the manager, and adds the templates of the usage quota system to the hub templates.
 
 ```yaml
 hub:
   extraConfig:
     01-setup-usage-quotas: |
-        from jupyterhub_usage_quotas import setup_usage_quotas, get_template_path
-        setup_usage_quotas(c)
-        template_path = get_template_path()
-        c.JupyterHub.template_pathsinsert(0, template_path)
+      from jupyterhub_usage_quotas import setup_usage_quotas, get_template_path
+      setup_usage_quotas(c)
+      c.JupyterHub.template_paths.insert(0, get_template_path())
 ```
 
-#### Required configuration
+The manager needs these settings:
 
-The following items are required configuration:
+- `c.UsageQuotaManager.prometheus_url`: the URL of the Prometheus server that has the usage data
+- `c.UsageQuotaManager.hub_namespace`: the Kubernetes namespace of the hub pod
+- `c.UsageQuotaManager.metrics_exporter_token`: the API token of the `metrics-exporter` service. z2jh makes this token. The examples below give it to the hub in the `JUPYTERHUB_USAGE_QUOTAS_METRICS_TOKEN` environment variable.
 
-- `c.UsageQuotaManager.metrics_exporter_token = os.environ.get("METRICS_EXPORTER_TOKEN")` (remember to `import os` within the `extraFiles` config file)
-- `c.UsageViewer.public_hub_url`: the public URL of the JupyterHub on the web
+#### Register the usage viewer service
 
-#### Common configuration
-
-Configuration common to both manager and server modules need to be defined individually, which introduces some duplication. Common configurations include:
-
-- `c.Usage[QuotaManager|Viewer].prometheus_url`: the server url of the Prometheus instance that is used as a source of truth for usage data
-- `c.Usage[QuotaManager|Viewer].hub_namespace`: the Kubernetes namespace where the Hub pod is running
-
-#### Mounting configuration files
-
-You can mount configuration under [`extraFiles`](https://z2jh.jupyter.org/en/stable/resources/reference.html#hub-extrafiles) so that they can be referenced by both modules and loaded in addition to the setup function in `hub.extraConfig`.
-
-#### Secrets Management
-
-The usage quota system relies on configuring sensitive secrets, such as session keys and credentials, including:
-
-- `c.Usage[QuotaManager|Viewer].prometheus_auth`: credentials for the Prometheus server
-- `c.UsageViewer.secret_session_key`: maintain a secure session with the usage quotas dashboard without needing to log in again.
-
-You can also mount this secret configuration under [`extraFiles`](https://z2jh.jupyter.org/en/stable/resources/reference.html#hub-extrafiles) so that they can be referenced by both modules.
-
-```{tip}
-Make sure you encrypt any secrets files if using a version control system, using a tool such as [SOPS](https://getsops.io/).
-```
-
-The hub API token for the metrics exporter service can be passed with:
+Add the usage viewer to `hub.services`, and give the service and the users the necessary scopes with `hub.loadRoles`. z2jh makes the API token of the service, and the Helm chart reads it from the `hub` Secret.
 
 ```yaml
 hub:
-  extraEnv:
-    METRICS_EXPORTER_TOKEN:
-      valueFrom:
-        secretKeyRef:
-          name: hub
-          key: hub.services.metrics-exporter.apiToken
-          optional: false
+  services:
+    usage-quota:
+      url: http://usage-viewer:9000
+      display: true
+      oauth_no_confirm: true
+  loadRoles:
+    usage-quota-service:
+      scopes:
+        - read:users
+        - list:services
+        - read:services
+      services:
+        - usage-quota
+    user:
+      scopes:
+        - self
+        - access:services!service=usage-quota
 ```
 
-#### Minimal Example
+```{note}
+The `user` role replaces the default user role of JupyterHub. If our configuration already has a `user` role, add the `access:services!service=usage-quota` scope to it.
+```
+
+The service URL is `http://<service name>:<port>`. With the default chart values, the name is `usage-viewer` and the port is `9000`. After we install the chart, its notes show the correct URL.
+
+#### Minimal z2jh example
 
 ```{code} yaml
 ---
@@ -173,6 +167,8 @@ hub:
       scope:
         - group-0
     UsageQuotaManager:
+      prometheus_url: http://<prometheus-service-name>.<k8s-prometheus-namespace>.svc.cluster.local
+      hub_namespace: <k8s-hub-namespace>
       scope_fallback_strategy:
         intersection: min
       policy:
@@ -183,41 +179,22 @@ hub:
             group:
               - group-0
       failover_open: false
-    extraConfig:
-      01-setup-usage-quotas: |
-        from jupyterhub_usage_quotas import setup_usage_quotas, get_template_path
-        setup_usage_quotas(c)
-        template_path = get_template_path()
-        c.JupyterHub.template_pathsinsert(0, template_path)
-    extraFiles:
-      usage_quota_config:
-        mountPath: /usr/local/etc/jupyterhub/jupyterhub_config.d/jupyterhub_usage_quota_config.py
-        stringData: |
-          import os
-          c.UsageQuotaManager.metrics_exporter_token = os.environ.get("METRICS_EXPORTER_TOKEN")
-          c.UsageViewer.public_hub_url = "https://<public-hub-url>"
-          c.UsageQuotaManager.prometheus_url: "http://<prometheus-service-name>.<k8s-prometheus-namespace>.svc.cluster.local"
-          c.UsageViewer.prometheus_url: "http://<prometheus-service-name>.<k8s-prometheus-namespace>.svc.cluster.local"
-          c.UsageQuotaManager.hub_namespace: "<k8s-hub-namespace>"
-          c.UsageQuotaViewer.hub_namespace: "<k8s-hub-namespace>"
-    extraEnv:
-      METRICS_EXPORTER_TOKEN:
-        valueFrom:
-          secretKeyRef:
-            name: hub
-            key: hub.services.metrics-exporter.apiToken
-            optional: false
+  extraConfig:
+    01-setup-usage-quotas: |
+      from jupyterhub_usage_quotas import setup_usage_quotas, get_template_path
+      setup_usage_quotas(c)
+      c.JupyterHub.template_paths.insert(0, get_template_path())
+  extraEnv:
+    JUPYTERHUB_USAGE_QUOTAS_METRICS_TOKEN:
+      valueFrom:
+        secretKeyRef:
+          name: hub
+          key: hub.services.metrics-exporter.apiToken
   services:
     usage-quota:
-      url: http://hub:9000
+      url: http://usage-viewer:9000
       display: true
       oauth_no_confirm: true
-      command:
-        - python3
-        - -m
-        - jupyterhub_usage_quotas.services.usage_viewer
-        - --config-files=/usr/local/etc/jupyterhub/jupyterhub_config.d/jupyterhub_usage_quota_config.py
-        - --config-files=/usr/local/etc/jupyterhub/jupyterhub_config.d/jupyterhub_usage_quota_config_secret.py
     metrics-exporter:
       display: false
   loadRoles:
@@ -234,48 +211,9 @@ hub:
         - access:services!service=usage-quota
     metrics-exporter-service:
       scopes:
-      - users
+        - users
       services:
-      - metrics-exporter
-    networkPolicy:
-      ingress:
-        - ports:
-            - port: 9000
-          from:
-            # Allow traffic from the proxy api pod
-            - podSelector:
-                matchLabels:
-                  hub.jupyter.org/network-access-hub: "true"
-            # Allow traffic from the hub pod itself for Jupyterhub's internal healthchecks for hub managed services.
-            - podSelector:
-                matchLabels:
-                  app.kubernetes.io/component: hub
-                  app.kubernetes.io/name: jupyterhub
-        - ports:
-          - port: 8081
-          from:
-          # Allow traffic from the hub pod itself for oauth calls from the usage-quota service to the hub api.
-          - podSelector:
-              matchLabels:
-                app.kubernetes.io/component: hub
-                app.kubernetes.io/name: jupyterhub
-    service:
-      extraPorts:
-        - port: 9000
-          targetPort: 9000
-          name: usage-quota
-  # The proxy.chp.networkPolicy.egress configuration below is required for the usage-quota dashboard service to be accessible for users.
-  proxy:
-    chp:
-      networkPolicy:
-        egress:
-          - to:
-              - podSelector:
-                  matchLabels:
-                    app.kubernetes.io/name: jupyterhub
-                    app.kubernetes.io/component: hub
-            ports:
-              - port: 9000
+        - metrics-exporter
 ```
 
 ```{code} yaml
@@ -283,26 +221,72 @@ hub:
 label: enc-minimal-z2jh-config
 ---
 # enc-config.yaml
-# Note: this contains secrets so make sure you encrypt this file if using a version control system
+# Note: this contains secrets so make sure we encrypt this file if using a version control system
 
 hub:
-  extraFiles:
-    usage_quota_config_secret:
-      mountPath: /usr/local/etc/jupyterhub/jupyterhub_config.d/jupyterhub_usage_quota_config_secret.py
-      stringData: |
-        c.UsageQuotaManager.prometheus_auth = {
-          "username": "<prometheus_username>",
-          "password": "<prometheus_password>"
-        }
-        c.UsageViewer.prometheus_auth = {
-          "username": "<prometheus_username>",
-          "password": "<prometheus_password>"
-        }
-        c.UsageViewer.session_secret_key = "<use-a-secure-key-in-production>"
+  config:
+    UsageQuotaManager:
+      prometheus_auth:
+        username: <prometheus_username>
+        password: <prometheus_password>
 ```
 
-See [Configuration](../reference/configuration.md) for a full list of configuration options.
+```{tip}
+Make sure we encrypt any secrets files if using a version control system, using a tool such as [SOPS](https://getsops.io/).
+```
+
+### Install the usage viewer chart
+
+Install the `jupyterhub-usage-quotas` Helm chart in the same Kubernetes namespace as z2jh. The chart reads the API token of the service from the `hub` Secret of z2jh.
+
+```{code} yaml
+---
+label: minimal-usage-quotas-values
+---
+# usage-quotas-values.yaml
+
+jupyterhub:
+  # The public URL of our JupyterHub
+  publicUrl: https://<public-hub-url>/
+
+config:
+  UsageViewer:
+    prometheus_url: http://<prometheus-service-name>.<k8s-prometheus-namespace>.svc.cluster.local
+```
+
+```{code} yaml
+---
+label: enc-minimal-usage-quotas-values
+---
+# enc-usage-quotas-values.yaml
+# Note: this contains secrets so make sure we encrypt this file if using a version control system
+
+config:
+  UsageViewer:
+    prometheus_auth:
+      username: <prometheus_username>
+      password: <prometheus_password>
+```
+
+```bash
+helm upgrade --install usage-quotas \
+  oci://ghcr.io/2i2c-org/jupyterhub-usage-quotas/jupyterhub-usage-quotas \
+  --version <chart-version> \
+  --namespace <k8s-hub-namespace> \
+  --values usage-quotas-values.yaml \
+  --values enc-usage-quotas-values.yaml
+```
+
+The chart does these things:
+
+- It sets the hub namespace of the usage viewer to the namespace of the release.
+- It makes a session secret key, and keeps it when we upgrade the chart.
+- It adds a NetworkPolicy that lets the z2jh proxy and hub pods access the service.
+
+Install or upgrade z2jh with the configuration from the previous section. Then go to `https://<public-hub-url>/hub/home` and click **Services > usage-quota** in the navbar.
+
+See [Configuration](../reference/configuration.md) for a full list of the `UsageQuotaManager` and `UsageViewer` options. We set the `UsageViewer` options in `config.UsageViewer` in the chart values. See [Helm chart](../reference/helm-chart.md) for all the chart values.
 
 ### Multi-cluster setups
 
-If you operate multiple clusters and want to deploy `jupyterhub-usage-quotas`, then rather than individually generating and [mounting configuration](#mounting-configuration-files) with `extraFiles`, you may want to programmatically pass config to each cluster. We recommend following the [Multi-cluster setups](./deploy.md#multi-cluster-setups) guide to take advantage of jsonnet, Kubernetes config maps and mirroring secrets across namespaces instead.
+If we operate multiple clusters and want to deploy `jupyterhub-usage-quotas`, we may want to programmatically pass config to each cluster. We recommend following the [Multi-cluster setups](./deploy.md#multi-cluster-setups) guide to take advantage of jsonnet and mirroring secrets across namespaces.

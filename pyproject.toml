@@ -260,11 +260,19 @@ check = "mypy src/jupyterhub_usage_quotas"
 [tool.hatch.envs.docs]
 description = """Build or serve the documentation."""
 python = "3.14"
+# Not detached: the docs build imports the package to generate the
+# configuration reference.
 dependencies = [
     "mystmd",
+    "pyyaml",
 ]
-detached = true
 
 [tool.hatch.envs.docs.scripts]
-build = ["env -C docs -- myst build --html"]
-serve = ["env -C docs -- myst start"]
+build = [
+    "python docs/scripts/update_configuration_reference.py",
+    "env -C docs -- myst build --html",
+]
+serve = [
+    "python docs/scripts/update_configuration_reference.py",
+    "env -C docs -- myst start",
+]

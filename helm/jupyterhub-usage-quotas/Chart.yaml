@@ -1,0 +1,11 @@
+# Chart.yaml v2 reference: https://helm.sh/docs/topics/charts/#the-chartyaml-file
+apiVersion: v2
+name: jupyterhub-usage-quotas
+version: 0.0.1-set.by.chartpress
+description: |
+  The usage quotas dashboard for JupyterHub, run as an external JupyterHub
+  service next to a Zero to JupyterHub deployment.
+keywords: [jupyter, jupyterhub, z2jh, quotas]
+home: https://jupyterhub-usage-quotas.readthedocs.io
+sources: [https://github.com/2i2c-org/jupyterhub-usage-quotas]
+kubeVersion: ">=1.28.0-0"
