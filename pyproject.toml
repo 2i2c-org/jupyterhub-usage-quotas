@@ -57,6 +57,7 @@ jupyterhub_usage_quotas = "jupyterhub_usage_quotas.app:main"
 
 [project.optional-dependencies]
 dev = [
+    "chartpress>=2.4.0",
     "ipython~=9.12",
     "pre-commit",
 ]
