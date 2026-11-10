@@ -16,10 +16,10 @@ project:
     - title: How-to guides
       children:
       - file: howto/quickstart.md
-      - file: howto/usage-quota-dashboard.md
+      - file: howto/deploy.md
       - file: howto/user-group-management.md
       - file: howto/quota-limits.md
-      - file: howto/deploy.md
+      - file: howto/usage-quota-dashboard.md
       - file: howto/grafana-dashboard.md
     - title: Explanation
       children:

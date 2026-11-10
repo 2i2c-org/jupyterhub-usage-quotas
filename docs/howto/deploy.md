@@ -54,7 +54,7 @@ You can programmatically render the jsonnet as yaml with `jsonnet --ext-str VARS
 
 #### Usage viewer chart values
 
-The usage viewer runs in its own pod, and we configure it with the values of the `jupyterhub-usage-quotas` Helm chart. We put the `UsageViewer` options in `config.UsageViewer`. We can make these values with jsonnet in the same way, e.g.
+The usage viewer runs in its own pod, and you configure it with the values of the `jupyterhub-usage-quotas` Helm chart. You put the `UsageViewer` options in `config.UsageViewer`. You can make these values with jsonnet in the same way, e.g.
 
 ```{code} javascript
 ---
@@ -74,7 +74,7 @@ local hub_domain = std.extVar('VARS_HUB_DOMAIN');
 }
 ```
 
-The chart sets `hub_namespace` of the usage viewer to the namespace of the Helm release, so we do not have to set it for each cluster.
+The chart sets `hub_namespace` of the usage viewer to the namespace of the Helm release, so you do not have to set it for each cluster.
 
 For all the chart values, see the [Helm chart reference](../reference/helm-chart.md).
 

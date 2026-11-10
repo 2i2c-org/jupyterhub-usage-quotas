@@ -37,11 +37,11 @@ The service has only the permissions of its own API token. The configuration in 
 
 Users need the `access:services!service=usage-quota` scope to open the dashboard.
 
-The service still has access to the Prometheus metrics of all users. So we should keep the Prometheus credentials of the service in a secret.
+The service still has access to the Prometheus metrics of all users. So you should keep the Prometheus credentials of the service in a secret.
 
 ## Configuration
 
-We can configure the service in three ways:
+You can configure the service in three ways:
 
 - A configuration file, with the `--config-files` flag. The file can be a Python file (`c.UsageViewer.<option> = ...`) or a JSON file (`{"UsageViewer": {...}}`).
 - Command line flags.
@@ -96,7 +96,7 @@ To run the service on a local computer for development, see the [Development gui
 
 ## Development mode
 
-When we start the service with the `--dev-mode` flag, the service can return randomly generated mock data. This is useful for development without a Prometheus instance.
+When you start the service with the `--dev-mode` flag, the service can return randomly generated mock data. This is useful for development without a Prometheus instance.
 
 The service uses mock data only when all of these conditions are true:
 

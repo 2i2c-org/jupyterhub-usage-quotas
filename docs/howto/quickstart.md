@@ -53,14 +53,14 @@ This quickstart guide assumes that the reader is running a [Zero to JupyterHub](
 
 The `jupyterhub-usage-quotas` system has two components:
 
-1. The *manager*. It enforces compute quotas when a user starts a server. It runs in the hub process, so we must install it in the hub image.
-1. The *usage viewer* service. It shows the [usage quota dashboard](./usage-quota-dashboard.md) to users. It runs as an [external JupyterHub service](../explanation/service.md) in its own pod. We install it with the `jupyterhub-usage-quotas` Helm chart.
+1. The *manager*. It enforces compute quotas when a user starts a server. It runs in the hub process, so you must install it in the hub image.
+1. The *usage viewer* service. It shows the [usage quota dashboard](./usage-quota-dashboard.md) to users. It runs as an [external JupyterHub service](../explanation/service.md) in its own pod. You install it with the `jupyterhub-usage-quotas` Helm chart.
 
 ### Install the manager in the hub image
 
 1. Create a custom hub image with [jupyterhub-usage-quotas](https://github.com/2i2c-org/jupyterhub-usage-quotas) installed. See [Services — Zero to JupyterHub with Kubernetes documentation](https://z2jh.jupyter.org/en/stable/administrator/services.html#example-service) for details on how to do this.
 
-   - Make sure we list all of the dependencies we require for the hub image, e.g. in a `requirements.txt` file
+   - Make sure you list all of the dependencies you require for the hub image, e.g. in a `requirements.txt` file
    - See the example below
 
    ````{tip} Example
@@ -87,11 +87,11 @@ The `jupyterhub-usage-quotas` system has two components:
 
 #### Authentication
 
-Usage quota policies are applied to user groups, therefore this information needs to be available in a user's [`auth_state`](https://jupyterhub.readthedocs.io/en/stable/reference/authenticators.html#authentication-state). This minimal working example assumes a z2jh deployment that uses [OAuthenticator](https://oauthenticator.readthedocs.io/en/latest/) to handle authentication, specifically the [Generic OAuthenticator](https://oauthenticator.readthedocs.io/en/latest/tutorials/provider-specific-setup/providers/generic.html). Make sure that we set the appropriate configuration for our authenticator in addition to the minimal example below. See [User Group Management](./user-group-management.md) for more details.
+Usage quota policies are applied to user groups, therefore this information needs to be available in a user's [`auth_state`](https://jupyterhub.readthedocs.io/en/stable/reference/authenticators.html#authentication-state). This minimal working example assumes a z2jh deployment that uses [OAuthenticator](https://oauthenticator.readthedocs.io/en/latest/) to handle authentication, specifically the [Generic OAuthenticator](https://oauthenticator.readthedocs.io/en/latest/tutorials/provider-specific-setup/providers/generic.html). Make sure that you set the appropriate configuration for your authenticator in addition to the minimal example below. See [User Group Management](./user-group-management.md) for more details.
 
 #### Home Storage Quotas
 
-If we are using home storage quotas, then make sure that we set the appropriate configuration for [jupyterhub-home-nfs](https://github.com/2i2c-org/jupyterhub-home-nfs) in addition to the minimal example below.
+If you are using home storage quotas, then make sure that you set the appropriate configuration for [jupyterhub-home-nfs](https://github.com/2i2c-org/jupyterhub-home-nfs) in addition to the minimal example below.
 
 #### Set up the manager
 
@@ -110,7 +110,7 @@ The manager needs these settings:
 
 - `c.UsageQuotaManager.prometheus_url`: the URL of the Prometheus server that has the usage data
 - `c.UsageQuotaManager.hub_namespace`: the Kubernetes namespace of the hub pod
-- `c.UsageQuotaManager.metrics_exporter_token`: the API token of the `metrics-exporter` service. z2jh makes this token. The examples below give it to the hub in the `JUPYTERHUB_USAGE_QUOTAS_METRICS_TOKEN` environment variable.
+- `c.UsageQuotaManager.metrics_exporter_token`: the API token of the `metrics-exporter` service. z2jh makes this token when the `metrics-exporter-service` is listed under `hub.services`. The examples below pass the API token to the hub in the `JUPYTERHUB_USAGE_QUOTAS_METRICS_TOKEN` environment variable.
 
 #### Register the usage viewer service
 
@@ -138,10 +138,10 @@ hub:
 ```
 
 ```{note}
-The `user` role replaces the default user role of JupyterHub. If our configuration already has a `user` role, add the `access:services!service=usage-quota` scope to it.
+The `user` role replaces the default user role of JupyterHub. If your configuration already has a `user` role, add the `access:services!service=usage-quota` scope to it.
 ```
 
-The service URL is `http://<service name>:<port>`. With the default chart values, the name is `usage-viewer` and the port is `9000`. After we install the chart, its notes show the correct URL.
+The service URL is `http://<service name>:<port>`. With the default chart values, the name is `usage-viewer` and the port is `9000`. After you install the chart, its notes show the correct URL.
 
 #### Minimal z2jh example
 
@@ -221,7 +221,7 @@ hub:
 label: enc-minimal-z2jh-config
 ---
 # enc-config.yaml
-# Note: this contains secrets so make sure we encrypt this file if using a version control system
+# Note: this contains secrets so make sure you encrypt this file if using a version control system
 
 hub:
   config:
@@ -232,7 +232,7 @@ hub:
 ```
 
 ```{tip}
-Make sure we encrypt any secrets files if using a version control system, using a tool such as [SOPS](https://getsops.io/).
+Make sure you encrypt any secrets files if using a version control system, using a tool such as [SOPS](https://getsops.io/).
 ```
 
 ### Install the usage viewer chart
@@ -246,7 +246,7 @@ label: minimal-usage-quotas-values
 # usage-quotas-values.yaml
 
 jupyterhub:
-  # The public URL of our JupyterHub
+  # The public URL of your JupyterHub
   publicUrl: https://<public-hub-url>/
 
 config:
@@ -259,7 +259,7 @@ config:
 label: enc-minimal-usage-quotas-values
 ---
 # enc-usage-quotas-values.yaml
-# Note: this contains secrets so make sure we encrypt this file if using a version control system
+# Note: this contains secrets so make sure you encrypt this file if using a version control system
 
 config:
   UsageViewer:
@@ -280,13 +280,13 @@ helm upgrade --install usage-quotas \
 The chart does these things:
 
 - It sets the hub namespace of the usage viewer to the namespace of the release.
-- It makes a session secret key, and keeps it when we upgrade the chart.
+- It makes a session secret key, and keeps it when you upgrade the chart.
 - It adds a NetworkPolicy that lets the z2jh proxy and hub pods access the service.
 
 Install or upgrade z2jh with the configuration from the previous section. Then go to `https://<public-hub-url>/hub/home` and click **Services > usage-quota** in the navbar.
 
-See [Configuration](../reference/configuration.md) for a full list of the `UsageQuotaManager` and `UsageViewer` options. We set the `UsageViewer` options in `config.UsageViewer` in the chart values. See [Helm chart](../reference/helm-chart.md) for all the chart values.
+See [Configuration](../reference/configuration.md) for a full list of the `UsageQuotaManager` and `UsageViewer` options. You set the `UsageViewer` options in `config.UsageViewer` in the chart values. See [Helm chart](../reference/helm-chart.md) for all the chart values.
 
 ### Multi-cluster setups
 
-If we operate multiple clusters and want to deploy `jupyterhub-usage-quotas`, we may want to programmatically pass config to each cluster. We recommend following the [Multi-cluster setups](./deploy.md#multi-cluster-setups) guide to take advantage of jsonnet and mirroring secrets across namespaces.
+If you operate multiple clusters and want to deploy `jupyterhub-usage-quotas`, you may want to programmatically pass config to each cluster. We recommend following the [Multi-cluster setups](./deploy.md#multi-cluster-setups) guide to take advantage of jsonnet and mirroring secrets across namespaces.
