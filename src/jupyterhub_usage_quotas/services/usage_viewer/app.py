@@ -560,6 +560,7 @@ class UsageViewer(Application):
                 (prefix + r"/oauth_callback", HubOAuthCallbackHandler),
                 (prefix + r"/metrics", MetricsHandler),
                 (prefix + r"/health", HealthHandler),
+                (r"/health", HealthHandler),
             ],
             cookie_secret=self.session_secret_key,
             enable_home_storage=self.enable_home_storage,

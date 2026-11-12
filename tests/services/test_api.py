@@ -98,3 +98,10 @@ class TestHealthRoute(UsageViewerTestCase):
 
         assert response.code == 200
         assert response.body == b'{"status": "ok"}'
+
+    def test_health_without_service_prefix(self):
+        """Health check is also served without the service prefix, for probes"""
+        response = self.fetch("/health", follow_redirects=False)
+
+        assert response.code == 200
+        assert response.body == b'{"status": "ok"}'
