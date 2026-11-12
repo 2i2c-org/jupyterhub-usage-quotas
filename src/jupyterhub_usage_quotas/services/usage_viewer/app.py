@@ -13,6 +13,7 @@ from jupyterhub.services.auth import (
     HubOAuthCallbackHandler,
     HubOAuthenticated,
 )
+from jupyterhub.utils import url_path_join
 from markupsafe import Markup
 from prometheus_client import (
     CONTENT_TYPE_LATEST,
@@ -40,6 +41,25 @@ SERVICE_ERROR_TOTAL = Counter(
     ["namespace", "username"],
     registry=service_registry,
 )
+
+
+def hub_base_path(public_hub_url: str) -> str:
+    """Return the JupyterHub base URL path of a public hub URL.
+
+    The public hub URL can include the `hub/` path segment or not, e.g. both
+    `https://example.org/jhub/` and `https://example.org/jhub/hub/` give
+    `/jhub/`.
+
+    Args:
+        public_hub_url: The public URL of JupyterHub.
+
+    Returns:
+        The base URL path, with a leading and a trailing slash.
+    """
+    path = url_path_join("/", urlparse(public_hub_url).path, "/")
+    if path.endswith("/hub/"):
+        path = path[: -len("hub/")]
+    return path
 
 
 class BaseHandler(HubOAuthenticated, web.RequestHandler):
@@ -152,8 +172,8 @@ class UsageViewer(Application):
         "host": "UsageViewer.service_host",
         "prometheus-url": "UsageViewer.prometheus_url",
         "prometheus-usage-quota-metrics": "UsageViewer.prometheus_usage_quota_metrics",
-        "hub_api_url": "UsageViewer.hub_api_url",
-        "hub_api_token": "UsageViewer.hub_api_token",
+        "hub-api-url": "UsageViewer.hub_api_url",
+        "service-name": "UsageViewer.service_name",
         "hub-namespace": "UsageViewer.hub_namespace",
         "dev-mode": "UsageViewer.dev_mode",
         "service-prefix": "UsageViewer.service_prefix",
@@ -237,13 +257,68 @@ class UsageViewer(Application):
             )
         return auth
 
-    hub_url = Unicode(
-        help="JupyterHub URL, e.g. http://localhost:8000 for local development."
+    hub_api_url = Unicode(
+        help="""
+        The internal URL of the Hub API, e.g. http://hub:8081/hub/api.
+
+        Can be set via the JUPYTERHUB_API_URL environment variable. Defaults to
+        http://$HUB_SERVICE_HOST:$HUB_SERVICE_PORT<hub prefix>api (Kubernetes
+        sets these variables for the z2jh hub Service), then to
+        http://127.0.0.1:8081<hub prefix>api.
+        """,
     ).tag(config=True)
 
-    @default("hub_url")
-    def _hub_url_default(self):
-        return f"http://{os.environ.get('HUB_SERVICE_HOST')}:{os.environ.get('HUB_SERVICE_PORT')}"
+    @default("hub_api_url")
+    def _hub_api_url_default(self):
+        api_url = os.environ.get("JUPYTERHUB_API_URL")
+        if api_url:
+            return api_url
+        host = os.environ.get("HUB_SERVICE_HOST")
+        port = os.environ.get("HUB_SERVICE_PORT")
+        hub_url = f"http://{host}:{port}" if host and port else "http://127.0.0.1:8081"
+        return url_path_join(hub_url, self.hub_prefix, "api")
+
+    hub_api_token = Unicode(
+        help="""
+        The API token that the service uses for Hub API requests. Required.
+        Can be set via the JUPYTERHUB_API_TOKEN environment variable.
+        """,
+    ).tag(config=True)
+
+    @default("hub_api_token")
+    def _hub_api_token_default(self):
+        token = os.environ.get("JUPYTERHUB_API_TOKEN", "")
+        if not token:
+            raise TraitError(
+                "hub_api_token is required but not set. "
+                "Set it via config (c.UsageViewer.hub_api_token) or "
+                "JUPYTERHUB_API_TOKEN environment variable."
+            )
+        return token
+
+    service_name = Unicode(
+        help="""
+        The name of the service in the JupyterHub services config.
+        Can be set via the JUPYTERHUB_SERVICE_NAME environment variable.
+        Defaults to usage-quota.
+        """,
+    ).tag(config=True)
+
+    @default("service_name")
+    def _service_name_default(self):
+        return os.environ.get("JUPYTERHUB_SERVICE_NAME") or "usage-quota"
+
+    oauth_client_id = Unicode(
+        help="""
+        The OAuth client ID of the service.
+        Can be set via the JUPYTERHUB_CLIENT_ID environment variable.
+        Defaults to service-<service_name>.
+        """,
+    ).tag(config=True)
+
+    @default("oauth_client_id")
+    def _oauth_client_id_default(self):
+        return os.environ.get("JUPYTERHUB_CLIENT_ID") or f"service-{self.service_name}"
 
     hub_namespace = Unicode(
         help="Kubernetes namespace of the JupyterHub deployment, used to filter Prometheus usage metrics in multi-tenant environments. Leave empty for single-tenant or development. Can be set via JUPYTERHUB_USAGE_QUOTAS_HUB_NAMESPACE environment variable.",
@@ -356,22 +431,33 @@ class UsageViewer(Application):
     ).tag(config=True)
 
     service_prefix = Unicode(
-        help="URL prefix for the service. Automatically set by JupyterHub when running as a managed service. Defaults to /services/usage-quota.",
+        help="""
+        URL prefix for the service. Can be set via the
+        JUPYTERHUB_SERVICE_PREFIX environment variable. Defaults to
+        <base URL>services/<service_name>/, with the base URL from
+        public_hub_url.
+        """,
     ).tag(config=True)
 
     @default("service_prefix")
     def _service_prefix_default(self):
-        # Try environment variable first (set by JupyterHub)
         prefix = os.environ.get("JUPYTERHUB_SERVICE_PREFIX")
-        return prefix or "/services/usage-quota/"
+        if prefix:
+            return prefix
+        return url_path_join(
+            hub_base_path(self.public_hub_url), "services", self.service_name, "/"
+        )
 
     public_hub_url = Unicode(
-        help="Public URL of the JupyterHub instance. Required. Automatically set by JupyterHub via JUPYTERHUB_PUBLIC_HUB_URL environment variable.",
+        help="""
+        Public URL of JupyterHub, with or without the hub/ path segment, e.g.
+        https://hub.example.org/ or https://hub.example.org/hub/. Required.
+        Can be set via the JUPYTERHUB_PUBLIC_HUB_URL environment variable.
+        """,
     ).tag(config=True)
 
     @default("public_hub_url")
     def _public_hub_url_default(self):
-        # Try environment variable first (set by JupyterHub)
         url = os.environ.get("JUPYTERHUB_PUBLIC_HUB_URL", "")
         if not url:
             raise TraitError(
@@ -420,6 +506,17 @@ class UsageViewer(Application):
             paths.append(default_path)
         return paths
 
+    @property
+    def public_origin(self) -> str:
+        """The scheme and host of public_hub_url."""
+        parsed = urlparse(self.public_hub_url)
+        return f"{parsed.scheme}://{parsed.netloc}"
+
+    @property
+    def hub_prefix(self) -> str:
+        """The URL path of the hub, e.g. /hub/."""
+        return url_path_join(hub_base_path(self.public_hub_url), "hub/")
+
     def make_app(self, quota_client: QuotaClient) -> web.Application:
         """Create and configure the Tornado application.
 
@@ -430,12 +527,8 @@ class UsageViewer(Application):
             Configured Tornado application
         """
         prefix = self.service_prefix.rstrip("/")
-        # Add trailing slash if needed, since this is also passed as base_url in UsageHandler
-        public_hub_url = (
-            self.public_hub_url
-            if urlparse(self.public_hub_url).path
-            else self.public_hub_url + "/"
-        )
+        public_origin = self.public_origin
+        public_hub_url = public_origin + self.hub_prefix
         self.hub_template_paths.append(
             get_template_path()
         )  # append usage-quota templates to default hub templates list
@@ -447,11 +540,20 @@ class UsageViewer(Application):
             public_hub_url, f"static/{path}"
         )
 
-        # HubOAuth reads JUPYTERHUB_SERVICE_PREFIX for its base_url default at
-        # import time, so a prefix set after import (e.g. in a config file) is
-        # ignored. Pass it explicitly so the OAuth redirect URI and cookie path
-        # match service_prefix.
-        HubOAuth.instance(cache_max_age=60, base_url=self.service_prefix)
+        # HubOAuth reads this only from the environment, for the secure flag
+        # of its OAuth state cookie.
+        os.environ.setdefault(
+            "JUPYTERHUB_PUBLIC_URL", public_origin + self.service_prefix
+        )
+        HubOAuth.instance(
+            cache_max_age=60,
+            base_url=self.service_prefix,
+            hub_prefix=self.hub_prefix,
+            api_url=self.hub_api_url,
+            api_token=self.hub_api_token,
+            oauth_client_id=self.oauth_client_id,
+            access_scopes={f"access:services!service={self.service_name}"},
+        )
         return web.Application(
             [
                 (prefix + r"/?", UsageHandler),
@@ -491,6 +593,10 @@ class UsageViewer(Application):
         )
 
         self.log.info("Initialized Usage Viewer service")
+        self.log.info(f"Service name: {self.service_name}")
+        self.log.info(f"Service prefix: {self.service_prefix}")
+        self.log.info(f"OAuth client ID: {self.oauth_client_id}")
+        self.log.info(f"Hub API URL: {self.hub_api_url}")
         self.log.info(f"Prometheus URL: {self.prometheus_url}")
         self.log.info(f"Hub Namespace: {self.hub_namespace or '(empty)'}")
         if self.dev_mode:
