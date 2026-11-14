@@ -32,8 +32,6 @@ HUB_ENV_VARS = [
     "JUPYTERHUB_PUBLIC_URL",
     "JUPYTERHUB_SERVICE_NAME",
     "JUPYTERHUB_SERVICE_PREFIX",
-    "HUB_SERVICE_HOST",
-    "HUB_SERVICE_PORT",
 ]
 
 
@@ -65,7 +63,7 @@ def test_hub_settings_derived_defaults(clean_env):
     assert app.service_prefix == "/jhub/services/usage-quota/"
     assert app.oauth_client_id == "service-usage-quota"
     assert app.hub_prefix == "/jhub/hub/"
-    assert app.hub_api_url == "http://127.0.0.1:8081/jhub/hub/api"
+    assert app.hub_api_url == "http://hub:8081/jhub/hub/api"
 
 
 def test_hub_settings_derived_from_service_name(clean_env):
@@ -111,12 +109,6 @@ def test_hub_settings_config_overrides_env(clean_env):
     assert app.hub_api_url == "http://hub:8081/hub/api"
     assert app.service_name == "config-name"
     assert app.service_prefix == "/services/config-name/"
-
-
-def test_hub_api_url_from_kubernetes_service_env(clean_env):
-    os.environ.update({"HUB_SERVICE_HOST": "10.0.0.2", "HUB_SERVICE_PORT": "8081"})
-    app = UsageViewer(public_hub_url="https://hub.example.org/jhub/")
-    assert app.hub_api_url == "http://10.0.0.2:8081/jhub/hub/api"
 
 
 def test_hub_api_token_required(clean_env):

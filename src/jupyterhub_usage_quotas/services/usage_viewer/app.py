@@ -262,9 +262,8 @@ class UsageViewer(Application):
         The internal URL of the Hub API, e.g. http://hub:8081/hub/api.
 
         Can be set via the JUPYTERHUB_API_URL environment variable. Defaults to
-        http://$HUB_SERVICE_HOST:$HUB_SERVICE_PORT<hub prefix>api (Kubernetes
-        sets these variables for the z2jh hub Service), then to
-        http://127.0.0.1:8081<hub prefix>api.
+        http://hub:8081<hub prefix>api, the z2jh hub Service in the same
+        namespace.
         """,
     ).tag(config=True)
 
@@ -273,10 +272,7 @@ class UsageViewer(Application):
         api_url = os.environ.get("JUPYTERHUB_API_URL")
         if api_url:
             return api_url
-        host = os.environ.get("HUB_SERVICE_HOST")
-        port = os.environ.get("HUB_SERVICE_PORT")
-        hub_url = f"http://{host}:{port}" if host and port else "http://127.0.0.1:8081"
-        return url_path_join(hub_url, self.hub_prefix, "api")
+        return url_path_join("http://hub:8081", self.hub_prefix, "api")
 
     hub_api_token = Unicode(
         help="""
