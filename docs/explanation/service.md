@@ -49,20 +49,22 @@ You can configure the service in three ways:
 
 For all options, see the [UsageViewer reference](../reference/configuration.md).
 
-### Environment variables from JupyterHub
+### Connection to JupyterHub
 
-JupyterHub sets these environment variables for the services that it starts. An external service must set them itself. The Helm chart sets them.
+These options tell the service how to connect to JupyterHub. Each option has an environment variable. JupyterHub sets these variables for the services that it starts, so a service that JupyterHub starts does not need the options. A value in the configuration has priority over the environment variable.
 
-| Variable                        | Example                                         | Description                                                                                            |
-| ------------------------------- | ----------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
-| `JUPYTERHUB_SERVICE_NAME`       | `usage-quota`                                   | The service name in the JupyterHub configuration                                                       |
-| `JUPYTERHUB_CLIENT_ID`          | `service-usage-quota`                           | The OAuth client ID, `service-<service name>`                                                          |
-| `JUPYTERHUB_SERVICE_PREFIX`     | `/services/usage-quota/`                        | The URL prefix of the service                                                                          |
-| `JUPYTERHUB_API_URL`            | `http://hub:8081/hub/api`                       | The JupyterHub API URL, as the service sees it                                                         |
-| `JUPYTERHUB_API_TOKEN`          |                                                 | The `api_token` of the service in the JupyterHub configuration                                         |
-| `JUPYTERHUB_PUBLIC_HUB_URL`     | `https://hub.example.org/hub/`                  | The public URL of the hub. Also sets `public_hub_url`.                                                 |
-| `JUPYTERHUB_PUBLIC_URL`         | `https://hub.example.org/services/usage-quota/` | (Optional) The public URL of the service. If it starts with `https`, the OAuth state cookie is secure. |
-| `JUPYTERHUB_OAUTH_CALLBACK_URL` | `/services/usage-quota/oauth_callback`          | (Optional) The OAuth callback URL. The default is `<prefix>oauth_callback`.                            |
+| Option            | Environment variable        | Default                              | Description                                                                                                        |
+| ----------------- | --------------------------- | ------------------------------------ | ------------------------------------------------------------------------------------------------------------------ |
+| `public_hub_url`  | `JUPYTERHUB_PUBLIC_HUB_URL` | **(required)**                       | The public URL of JupyterHub, e.g. `https://hub.example.org/`. The URL can include the `hub/` path segment or not. |
+| `hub_api_token`   | `JUPYTERHUB_API_TOKEN`      | **(required)**                       | The `api_token` of the service in the JupyterHub configuration                                                     |
+| `hub_api_url`     | `JUPYTERHUB_API_URL`        | `http://hub:8081<base URL>hub/api`   | The JupyterHub API URL, as the service sees it. The default is the z2jh `hub` Service in the same namespace.       |
+| `service_name`    | `JUPYTERHUB_SERVICE_NAME`   | `usage-quota`                        | The service name in the JupyterHub configuration                                                                   |
+| `service_prefix`  | `JUPYTERHUB_SERVICE_PREFIX` | `<base URL>services/<service_name>/` | The URL prefix of the service                                                                                      |
+| `oauth_client_id` | `JUPYTERHUB_CLIENT_ID`      | `service-<service_name>`             | The OAuth client ID of the service                                                                                 |
+
+The base URL is the path of `public_hub_url` without the `hub/` segment, e.g. `/` for `https://hub.example.org/hub/`.
+
+The service makes the OAuth callback URL and the access scope from the options above. JupyterHub uses the same values for the services that it registers, so you do not have to set them.
 
 ### Environment variables for the usage viewer
 
@@ -82,15 +84,17 @@ JupyterHub sets these environment variables for the services that it starts. An 
 | `--prometheus-url`     | `prometheus_url`     | `http://127.0.0.1:9090`    | The Prometheus server URL                                              |
 | `--hub-namespace`      | `hub_namespace`      | `""`                       | The Kubernetes namespace of the JupyterHub deployment                  |
 | `--public-hub-url`     | `public_hub_url`     | **(required)**             | The public URL of the hub                                              |
+| `--hub-api-url`        | `hub_api_url`        | See the table above        | The JupyterHub API URL                                                 |
+| `--service-name`       | `service_name`       | `usage-quota`              | The service name in the JupyterHub configuration                       |
 | `--session-secret-key` | `session_secret_key` | A random key at each start | The key that signs the session cookies                                 |
-| `--service-prefix`     | `service_prefix`     | `/services/usage-quota/`   | The URL prefix of the service                                          |
+| `--service-prefix`     | `service_prefix`     | See the table above        | The URL prefix of the service                                          |
 | `--port`               | `service_port`       | `9000`                     | The port that the service listens on                                   |
 | `--host`               | `service_host`       | `0.0.0.0`                  | The IP address that the service listens on                             |
 | `--dev-mode`           | `dev_mode`           | `False`                    | Enable development mode with mock data                                 |
 
 ## Deployment
 
-For Kubernetes, use the [Helm chart](../reference/helm-chart.md) in this repository. It installs the service next to a [Zero to JupyterHub](https://z2jh.jupyter.org/en/stable/) deployment, and sets the environment variables above. See the [Deployment guide](../howto/deploy.md).
+For Kubernetes, use the [Helm chart](../reference/helm-chart.md) in this repository. It installs the service next to a [Zero to JupyterHub](https://z2jh.jupyter.org/en/stable/) deployment. It reads the API token of the service from the z2jh `hub` Secret. See the [Deployment guide](../howto/deploy.md).
 
 To run the service on a local computer for development, see the [Development guide](../contributing/DEVELOPMENT.md).
 

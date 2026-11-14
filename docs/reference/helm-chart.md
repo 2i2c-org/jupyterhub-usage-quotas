@@ -40,66 +40,6 @@ See the z2jh documentation for
 
 - Type: object
 
-## `jupyterhub`
-
-- Type: object
-
-How the service connects to JupyterHub.
-
-### `jupyterhub.serviceName`
-
-- Type: string
-- Default: `"usage-quota"`
-
-The name of the JupyterHub service. It must be the same as the key
-under the z2jh `hub.services` config. The service is available at
-`/services/<serviceName>/`.
-
-### `jupyterhub.apiUrl`
-
-- Type: string
-- Default: `"http://hub:8081/hub/api"`
-
-The JupyterHub API URL, as seen from inside the cluster.
-
-### `jupyterhub.publicUrl`
-
-- Type: string
-
-The public URL of JupyterHub, e.g. `https://hub.example.org/`.
-The service uses it for links and static files. Required.
-
-### `jupyterhub.apiToken`
-
-- Type: object
-
-The API token that the service uses to talk to JupyterHub.
-
-#### `jupyterhub.apiToken.value`
-
-- Type: string
-
-The token. If empty, the token is read from `existingSecret`.
-
-#### `jupyterhub.apiToken.existingSecret`
-
-- Type: object
-
-A Secret that contains the token. By default, this is the
-token that z2jh makes for the `hub.services.<serviceName>`
-entry. The Secret must be in the same namespace as this chart.
-
-##### `jupyterhub.apiToken.existingSecret.name`
-
-- Type: string
-- Default: `"hub"`
-
-##### `jupyterhub.apiToken.existingSecret.key`
-
-- Type: string
-
-If empty, the key is `hub.services.<serviceName>.apiToken`.
-
 ## `config`
 
 - Type: object
@@ -110,6 +50,7 @@ can contain credentials such as `prometheus_auth`.
 ```yaml
 config:
   UsageViewer:
+    public_hub_url: https://hub.example.org/
     prometheus_url: http://prometheus-server.support.svc.cluster.local
     enable_compute: true
 ```
@@ -119,6 +60,41 @@ config:
 - Type: object
 
 See the [UsageViewer reference](https://jupyterhub-usage-quotas.readthedocs.io/en/latest/reference/usageviewer/).
+
+The chart also reads these options:
+
+- `public_hub_url` (required): the public URL of JupyterHub, e.g.
+  `https://hub.example.org/`.
+- `service_name`: the key under the z2jh `hub.services` config. The
+  default is `usage-quota`.
+- `hub_api_token`: if set, the chart does not read the token from
+  `hubApiToken.existingSecret`.
+
+## `hubApiToken`
+
+- Type: object
+
+The API token that the service uses for Hub API requests, if
+`config.UsageViewer.hub_api_token` is not set.
+
+### `hubApiToken.existingSecret`
+
+- Type: object
+
+A Secret that contains the token. By default, this is the token
+that z2jh makes for the `hub.services.<service_name>` entry. The
+Secret must be in the same namespace as this chart.
+
+#### `hubApiToken.existingSecret.name`
+
+- Type: string
+- Default: `"hub"`
+
+#### `hubApiToken.existingSecret.key`
+
+- Type: string
+
+If empty, the key is `hub.services.<service_name>.apiToken`.
 
 ## `sessionSecretKey`
 

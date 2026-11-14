@@ -245,12 +245,10 @@ label: minimal-usage-quotas-values
 ---
 # usage-quotas-values.yaml
 
-jupyterhub:
-  # The public URL of your JupyterHub
-  publicUrl: https://<public-hub-url>/
-
 config:
   UsageViewer:
+    # The public URL of your JupyterHub
+    public_hub_url: https://<public-hub-url>/
     prometheus_url: http://<prometheus-service-name>.<k8s-prometheus-namespace>.svc.cluster.local
 ```
 

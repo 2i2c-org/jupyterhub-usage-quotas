@@ -63,11 +63,9 @@ filename: usage-quotas-values.jsonnet
 local hub_domain = std.extVar('VARS_HUB_DOMAIN');
 
 {
-  jupyterhub: {
-    publicUrl: 'https://%s/' % hub_domain,
-  },
   config: {
     UsageViewer: {
+      public_hub_url: 'https://%s/' % hub_domain,
       prometheus_url: 'http://<prometheus-service-name>.<k8s-prometheus-namespace>.svc.cluster.local',
     },
   },
