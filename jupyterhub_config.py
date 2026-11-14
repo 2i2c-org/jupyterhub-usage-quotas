@@ -74,24 +74,10 @@ c.UsageQuotaManager.policy = [
     },
 ]
 
-c.UsageViewer.hub_namespace = "prod"
-c.UsageViewer.public_hub_url = "http://localhost:8000/"
-
-c.JupyterHub.services.append(
-    {
-        "name": "usage-quota",
-        "url": "http://localhost:9000",
-        "display": True,
-        "oauth_no_confirm": True,
-        "command": [
-            "python",
-            "-m",
-            "jupyterhub_usage_quotas.services.usage_viewer",
-            "--config-files=jupyterhub_config.py",
-            "--config-files=jupyterhub_config_secret.py",
-        ],
-    }
-)
+# The usage viewer runs as an external service, in a separate process. See the
+# "Running the usage viewer service locally" section in DEVELOPMENT.md.
+# jupyterhub_config_secret.py registers the service, because the service entry
+# holds its API token.
 
 c.JupyterHub.load_roles = [
     {
