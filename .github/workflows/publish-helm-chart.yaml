@@ -67,7 +67,7 @@ jobs:
         working-directory: helm/jupyterhub-usage-quotas
 
       - name: Lint the Helm chart
-        run: helm lint helm/jupyterhub-usage-quotas --set jupyterhub.publicUrl=https://hub.example.org/
+        run: helm lint helm/jupyterhub-usage-quotas --set config.UsageViewer.public_hub_url=https://hub.example.org/
 
       - name: Build and push the image, and publish the chart
         run: |

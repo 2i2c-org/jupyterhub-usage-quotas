@@ -2,7 +2,7 @@
 # Render the jupyterhub-usage-quotas chart and check the rendered manifests.
 #
 # It renders two value sets:
-# - the default values, with only jupyterhub.publicUrl set
+# - the default values, with only config.UsageViewer.public_hub_url set
 # - tests/helm/lint-and-validate-values.yaml
 #
 # Requires helm and yq (https://github.com/mikefarah/yq). Run it from the
@@ -58,10 +58,20 @@ env() {
 env_secret() {
     get Deployment "$container.env[] | select(.name == \"$1\") | .valueFrom.secretKeyRef | .name + \"/\" + .key"
 }
+env_names() {
+    get Deployment "$container.env[].name" | tr '\n' ' '
+}
 
-echo "### Default values (with jupyterhub.publicUrl)"
-MANIFESTS=$(helm template usage-quotas "$CHART" --namespace "$NAMESPACE" \
-    --set jupyterhub.publicUrl=https://hub.example.org/)
+# dashboard_url HELM_VALUE_ARGS..., from the chart notes
+dashboard_url() {
+    helm install usage-quotas "$CHART" --namespace "$NAMESPACE" --dry-run=client "$@" |
+        sed -n 's/^ *- Dashboard URL: *//p'
+}
+
+DEFAULT_ARGS=(--set config.UsageViewer.public_hub_url=https://hub.example.org/)
+
+echo "### Default values (with config.UsageViewer.public_hub_url)"
+MANIFESTS=$(helm template usage-quotas "$CHART" --namespace "$NAMESPACE" "${DEFAULT_ARGS[@]}")
 
 check "resource names" \
     "$(yq -N '.kind + "/" + .metadata.name' <<<"$MANIFESTS" | sort | tr '\n' ' ')" \
@@ -69,14 +79,16 @@ check "resource names" \
 check_selectors
 check "API token from the z2jh hub Secret" \
     "$(env_secret JUPYTERHUB_API_TOKEN)" "hub/hub.services.usage-quota.apiToken"
-check "no api-token key in the chart Secret" \
-    "$(get Secret '.data | has("api-token")')" "false"
-check "service prefix" "$(env JUPYTERHUB_SERVICE_PREFIX)" "/services/usage-quota/"
-check "public hub URL" "$(env JUPYTERHUB_PUBLIC_HUB_URL)" "https://hub.example.org/hub/"
+check "env vars" "$(env_names)" \
+    "JUPYTERHUB_API_TOKEN JUPYTERHUB_USAGE_QUOTAS_HUB_NAMESPACE JUPYTERHUB_USAGE_QUOTAS_SESSION_SECRET_KEY "
 check "hub namespace is the release namespace" \
     "$(env JUPYTERHUB_USAGE_QUOTAS_HUB_NAMESPACE)" "$NAMESPACE"
-check "config is an empty UsageViewer section" \
-    "$(get Secret '.data["values.json"] | @base64d')" '{"UsageViewer":{}}'
+check "config is the UsageViewer section" \
+    "$(get Secret '.data["values.json"] | @base64d')" '{"UsageViewer":{"public_hub_url":"https://hub.example.org/"}}'
+check "readiness probe path" \
+    "$(get Deployment "$container.readinessProbe.httpGet.path")" "/health"
+check "dashboard URL in the notes" \
+    "$(dashboard_url "${DEFAULT_ARGS[@]}")" "https://hub.example.org/services/usage-quota/"
 check "container runs as non-root with a read-only root filesystem" \
     "$(get Deployment "$container.securityContext | (.runAsNonRoot and .readOnlyRootFilesystem)")" "true"
 check "pod can access the z2jh hub" \
@@ -96,21 +108,14 @@ check "name label" \
 check_selectors
 check "Deployment uses the ServiceAccount" \
     "$(get Deployment '.spec.template.spec.serviceAccountName')" "custom-sa"
-check "API token from the chart Secret" \
-    "$(env_secret JUPYTERHUB_API_TOKEN)" "$fullname/api-token"
-check "api-token key in the chart Secret" \
-    "$(get Secret '.data["api-token"] | @base64d')" "api-token-value"
+check "no token env var with an inline token" \
+    "$(env_names | grep -c JUPYTERHUB_API_TOKEN)" "0"
+check "inline token in values.json" \
+    "$(get Secret '.data["values.json"] | @base64d | from_json | .UsageViewer.hub_api_token')" "api-token-value"
 check "explicit session secret key" \
     "$(get Secret '.data["session-secret-key"] | @base64d')" "session-secret-key"
-check "OAuth client ID" "$(env JUPYTERHUB_CLIENT_ID)" "service-quota"
-check "base URL" "$(env JUPYTERHUB_BASE_URL)" "/jhub/"
-check "service prefix" "$(env JUPYTERHUB_SERVICE_PREFIX)" "/jhub/services/quota/"
-check "OAuth callback URL" \
-    "$(env JUPYTERHUB_OAUTH_CALLBACK_URL)" "/jhub/services/quota/oauth_callback"
-check "public URL" "$(env JUPYTERHUB_PUBLIC_URL)" "https://hub.example.org/jhub/services/quota/"
-check "public hub URL" "$(env JUPYTERHUB_PUBLIC_HUB_URL)" "https://hub.example.org/jhub/hub/"
-check "readiness probe path" \
-    "$(get Deployment "$container.readinessProbe.httpGet.path")" "/jhub/services/quota/health"
+check "dashboard URL in the notes, with a base URL and the hub/ segment" \
+    "$(dashboard_url --values "$LINT_VALUES")" "https://hub.example.org/jhub/services/quota/"
 check "tpl in extraEnv" "$(env EXAMPLE_RELEASE_NAMESPACE)" "$NAMESPACE"
 check "valueFrom in extraEnv" \
     "$(env_secret JUPYTERHUB_USAGE_QUOTAS_PROMETHEUS_USERNAME)" "prometheus-auth/username"

@@ -5,30 +5,23 @@ nameOverride:
 fullnameOverride: ""
 global: {}
 
-# JupyterHub integration
-# -----------------------------------------------------------------------------
-#
-jupyterhub:
-  # Must be the same as the key under the z2jh `hub.services` config.
-  serviceName: usage-quota
-  # The JupyterHub API URL, as seen from inside the cluster.
-  apiUrl: http://hub:8081/hub/api
-  # The public URL of JupyterHub, e.g. https://hub.example.org/. Required.
-  publicUrl: ""
-  apiToken:
-    # If empty, the token is read from existingSecret.
-    value: ""
-    existingSecret:
-      # The z2jh hub Secret.
-      name: hub
-      # If empty, defaults to hub.services.<serviceName>.apiToken.
-      key: ""
-
 # UsageViewer configuration
 # -----------------------------------------------------------------------------
 #
 config:
   UsageViewer: {}
+    # public_hub_url: https://hub.example.org/  # Required.
+    # service_name: usage-quota
+    # hub_api_url:
+
+# The API token for Hub API requests, if config.UsageViewer.hub_api_token is
+# not set.
+hubApiToken:
+  existingSecret:
+    # The z2jh hub Secret.
+    name: hub
+    # If empty, defaults to hub.services.<service_name>.apiToken.
+    key: ""
 
 # If empty, a random key is generated on install and kept on upgrade.
 sessionSecretKey: ""

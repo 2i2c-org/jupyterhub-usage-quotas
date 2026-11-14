@@ -26,21 +26,31 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}
 
 {{- /*
-    URLs derived from jupyterhub.publicUrl
+    Values from config.UsageViewer. The URLs follow the defaults of the
+    UsageViewer traits.
 */}}
+{{- define "jupyterhub-usage-quotas.serviceName" -}}
+{{- (.Values.config.UsageViewer | default dict).service_name | default "usage-quota" }}
+{{- end }}
+
+{{- define "jupyterhub-usage-quotas.publicHubUrl" -}}
+{{- required "config.UsageViewer.public_hub_url is required, e.g. https://hub.example.org/" (.Values.config.UsageViewer | default dict).public_hub_url }}
+{{- end }}
+
 {{- define "jupyterhub-usage-quotas.publicOrigin" -}}
-{{- $url := required "jupyterhub.publicUrl is required, e.g. https://hub.example.org/" .Values.jupyterhub.publicUrl | urlParse }}
+{{- $publicHubUrl := include "jupyterhub-usage-quotas.publicHubUrl" . }}
+{{- $url := urlParse $publicHubUrl }}
 {{- if not (and $url.scheme $url.host) }}
-{{- fail (printf "jupyterhub.publicUrl must be an absolute URL, e.g. https://hub.example.org/, got %q" .Values.jupyterhub.publicUrl) }}
+{{- fail (printf "config.UsageViewer.public_hub_url must be an absolute URL, e.g. https://hub.example.org/, got %q" $publicHubUrl) }}
 {{- end }}
 {{- printf "%s://%s" $url.scheme $url.host }}
 {{- end }}
 
 {{- define "jupyterhub-usage-quotas.baseUrl" -}}
-{{- $path := (urlParse .Values.jupyterhub.publicUrl).path | trimSuffix "/" }}
+{{- $path := (urlParse (include "jupyterhub-usage-quotas.publicHubUrl" .)).path | trimSuffix "/" | trimSuffix "/hub" }}
 {{- printf "%s/" $path }}
 {{- end }}
 
 {{- define "jupyterhub-usage-quotas.servicePrefix" -}}
-{{- printf "%sservices/%s/" (include "jupyterhub-usage-quotas.baseUrl" .) .Values.jupyterhub.serviceName }}
+{{- (.Values.config.UsageViewer | default dict).service_prefix | default (printf "%sservices/%s/" (include "jupyterhub-usage-quotas.baseUrl" .) (include "jupyterhub-usage-quotas.serviceName" .)) }}
 {{- end }}

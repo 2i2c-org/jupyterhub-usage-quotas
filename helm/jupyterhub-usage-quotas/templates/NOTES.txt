@@ -1,5 +1,5 @@
 {{- $fullname := include "jupyterhub-usage-quotas.usage-viewer.fullname" . }}
-{{- $serviceName := .Values.jupyterhub.serviceName }}
+{{- $serviceName := include "jupyterhub-usage-quotas.serviceName" . }}
 Thank you for installing {{ .Chart.Name }}!
 
 ### Installation info
@@ -37,14 +37,14 @@ Thank you for installing {{ .Chart.Name }}!
 
     The "user" role replaces the default user role of JupyterHub. If your
     config already has a "user" role, add the scope to it.
-    {{- if .Values.jupyterhub.apiToken.value }}
+    {{- if (.Values.config.UsageViewer | default dict).hub_api_token }}
 
     Also set hub.services.{{ $serviceName }}.apiToken to the same value as
-    jupyterhub.apiToken.value in this chart.
+    config.UsageViewer.hub_api_token in this chart.
     {{- else }}
 
     z2jh then creates the API token for the service in the
-    "{{ .Values.jupyterhub.apiToken.existingSecret.name }}" Secret. The pod of this chart stays in the
+    "{{ .Values.hubApiToken.existingSecret.name }}" Secret. The pod of this chart stays in the
     CreateContainerConfigError state until that token exists.
     {{- end }}
 

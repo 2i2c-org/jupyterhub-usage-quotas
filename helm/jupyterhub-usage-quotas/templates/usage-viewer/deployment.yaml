@@ -1,8 +1,8 @@
 {{- $fullname := include "jupyterhub-usage-quotas.usage-viewer.fullname" . }}
-{{- $origin := include "jupyterhub-usage-quotas.publicOrigin" . }}
-{{- $baseUrl := include "jupyterhub-usage-quotas.baseUrl" . }}
-{{- $prefix := include "jupyterhub-usage-quotas.servicePrefix" . }}
-{{- $serviceName := .Values.jupyterhub.serviceName }}
+{{- $serviceName := include "jupyterhub-usage-quotas.serviceName" . }}
+{{- $config := .Values.config.UsageViewer | default dict }}
+{{- /* Fail early on a missing or invalid public_hub_url. */}}
+{{- $_ := include "jupyterhub-usage-quotas.publicOrigin" . }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -20,7 +20,7 @@ spec:
     metadata:
       annotations:
         # Restart the pod when the content of the Secret changes.
-        checksum/secret: {{ list .Values.config .Values.sessionSecretKey .Values.jupyterhub.apiToken.value | toJson | sha256sum }}
+        checksum/secret: {{ list .Values.config .Values.sessionSecretKey | toJson | sha256sum }}
         {{- with .Values.podAnnotations }}
         {{- . | toYaml | nindent 8 }}
         {{- end }}
@@ -69,34 +69,13 @@ spec:
             - name: http
               containerPort: {{ .Values.service.port }}
           env:
-            # Environment that JupyterHub sets for the services that it manages
-            - name: JUPYTERHUB_SERVICE_NAME
-              value: {{ $serviceName | quote }}
-            - name: JUPYTERHUB_CLIENT_ID
-              value: {{ printf "service-%s" $serviceName | quote }}
-            - name: JUPYTERHUB_API_URL
-              value: {{ .Values.jupyterhub.apiUrl | quote }}
+            {{- if not $config.hub_api_token }}
             - name: JUPYTERHUB_API_TOKEN
               valueFrom:
                 secretKeyRef:
-                  {{- if .Values.jupyterhub.apiToken.value }}
-                  name: {{ $fullname }}
-                  key: api-token
-                  {{- else }}
-                  name: {{ .Values.jupyterhub.apiToken.existingSecret.name }}
-                  key: {{ .Values.jupyterhub.apiToken.existingSecret.key | default (printf "hub.services.%s.apiToken" $serviceName) }}
-                  {{- end }}
-            - name: JUPYTERHUB_BASE_URL
-              value: {{ $baseUrl | quote }}
-            - name: JUPYTERHUB_SERVICE_PREFIX
-              value: {{ $prefix | quote }}
-            - name: JUPYTERHUB_OAUTH_CALLBACK_URL
-              value: {{ printf "%soauth_callback" $prefix | quote }}
-            - name: JUPYTERHUB_PUBLIC_URL
-              value: {{ printf "%s%s" $origin $prefix | quote }}
-            - name: JUPYTERHUB_PUBLIC_HUB_URL
-              value: {{ printf "%s%shub/" $origin $baseUrl | quote }}
-            # Environment for the UsageViewer traitlets defaults
+                  name: {{ .Values.hubApiToken.existingSecret.name }}
+                  key: {{ .Values.hubApiToken.existingSecret.key | default (printf "hub.services.%s.apiToken" $serviceName) }}
+            {{- end }}
             - name: JUPYTERHUB_USAGE_QUOTAS_HUB_NAMESPACE
               value: {{ .Release.Namespace | quote }}
             - name: JUPYTERHUB_USAGE_QUOTAS_SESSION_SECRET_KEY
@@ -117,13 +96,13 @@ spec:
           readinessProbe:
             periodSeconds: 5
             httpGet:
-              path: {{ $prefix }}health
+              path: /health
               port: http
           livenessProbe:
             periodSeconds: 10
             failureThreshold: 5
             httpGet:
-              path: {{ $prefix }}health
+              path: /health
               port: http
           {{- with .Values.resources }}
           resources:

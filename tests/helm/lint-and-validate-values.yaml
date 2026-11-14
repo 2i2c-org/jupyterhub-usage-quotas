@@ -1,7 +1,8 @@
 # Values for the jupyterhub-usage-quotas chart that render the template
 # branches that the default values do not render. They are not a working
-# config. CI also renders the default values (with only jupyterhub.publicUrl
-# set), so this file does not repeat default values.
+# config. CI also renders the default values (with only
+# config.UsageViewer.public_hub_url set), so this file does not repeat default
+# values.
 #
 # This follows the tools/templates/lint-and-validate-values.yaml pattern in
 # the jupyterhub chart (z2jh).
@@ -11,20 +12,16 @@
 nameOverride: name-override
 fullnameOverride: null
 
-jupyterhub:
-  # The derived URLs (service prefix, public URLs, probe paths, OAuth
-  # callback) with a non-default service name and a JupyterHub base URL.
-  serviceName: quota
-  apiUrl: http://hub:8081/jhub/hub/api
-  publicUrl: https://hub.example.org/jhub/
-  # The api-token key in the chart Secret, and the secretKeyRef to it.
-  apiToken:
-    value: api-token-value
-
 # values.json in the Secret: nested values, and a string that must be
 # escaped in JSON.
 config:
   UsageViewer:
+    # The derived service prefix and token key, with a non-default service
+    # name and a JupyterHub base URL.
+    public_hub_url: https://hub.example.org/jhub/hub/
+    service_name: quota
+    # An inline token, so the chart does not read the token from a Secret.
+    hub_api_token: api-token-value
     prometheus_url: http://prometheus-server.support.svc.cluster.local
     prometheus_auth:
       username: username

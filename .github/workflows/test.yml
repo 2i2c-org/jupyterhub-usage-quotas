@@ -157,7 +157,7 @@ jobs:
       # so use the API server.
       - name: Validate the rendered manifests with the API server
         run: |
-          helm template usage-quotas $CHART --set jupyterhub.publicUrl=https://hub.example.org/ \
+          helm template usage-quotas $CHART --set config.UsageViewer.public_hub_url=https://hub.example.org/ \
             | kubectl apply --dry-run=server -f -
           helm template usage-quotas $CHART --values tests/helm/lint-and-validate-values.yaml \
             | kubectl apply --dry-run=server -f -
@@ -175,7 +175,7 @@ jobs:
         run: |
           helm upgrade --install usage-quotas $CHART \
             --set image.tag=ci \
-            --set jupyterhub.publicUrl=http://localhost:8080/ \
+            --set config.UsageViewer.public_hub_url=http://localhost:8080/ \
             --wait --timeout 3m
 
       - name: Check the service through the z2jh proxy
