@@ -112,7 +112,7 @@ The usage viewer (the usage quota dashboard) runs as an [external JupyterHub ser
      --config-files=jupyterhub_config_secret.py
    ```
 
-   JupyterHub sets the `JUPYTERHUB_*` environment variables for the services that it starts. An external service must set them itself. `usage_viewer_config.py` sets these variables. If you change the `api_token` of the `usage-quota` service in `jupyterhub_config_secret.py`, change `JUPYTERHUB_API_TOKEN` in `usage_viewer_config.py` to the same value.
+   `usage_viewer_config.py` sets the public URL of JupyterHub and the URL of the Hub API. `jupyterhub_config_secret.py` sets the API token of the service, `c.UsageViewer.hub_api_token`. JupyterHub and the usage viewer both load this file, so they use the same token.
 
 1. Go to http://localhost:8000, log in, and click **Services > usage-quota** in the navbar.
 

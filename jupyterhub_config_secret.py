@@ -12,6 +12,8 @@ c.UsageViewer.prometheus_auth = {
 
 c.UsageViewer.session_secret_key = "use-a-secure-random-key-in-production"
 
+c.UsageViewer.hub_api_token = "use-another-secure-random-key-in-production"
+
 c.UsageQuotaManager.metrics_exporter_token = "use-a-secure-random-key-in-production"
 
 c.JupyterHub.services = [
@@ -20,12 +22,10 @@ c.JupyterHub.services = [
         "api_token": c.UsageQuotaManager.metrics_exporter_token,
     },
     {
-        # The usage viewer, run as an external service. Its process must use
-        # the same API token, in the JUPYTERHUB_API_TOKEN environment variable.
-        # The token must be different from the metrics-exporter token.
+        # The usage viewer, run as an external service.
         "name": "usage-quota",
         "url": "http://localhost:9000",
-        "api_token": "use-another-secure-random-key-in-production",
+        "api_token": c.UsageViewer.hub_api_token,
         "display": True,
         "oauth_no_confirm": True,
     },
