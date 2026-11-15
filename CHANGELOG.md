@@ -62,6 +62,21 @@ See [our definition of contributors](https://github-activity.readthedocs.io/en/l
 
 @GeorgianaElena ([activity](https://github.com/search?q=repo%3A2i2c-org%2Fjupyterhub-usage-quotas+involves%3AGeorgianaElena+updated%3A2026-08-12..2026-09-07&type=Issues)) | @jnywong ([activity](https://github.com/search?q=repo%3A2i2c-org%2Fjupyterhub-usage-quotas+involves%3Ajnywong+updated%3A2026-08-12..2026-09-07&type=Issues))
 
+## v0.1.6 2026-11-15
+
+### API and Breaking Changes
+
+- Backport PR: Run the usage viewer as an external Jupyterhub service [#102](https://github.com/2i2c-org/jupyterhub-usage-quotas/pull/102) ([@sunu](https://github.com/sunu), [@jnywong](https://github.com/jnywong))
+
+### Contributors to this release
+
+The following people contributed discussions, new ideas, code and documentation contributions, and review.
+See [our definition of contributors](https://github-activity.readthedocs.io/en/latest/use/#how-does-this-tool-define-contributions-in-the-reports).
+
+([GitHub contributors page for this release](https://github.com/2i2c-org/jupyterhub-usage-quotas/graphs/contributors?from=2026-09-15&to=2026-11-15&type=c))
+
+@jnywong ([activity](https://github.com/search?q=repo%3A2i2c-org%2Fjupyterhub-usage-quotas+involves%3Ajnywong+updated%3A2026-09-15..2026-11-15&type=Issues)) | @shaneknapp ([activity](https://github.com/search?q=repo%3A2i2c-org%2Fjupyterhub-usage-quotas+involves%3Ashaneknapp+updated%3A2026-09-15..2026-11-15&type=Issues)) | @sunu ([activity](https://github.com/search?q=repo%3A2i2c-org%2Fjupyterhub-usage-quotas+involves%3Asunu+updated%3A2026-09-15..2026-11-15&type=Issues))
+
 ## v0.1.5 2026-09-15
 
 ([full changelog](https://github.com/2i2c-org/jupyterhub-usage-quotas/compare/v0.1.4...v0.1.5))
