@@ -8,16 +8,19 @@ build:
   jobs:
     post_checkout:
     - |-
-      if [ "$READTHEDOCS_VERSION_TYPE" = "external" ] && git diff --quiet origin/main -- docs/ .readthedocs.yaml;
+      if [ "$READTHEDOCS_VERSION_TYPE" = "external" ] && git diff --quiet origin/main -- docs/ src/ helm/jupyterhub-usage-quotas/values.yaml helm/jupyterhub-usage-quotas/values.schema.yaml;
       then
         exit 183;
       fi
     install:
     - npm install -g mystmd
+    # The configuration reference is generated from the package and the Helm chart
+    - pip install . pyyaml
     - mkdir -p $READTHEDOCS_OUTPUT/html/
     - BASE_URL="/$READTHEDOCS_LANGUAGE/$READTHEDOCS_VERSION"
     build:
       html:
+      - python docs/scripts/update_configuration_reference.py
       - env -C docs -- myst build --html
       - cp -a docs/_build/html/. "$READTHEDOCS_OUTPUT/html"
       - rm -rf docs/_build

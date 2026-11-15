@@ -261,3 +261,6 @@ jupyterhub-proxy.pid
 jupyterhub.sqlite
 jupyterhub_cookie_secret
 **token**
+
+# Generated from values.schema.yaml
+helm/jupyterhub-usage-quotas/values.schema.json

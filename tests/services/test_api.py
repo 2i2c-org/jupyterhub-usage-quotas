@@ -87,3 +87,21 @@ class TestOAuthCallbackRoute(UsageViewerTestCase):
             follow_redirects=False,
         )
         assert response.code != 404
+
+
+class TestHealthRoute(UsageViewerTestCase):
+    """Test the health route (GET /health)"""
+
+    def test_health_returns_ok_without_authentication(self):
+        """Health check should not require authentication"""
+        response = self.fetch("/services/usage-quota/health", follow_redirects=False)
+
+        assert response.code == 200
+        assert response.body == b'{"status": "ok"}'
+
+    def test_health_without_service_prefix(self):
+        """Health check is also served without the service prefix, for probes"""
+        response = self.fetch("/health", follow_redirects=False)
+
+        assert response.code == 200
+        assert response.body == b'{"status": "ok"}'

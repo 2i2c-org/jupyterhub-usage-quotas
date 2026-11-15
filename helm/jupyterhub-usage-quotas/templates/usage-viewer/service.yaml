@@ -1,0 +1,21 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "jupyterhub-usage-quotas.usage-viewer.fullname" . }}
+  labels:
+    {{- include "jupyterhub-usage-quotas.labels" . | nindent 4 }}
+    app.kubernetes.io/component: usage-viewer
+  {{- with .Values.service.annotations }}
+  annotations:
+    {{- . | toYaml | nindent 4 }}
+  {{- end }}
+spec:
+  type: {{ .Values.service.type }}
+  selector:
+    {{- include "jupyterhub-usage-quotas.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: usage-viewer
+  ports:
+    - name: http
+      port: {{ .Values.service.port }}
+      targetPort: http
+      protocol: TCP
