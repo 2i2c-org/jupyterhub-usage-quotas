@@ -16,9 +16,11 @@ project:
     - title: How-to guides
       children:
       - file: howto/quickstart.md
-      - file: howto/usage-quota-dashboard.md
-      - file: howto/user-group-management.md
       - file: howto/deploy.md
+      - file: howto/user-group-management.md
+      - file: howto/quota-limits.md
+      - file: howto/usage-quota-dashboard.md
+      - file: howto/grafana-dashboard.md
     - title: Explanation
       children:
       - file: explanation/overview.md
@@ -32,6 +34,7 @@ project:
         hidden: true
       - file: reference/UsageViewer.md
         hidden: true
+      - file: reference/helm-chart.md
       - file: reference/CHANGELOG.md
       - file: reference/glossary.md
     - title: Contributing

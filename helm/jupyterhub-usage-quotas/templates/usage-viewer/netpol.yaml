@@ -1,0 +1,35 @@
+{{- if .Values.networkPolicy.enabled -}}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "jupyterhub-usage-quotas.usage-viewer.fullname" . }}
+  labels:
+    {{- include "jupyterhub-usage-quotas.labels" . | nindent 4 }}
+    app.kubernetes.io/component: usage-viewer
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "jupyterhub-usage-quotas.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: usage-viewer
+  policyTypes:
+    # Only constrain ingress for simplicity, allow any egress
+    - Ingress
+  ingress:
+    # Allow the z2jh proxy (user traffic) and the z2jh hub (service health
+    # checks) in the local namespace to access the http port. If z2jh is
+    # installed with a nameOverride, add a rule to networkPolicy.ingress.
+    - ports:
+        - port: http
+      from:
+        - podSelector:
+            matchLabels:
+              app: jupyterhub
+            matchExpressions:
+              - key: component
+                operator: In
+                values: [hub, proxy]
+
+    {{- with .Values.networkPolicy.ingress }}
+    {{- . | toYaml | nindent 4 }}
+    {{- end }}
+{{- end }}

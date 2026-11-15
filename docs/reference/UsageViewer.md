@@ -1,6 +1,6 @@
 # UsageViewer
 
-(usageviewer-config)=
+(usageviewer)=
 
 ```
 # Configuration file for jupyterhub-usage-viewer.
@@ -124,6 +124,18 @@ c = get_config()  #noqa
 #  Default: 'Contact your JupyterHub Admin if you need additional quota.'
 # c.UsageViewer.footer_note = 'Contact your JupyterHub Admin if you need additional quota.'
 
+## The API token that the service uses for Hub API requests. Required. Can be set
+#  via the JUPYTERHUB_API_TOKEN environment variable.
+#  Default: ''
+# c.UsageViewer.hub_api_token = ''
+
+## The internal URL of the Hub API, e.g. http://hub:8081/hub/api.
+#
+#  Can be set via the JUPYTERHUB_API_URL environment variable. Defaults to
+#  http://hub:8081<hub prefix>api, the z2jh hub Service in the same namespace.
+#  Default: ''
+# c.UsageViewer.hub_api_url = ''
+
 ## Kubernetes namespace of the JupyterHub deployment, used to filter Prometheus
 #  usage metrics in multi-tenant environments. Leave empty for single-tenant or
 #  development. Can be set via JUPYTERHUB_USAGE_QUOTAS_HUB_NAMESPACE environment
@@ -136,10 +148,6 @@ c = get_config()  #noqa
 #  paths take precedence while falling back to JupyterHub's default templates.
 #  Default: []
 # c.UsageViewer.hub_template_paths = []
-
-## JupyterHub URL, e.g. http://localhost:8000 for local development.
-#  Default: ''
-# c.UsageViewer.hub_url = ''
 
 ## The date format used by logging formatters for %(asctime)s
 #  See also: Application.log_datefmt
@@ -157,11 +165,16 @@ c = get_config()  #noqa
 #  See also: Application.logging_config
 # c.UsageViewer.logging_config = {}
 
+## The OAuth client ID of the service. Can be set via the JUPYTERHUB_CLIENT_ID
+#  environment variable. Defaults to service-<service_name>.
+#  Default: ''
+# c.UsageViewer.oauth_client_id = ''
+
 ## Username and password credentials for authenticating with Prometheus.
 #  Can be set via JUPYTERHUB_USAGE_QUOTAS_PROMETHEUS_USERNAME and
 #  JUPYTERHUB_USAGE_QUOTAS_PROMETHEUS_PASSWORD environment variables.
 #  For example:
-#      c.UsageConfig.prometheus_auth = {
+#      c.UsageViewer.prometheus_auth = {
 #          "username": "username",
 #          "password": "password",
 #      }
@@ -177,21 +190,22 @@ c = get_config()  #noqa
 ## Prometheus metrics for querying storage and/or compute usage and quotas.
 #  Defaults to:
 #
-#  c.UsageViewerConfig.prometheus_usage_quota_metrics = {
+#  c.UsageViewer.prometheus_usage_quota_metrics = {
 #      "home_storage": {
 #          "usage": "dirsize_total_size_bytes",
 #          "quota": "dirsize_hard_limit_bytes"
 #      },
 #      "compute": {
-#          "usage": "jupyterhub_memory_usage_gibibyte_hours",
-#          "quota": "jupyterhub_memory_limit_gibibyte_hours"
+#          "usage": "jupyterhub_memory_usage_byte_hours_total",
+#          "quota": "jupyterhub_memory_limit_byte_hours_total"
 #      }
 #  }
-#  Default: {'home_storage': {'usage': 'dirsize_total_size_bytes', 'quota': 'dirsize_hard_limit_bytes'}, 'compute': {'usage': 'jupyterhub_memory_usage_gibibyte_hours', 'quota': 'jupyterhub_memory_limit_gibibyte_hours'}}
-# c.UsageViewer.prometheus_usage_quota_metrics = {'home_storage': {'usage': 'dirsize_total_size_bytes', 'quota': 'dirsize_hard_limit_bytes'}, 'compute': {'usage': 'jupyterhub_memory_usage_gibibyte_hours', 'quota': 'jupyterhub_memory_limit_gibibyte_hours'}}
+#  Default: {'home_storage': {'usage': 'dirsize_total_size_bytes', 'quota': 'dirsize_hard_limit_bytes'}, 'compute': {'usage': 'jupyterhub_memory_usage_byte_hours_total', 'quota': 'jupyterhub_memory_limit_byte_hours_total'}}
+# c.UsageViewer.prometheus_usage_quota_metrics = {'home_storage': {'usage': 'dirsize_total_size_bytes', 'quota': 'dirsize_hard_limit_bytes'}, 'compute': {'usage': 'jupyterhub_memory_usage_byte_hours_total', 'quota': 'jupyterhub_memory_limit_byte_hours_total'}}
 
-## Public URL of the JupyterHub instance. Required. Automatically set by
-#  JupyterHub via JUPYTERHUB_PUBLIC_HUB_URL environment variable.
+## Public URL of JupyterHub, with or without the hub/ path segment, e.g.
+#  https://hub.example.org/ or https://hub.example.org/hub/. Required. Can be set
+#  via the JUPYTERHUB_PUBLIC_HUB_URL environment variable.
 #  Default: ''
 # c.UsageViewer.public_hub_url = ''
 
@@ -199,17 +213,25 @@ c = get_config()  #noqa
 #  Default: '0.0.0.0'
 # c.UsageViewer.service_host = '0.0.0.0'
 
+## The name of the service in the JupyterHub services config. Can be set via the
+#  JUPYTERHUB_SERVICE_NAME environment variable. Defaults to usage-quota.
+#  Default: ''
+# c.UsageViewer.service_name = ''
+
 ## Port to bind the usage viewer service to
 #  Default: 9000
 # c.UsageViewer.service_port = 9000
 
-## URL prefix for the service. Automatically set by JupyterHub when running as a
-#  managed service. Defaults to /services/usage-quota.
+## URL prefix for the service. Can be set via the JUPYTERHUB_SERVICE_PREFIX
+#  environment variable. Defaults to <base URL>services/<service_name>/, with the
+#  base URL from public_hub_url.
 #  Default: ''
 # c.UsageViewer.service_prefix = ''
 
-## Secret key for session cookie encryption. Required for secure sessions. Set
-#  via config or JUPYTERHUB_USAGE_QUOTAS_SESSION_SECRET_KEY environment variable.
+## Secret key to sign browser cookies. Required to maintain secure authenticated
+#  sessions. Set via config or JUPYTERHUB_USAGE_QUOTAS_SESSION_SECRET_KEY
+#  environment variable. If not set, an ephemeral key is generated whenever the
+#  application restarts, so stale sessions require users to authenticate again.
 #  Default: ''
 # c.UsageViewer.session_secret_key = ''
 
